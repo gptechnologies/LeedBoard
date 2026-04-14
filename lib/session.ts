@@ -1,15 +1,23 @@
-import crypto from "node:crypto";
-import { cookies } from "next/headers";
-import { type NextResponse } from "next/server";
-import { redirect } from "next/navigation";
+import { auth, currentUser as getClerkCurrentUser } from "@clerk/nextjs/server";
 import { UserRole } from "@prisma/client";
+import { redirect } from "next/navigation";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-const SESSION_COOKIE = "cleaning_session";
-const SESSION_TTL_DAYS = 30;
+function normalizeEmail(value: string) {
+  return value.trim().toLowerCase();
+}
 
-function hashToken(token: string) {
-  return crypto.createHash("sha256").update(token).digest("hex");
+function getClerkPrimaryEmail(
+  clerkUser: Awaited<ReturnType<typeof getClerkCurrentUser>>,
+) {
+  const email =
+    clerkUser?.primaryEmailAddress?.emailAddress ??
+    clerkUser?.emailAddresses.find((item) => item.id === clerkUser.primaryEmailAddressId)
+      ?.emailAddress ??
+    clerkUser?.emailAddresses[0]?.emailAddress;
+
+  return email ? normalizeEmail(email) : null;
 }
 
 export function getRoleHome(role: UserRole) {
@@ -24,79 +32,103 @@ export function getRoleHome(role: UserRole) {
   return "/customer";
 }
 
-export async function createSession(userId: string) {
-  const token = crypto.randomBytes(32).toString("hex");
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + SESSION_TTL_DAYS);
-
-  await prisma.session.create({
-    data: {
-      tokenHash: hashToken(token),
-      expiresAt,
-      userId,
+async function findOrAttachUser(clerkUserId: string) {
+  const byClerkId = await prisma.user.findUnique({
+    where: { clerkUserId },
+    include: {
+      cleanerProfile: true,
     },
   });
 
-  return { token, expiresAt };
-}
+  if (byClerkId) {
+    return byClerkId;
+  }
 
-export function applySessionCookie(response: NextResponse, token: string, expiresAt: Date) {
-  response.cookies.set({
-    name: SESSION_COOKIE,
-    value: token,
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    expires: expiresAt,
-    path: "/",
+  const clerkUser = await getClerkCurrentUser();
+  const email = getClerkPrimaryEmail(clerkUser);
+
+  if (!clerkUser || !email) {
+    return null;
+  }
+
+  const existing = await prisma.user.findUnique({
+    where: { email },
+    include: {
+      cleanerProfile: true,
+    },
   });
-}
 
-export function clearSessionCookie(response: NextResponse) {
-  response.cookies.set({
-    name: SESSION_COOKIE,
-    value: "",
-    expires: new Date(0),
-    path: "/",
+  if (!existing) {
+    return null;
+  }
+
+  return prisma.user.update({
+    where: { id: existing.id },
+    data: {
+      clerkUserId,
+      email,
+      firstName: clerkUser.firstName?.trim() || existing.firstName,
+      lastName: clerkUser.lastName?.trim() || existing.lastName,
+    },
+    include: {
+      cleanerProfile: true,
+    },
   });
 }
 
 export async function getCurrentUser() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
+  const { userId } = await auth();
 
-  if (!token) {
+  if (!userId) {
     return null;
   }
 
-  const session = await prisma.session.findUnique({
-    where: { tokenHash: hashToken(token) },
-    include: {
-      user: {
-        include: {
-          cleanerProfile: true,
-        },
-      },
-    },
-  });
+  return findOrAttachUser(userId);
+}
 
-  if (!session) {
+export async function getSignedInIdentity() {
+  const { userId } = await auth();
+
+  if (!userId) {
     return null;
   }
 
-  if (session.expiresAt <= new Date()) {
-    await prisma.session.delete({ where: { id: session.id } });
+  const clerkUser = await getClerkCurrentUser();
+  const email = getClerkPrimaryEmail(clerkUser);
+
+  if (!clerkUser || !email) {
     return null;
   }
 
-  return session.user;
+  return {
+    clerkUserId: userId,
+    email,
+    firstName: clerkUser.firstName?.trim() || "",
+    lastName: clerkUser.lastName?.trim() || "",
+  };
+}
+
+export async function requireSignedInIdentity() {
+  const identity = await getSignedInIdentity();
+
+  if (!identity) {
+    redirect("/login");
+  }
+
+  return identity;
 }
 
 export async function requireUser(role?: UserRole) {
-  const user = await getCurrentUser();
+  const { userId } = await auth();
+
+  if (!userId) {
+    redirect("/login");
+  }
+
+  const user = await findOrAttachUser(userId);
 
   if (!user) {
-    redirect("/login");
+    redirect("/welcome");
   }
 
   if (role && user.role !== role) {
@@ -106,18 +138,22 @@ export async function requireUser(role?: UserRole) {
   return user;
 }
 
-export async function destroyCurrentSession() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
+export async function requireApiUser(request: Request, role?: UserRole) {
+  const { userId } = await auth();
 
-  if (!token) {
-    return;
+  if (!userId) {
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  await prisma.session.deleteMany({
-    where: {
-      tokenHash: hashToken(token),
-    },
-  });
-}
+  const user = await findOrAttachUser(userId);
 
+  if (!user) {
+    return NextResponse.redirect(new URL("/welcome", request.url));
+  }
+
+  if (role && user.role !== role) {
+    return NextResponse.redirect(new URL(getRoleHome(user.role), request.url));
+  }
+
+  return user;
+}

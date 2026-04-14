@@ -1,20 +1,19 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, UserRole } from "@prisma/client";
-import bcrypt from "bcryptjs";
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL is required to seed the database.");
+const connectionString = process.env.DIRECT_DATABASE_URL ?? process.env.DATABASE_URL;
+
+if (!connectionString) {
+  throw new Error("DIRECT_DATABASE_URL or DATABASE_URL is required to seed the database.");
 }
 
 const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
+  connectionString,
 });
 
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const passwordHash = await bcrypt.hash("admin123", 10);
-
   await prisma.user.upsert({
     where: { email: "admin@archmontcleaners.local" },
     update: {},
@@ -23,7 +22,6 @@ async function main() {
       firstName: "Archmont",
       lastName: "Admin",
       email: "admin@archmontcleaners.local",
-      passwordHash,
     },
   });
 

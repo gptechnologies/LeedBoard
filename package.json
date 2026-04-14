@@ -10,9 +10,9 @@
     "setup": "npm run db:generate && npm run db:push && npm run db:seed"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.1.0",
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.7.0",
-    "bcryptjs": "^3.0.3",
     "next": "^16.2.3",
     "pg": "^8.20.0",
     "prisma": "^7.7.0",

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency } from "@/lib/format";
 import { getCurrentUser, getRoleHome } from "@/lib/session";
@@ -6,11 +7,12 @@ import { getCurrentUser, getRoleHome } from "@/lib/session";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [services, user] = await Promise.all([
+  const [services, { userId }, user] = await Promise.all([
     prisma.service.findMany({
       where: { isActive: true },
       orderBy: { basePriceCents: "asc" },
     }),
+    auth(),
     getCurrentUser(),
   ]);
 
@@ -26,13 +28,13 @@ export default async function HomePage() {
           </p>
           <div className="hero-actions">
             <Link
-              href={user ? getRoleHome(user.role) : "/signup?role=CUSTOMER"}
+              href={user ? getRoleHome(user.role) : userId ? "/welcome" : "/signup?role=CUSTOMER"}
               className="button-link"
             >
-              {user ? "Open my account" : "Book now"}
+              {user ? "Open my account" : userId ? "Complete setup" : "Book now"}
             </Link>
             <Link href="/login" className="button-link secondary">
-              Returning customer
+              {userId ? "Account access" : "Sign in"}
             </Link>
           </div>
           <div className="inline-metrics">

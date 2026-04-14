@@ -38,16 +38,15 @@ enum BookingEventType {
 
 model User {
   id               String          @id @default(cuid())
+  clerkUserId      String?         @unique
   role             UserRole
   firstName        String
   lastName         String
   email            String          @unique
-  passwordHash     String
   phone            String?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   cleanerProfile   CleanerProfile?
-  sessions         Session[]
   customerBookings Booking[]       @relation("CustomerBookings")
   cleanerBookings  Booking[]       @relation("CleanerBookings")
   bookingEvents    BookingEvent[]
@@ -61,15 +60,6 @@ model CleanerProfile {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model Session {
-  id        String   @id @default(cuid())
-  tokenHash String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Service {

@@ -1,13 +1,12 @@
 import { UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/session";
+import { requireApiUser } from "@/lib/session";
 
 export async function POST(request: Request) {
-  const user = await getCurrentUser();
-
-  if (!user || user.role !== UserRole.CLEANER) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  const user = await requireApiUser(request, UserRole.CLEANER);
+  if (user instanceof NextResponse) {
+    return user;
   }
 
   const formData = await request.formData();
@@ -24,4 +23,3 @@ export async function POST(request: Request) {
 
   return NextResponse.redirect(new URL("/cleaner", request.url));
 }
-

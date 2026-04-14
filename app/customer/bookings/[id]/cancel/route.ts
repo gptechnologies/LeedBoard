@@ -1,7 +1,7 @@
 import { BookingEventType, BookingStatus, PaymentStatus, UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/session";
+import { requireApiUser } from "@/lib/session";
 import { recordBookingEvent } from "@/lib/bookings";
 
 type CancelRouteProps = {
@@ -11,10 +11,9 @@ type CancelRouteProps = {
 };
 
 export async function POST(request: Request, { params }: CancelRouteProps) {
-  const user = await getCurrentUser();
-
-  if (!user || user.role !== UserRole.CUSTOMER) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  const user = await requireApiUser(request, UserRole.CUSTOMER);
+  if (user instanceof NextResponse) {
+    return user;
   }
 
   const { id } = await params;
@@ -66,4 +65,3 @@ export async function POST(request: Request, { params }: CancelRouteProps) {
 
   return NextResponse.redirect(new URL(`/customer/bookings/${booking.id}`, request.url));
 }
-

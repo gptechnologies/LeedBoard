@@ -2,7 +2,7 @@ import { BookingEventType, BookingStatus, PaymentStatus, UserRole } from "@prism
 import { NextResponse } from "next/server";
 import { canCleanerMoveToStatus, recordBookingEvent } from "@/lib/bookings";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/session";
+import { requireApiUser } from "@/lib/session";
 
 type CleanerStatusRouteProps = {
   params: Promise<{
@@ -11,10 +11,9 @@ type CleanerStatusRouteProps = {
 };
 
 export async function POST(request: Request, { params }: CleanerStatusRouteProps) {
-  const user = await getCurrentUser();
-
-  if (!user || user.role !== UserRole.CLEANER) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  const user = await requireApiUser(request, UserRole.CLEANER);
+  if (user instanceof NextResponse) {
+    return user;
   }
 
   const { id } = await params;

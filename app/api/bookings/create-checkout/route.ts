@@ -9,7 +9,7 @@ import {
 } from "@/lib/bookings";
 import { getRequiredString } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/session";
+import { requireApiUser } from "@/lib/session";
 import { getStripe, isStripeConfigured } from "@/lib/stripe";
 
 function redirectWithError(request: Request, message: string) {
@@ -19,10 +19,9 @@ function redirectWithError(request: Request, message: string) {
 }
 
 export async function POST(request: Request) {
-  const user = await getCurrentUser();
-
-  if (!user || user.role !== UserRole.CUSTOMER) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  const user = await requireApiUser(request, UserRole.CUSTOMER);
+  if (user instanceof NextResponse) {
+    return user;
   }
 
   const formData = await request.formData();

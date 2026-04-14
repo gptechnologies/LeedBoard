@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { auth } from "@clerk/nextjs/server";
 import { UserRole } from "@prisma/client";
+import { AccountUserButton } from "@/components/account-user-button";
 import { getCurrentUser } from "@/lib/session";
 
 export async function SiteHeader() {
-  const user = await getCurrentUser();
+  const [{ userId }, user] = await Promise.all([auth(), getCurrentUser()]);
 
   return (
     <header className="site-header">
@@ -12,7 +14,7 @@ export async function SiteHeader() {
           Archmont Cleaners
         </Link>
         <nav className="nav-links">
-          {!user ? (
+          {!userId ? (
             <>
               <Link href="/signup?role=CUSTOMER" className="primary">
                 Book a Cleaning
@@ -22,7 +24,7 @@ export async function SiteHeader() {
                 Provider access
               </Link>
             </>
-          ) : (
+          ) : user ? (
             <>
               {user.role === UserRole.CUSTOMER ? (
                 <>
@@ -42,9 +44,14 @@ export async function SiteHeader() {
                   Operations
                 </Link>
               ) : null}
-              <form action="/auth/logout" method="post">
-                <button type="submit">Sign Out</button>
-              </form>
+              <AccountUserButton />
+            </>
+          ) : (
+            <>
+              <Link href="/welcome" className="primary">
+                Finish setup
+              </Link>
+              <AccountUserButton />
             </>
           )}
         </nav>

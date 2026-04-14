@@ -1,11 +1,18 @@
-type LoginPageProps = {
-  searchParams: Promise<{
-    error?: string;
-  }>;
-};
+import { SignIn } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import { getCurrentUser, getRoleHome } from "@/lib/session";
 
-export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const params = await searchParams;
+export default async function LoginPage() {
+  const [{ userId }, user] = await Promise.all([auth(), getCurrentUser()]);
+
+  if (user) {
+    redirect(getRoleHome(user.role));
+  }
+
+  if (userId) {
+    redirect("/welcome");
+  }
 
   return (
     <section className="auth-shell stack">
@@ -16,20 +23,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           Access upcoming visits, booking details, and provider schedules in one place.
         </p>
       </div>
-
-      {params.error ? <div className="notice error">{params.error}</div> : null}
-
-      <form action="/auth/login" method="post" className="stack">
-        <div className="field">
-          <label htmlFor="email">Email</label>
-          <input id="email" name="email" type="email" placeholder="name@email.com" required />
-        </div>
-        <div className="field">
-          <label htmlFor="password">Password</label>
-          <input id="password" name="password" type="password" placeholder="Enter your password" required />
-        </div>
-        <button type="submit">Sign in</button>
-      </form>
+      <SignIn
+        path="/login"
+        routing="path"
+        signUpUrl="/signup"
+        forceRedirectUrl="/auth/continue"
+      />
     </section>
   );
 }
