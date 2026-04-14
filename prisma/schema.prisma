@@ -1,0 +1,172 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  CUSTOMER
+  CLEANER
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING_PAYMENT
+  BOOKED
+  EN_ROUTE
+  ARRIVED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+}
+
+enum BookingEventType {
+  BOOKING_CREATED
+  PAYMENT_CONFIRMED
+  PAYMENT_FAILED
+  STATUS_CHANGED
+}
+
+model User {
+  id               String          @id @default(cuid())
+  role             UserRole
+  firstName        String
+  lastName         String
+  email            String          @unique
+  passwordHash     String
+  phone            String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  cleanerProfile   CleanerProfile?
+  sessions         Session[]
+  customerBookings Booking[]       @relation("CustomerBookings")
+  cleanerBookings  Booking[]       @relation("CleanerBookings")
+  bookingEvents    BookingEvent[]
+}
+
+model CleanerProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  isAvailable Boolean  @default(true)
+  bio         String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Service {
+  id              String    @id @default(cuid())
+  slug            String    @unique
+  name            String
+  description     String
+  basePriceCents  Int
+  durationMinutes Int
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  bookings        Booking[]
+}
+
+model AddOn {
+  id              String       @id @default(cuid())
+  slug            String       @unique
+  name            String
+  description     String
+  priceCents      Int
+  durationMinutes Int
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  bookingItems    BookingAddOn[]
+}
+
+model TimeSlot {
+  id        String    @id @default(cuid())
+  startsAt  DateTime
+  endsAt    DateTime
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  bookings  Booking[]
+
+  @@unique([startsAt, endsAt])
+}
+
+model Booking {
+  id                     String        @id @default(cuid())
+  bookingNumber          String        @unique
+  status                 BookingStatus
+  paymentStatus          PaymentStatus
+  subtotalCents          Int
+  addOnTotalCents        Int
+  taxCents               Int
+  totalCents             Int
+  addressLine1           String
+  addressLine2           String?
+  city                   String
+  state                  String
+  postalCode             String
+  bedrooms               Int
+  bathrooms              Float
+  notes                  String?
+  stripeCheckoutSessionId String?      @unique
+  stripePaymentIntentId  String?
+  expiresAt              DateTime?
+  paidAt                 DateTime?
+  completedAt            DateTime?
+  cancelledAt            DateTime?
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+  customerId             String
+  cleanerId              String
+  serviceId              String
+  slotId                 String
+  customer               User          @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: Cascade)
+  cleaner                User          @relation("CleanerBookings", fields: [cleanerId], references: [id], onDelete: Cascade)
+  service                Service       @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  slot                   TimeSlot      @relation(fields: [slotId], references: [id], onDelete: Restrict)
+  addOns                 BookingAddOn[]
+  events                 BookingEvent[]
+}
+
+model BookingAddOn {
+  id             String   @id @default(cuid())
+  quantity       Int
+  unitPriceCents Int
+  totalPriceCents Int
+  bookingId      String
+  addOnId        String
+  booking        Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  addOn          AddOn    @relation(fields: [addOnId], references: [id], onDelete: Restrict)
+}
+
+model BookingEvent {
+  id         String           @id @default(cuid())
+  eventType  BookingEventType
+  fromStatus BookingStatus?
+  toStatus   BookingStatus?
+  note       String?
+  createdAt  DateTime         @default(now())
+  bookingId  String
+  actorId    String?
+  booking    Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  actor      User?            @relation(fields: [actorId], references: [id], onDelete: SetNull)
+}
