@@ -64,11 +64,15 @@ export async function POST(request: Request) {
         update: {
           bio,
           isAvailable: true,
+          serviceAreaPostalCodes: [],
+          serviceNeeds: [],
         },
         create: {
           userId: user.id,
           bio,
           isAvailable: true,
+          serviceAreaPostalCodes: [],
+          serviceNeeds: [],
         },
       });
     }

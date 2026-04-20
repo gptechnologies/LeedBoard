@@ -4,3 +4,10 @@ node_modules
 .env.local
 *.log
 dev.db
+DATABASE_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-shiny-dawn-amlfytpn.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require"
+DIRECT_DATABASE_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-shiny-dawn-amlfytpn.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_..."
+CLERK_SECRET_KEY="sk_test_..."
+NEXT_PUBLIC_CLERK_SIGN_IN_URL="/login"
+NEXT_PUBLIC_CLERK_SIGN_UP_URL="/signup"
+STRIPE_SECRET_KEY="sk_test_..."

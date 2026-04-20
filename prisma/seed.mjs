@@ -1,5 +1,18 @@
+import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient, UserRole } from "@prisma/client";
+import {
+  BidPricingType,
+  BidStatus,
+  EntryMethod,
+  JobRequestStatus,
+  PrismaClient,
+  PriorityType,
+  RoomType,
+  ServiceNeed,
+  SuppliesSource,
+  TimingPreference,
+  UserRole,
+} from "@prisma/client";
 
 const connectionString = process.env.DIRECT_DATABASE_URL ?? process.env.DATABASE_URL;
 
@@ -126,6 +139,341 @@ async function main() {
       });
     }
   }
+
+  const customer = await prisma.user.upsert({
+    where: { email: "customer@archmontcleaners.local" },
+    update: {
+      role: UserRole.CUSTOMER,
+      firstName: "Anna",
+      lastName: "Grace",
+      phone: "(415) 555-0184",
+    },
+    create: {
+      role: UserRole.CUSTOMER,
+      firstName: "Anna",
+      lastName: "Grace",
+      email: "customer@archmontcleaners.local",
+      phone: "(415) 555-0184",
+    },
+  });
+
+  await prisma.homeProfile.deleteMany({
+    where: { customerId: customer.id },
+  });
+
+  const homeProfile = await prisma.homeProfile.create({
+    data: {
+      customerId: customer.id,
+      label: "My Home",
+      addressLine1: "1200 Market St",
+      addressLine2: "Unit 5B",
+      city: "San Francisco",
+      state: "CA",
+      postalCode: "94103",
+      entryMethod: EntryMethod.DOOR_CODE,
+      entryNotes: "Use the call box and I will buzz you in if needed.",
+      suppliesSource: SuppliesSource.CLEANER_BRINGS_ALL,
+      defaultRoomTypes: [RoomType.KITCHEN, RoomType.BATHROOM, RoomType.BEDROOM, RoomType.LIVING_AREA],
+      defaultPriorityTypes: [PriorityType.DEEP_BATHROOM, PriorityType.DEEP_KITCHEN, PriorityType.FLOORS],
+      notes: "Two-bedroom condo on the fifth floor. Elevator available.",
+      isDefault: true,
+    },
+  });
+
+  const cleaners = [
+    {
+      email: "maria@archmontcleaners.local",
+      firstName: "Maria",
+      lastName: "Garcia",
+      phone: "(415) 555-0101",
+      profile: {
+        bio: "Reliable home cleaner focused on kitchens, bathrooms, and deep refreshes.",
+        headline: "Detail-focused residential cleaner",
+        hourlyRateFromCents: 3500,
+        standardHourlyRateCents: 3500,
+        standardFlatRateCents: 15000,
+        standardDeepCleanFlatRateCents: 24500,
+        defaultEtaMinutes: 45,
+        flatRateAvailable: true,
+        bidTemplatesEnabled: true,
+        googleRating: 4.9,
+        googleReviewCount: 112,
+        googleReviewSummary: "Clients mention punctual arrivals, thorough bathrooms, and polished kitchen work.",
+        externalReviewSource: "Google",
+        licensedAndInsured: true,
+        serviceAreaPostalCodes: ["94103", "94107", "94110"],
+        serviceNeeds: [
+          ServiceNeed.GENERAL_CLEANING,
+          ServiceNeed.DEEP_CLEAN,
+          ServiceNeed.KITCHEN,
+          ServiceNeed.BATHROOMS,
+          ServiceNeed.FLOORS,
+        ],
+      },
+    },
+    {
+      email: "savanah@archmontcleaners.local",
+      firstName: "Savanah",
+      lastName: "Lee",
+      phone: "(415) 555-0102",
+      profile: {
+        bio: "Fast, dependable home cleaning for recurring upkeep and move-out prep.",
+        headline: "Quick turn and move-out specialist",
+        hourlyRateFromCents: 3200,
+        standardHourlyRateCents: 3200,
+        standardFlatRateCents: 14000,
+        standardDeepCleanFlatRateCents: 22500,
+        defaultEtaMinutes: 60,
+        flatRateAvailable: true,
+        bidTemplatesEnabled: true,
+        googleRating: 4.8,
+        googleReviewCount: 87,
+        googleReviewSummary: "Known for fast turnarounds and organized move-out jobs.",
+        externalReviewSource: "Google",
+        licensedAndInsured: true,
+        serviceAreaPostalCodes: ["94103", "94105", "94107"],
+        serviceNeeds: [
+          ServiceNeed.GENERAL_CLEANING,
+          ServiceNeed.MOVE_OUT,
+          ServiceNeed.WINDOWS,
+          ServiceNeed.DUSTING,
+        ],
+      },
+    },
+    {
+      email: "marcus@archmontcleaners.local",
+      firstName: "Marcus",
+      lastName: "Mane",
+      phone: "(415) 555-0103",
+      profile: {
+        bio: "Residential cleaner available for flexible evening and weekend jobs.",
+        headline: "Flexible schedule and flat-fee quotes",
+        hourlyRateFromCents: 3800,
+        standardHourlyRateCents: 3800,
+        standardFlatRateCents: 16500,
+        standardDeepCleanFlatRateCents: 26000,
+        defaultEtaMinutes: 30,
+        flatRateAvailable: true,
+        bidTemplatesEnabled: true,
+        googleRating: 4.7,
+        googleReviewCount: 64,
+        googleReviewSummary: "Praised for communication and efficient same-day availability.",
+        externalReviewSource: "Google",
+        licensedAndInsured: false,
+        serviceAreaPostalCodes: ["94110", "94112", "94114", "94103"],
+        serviceNeeds: [
+          ServiceNeed.GENERAL_CLEANING,
+          ServiceNeed.KITCHEN,
+          ServiceNeed.BATHROOMS,
+          ServiceNeed.LAUNDRY,
+        ],
+      },
+    },
+  ];
+
+  const cleanerUsers = [];
+
+  for (const cleaner of cleaners) {
+    const user = await prisma.user.upsert({
+      where: { email: cleaner.email },
+      update: {
+        role: UserRole.CLEANER,
+        firstName: cleaner.firstName,
+        lastName: cleaner.lastName,
+        phone: cleaner.phone,
+        cleanerProfile: {
+          upsert: {
+            update: {
+              isAvailable: true,
+              ...cleaner.profile,
+            },
+            create: {
+              isAvailable: true,
+              ...cleaner.profile,
+            },
+          },
+        },
+      },
+      create: {
+        role: UserRole.CLEANER,
+        firstName: cleaner.firstName,
+        lastName: cleaner.lastName,
+        email: cleaner.email,
+        phone: cleaner.phone,
+        cleanerProfile: {
+          create: {
+            isAvailable: true,
+            ...cleaner.profile,
+          },
+        },
+      },
+      include: {
+        cleanerProfile: true,
+      },
+    });
+
+    cleanerUsers.push(user);
+  }
+
+  await prisma.jobBid.deleteMany();
+  await prisma.jobRequest.deleteMany();
+
+  const awardedJob = await prisma.jobRequest.create({
+    data: {
+      customerId: customer.id,
+      homeProfileId: homeProfile.id,
+      title: "Weekly home reset",
+      addressLine1: homeProfile.addressLine1,
+      addressLine2: homeProfile.addressLine2,
+      city: homeProfile.city,
+      state: homeProfile.state,
+      postalCode: homeProfile.postalCode,
+      serviceNeeds: [ServiceNeed.GENERAL_CLEANING, ServiceNeed.KITCHEN, ServiceNeed.BATHROOMS],
+      roomTypes: [RoomType.KITCHEN, RoomType.BATHROOM, RoomType.LIVING_AREA],
+      priorityTypes: [PriorityType.GENERAL_DUST, PriorityType.FLOORS],
+      entryMethod: homeProfile.entryMethod,
+      entryNotes: homeProfile.entryNotes,
+      suppliesSource: homeProfile.suppliesSource,
+      timingPreference: TimingPreference.TIME_SLOT,
+      requestedDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+      requestedWindowStart: "11:00",
+      requestedWindowEnd: "14:00",
+      notes: "This one has already been fulfilled successfully.",
+      status: JobRequestStatus.AWARDED,
+      customerCompletedJobsSnapshot: 2,
+      customerMemberSinceSnapshot: customer.createdAt,
+    },
+  });
+
+  const awardedBid = await prisma.jobBid.create({
+    data: {
+      jobRequestId: awardedJob.id,
+      cleanerId: cleanerUsers[0].id,
+      pricingType: BidPricingType.FLAT,
+      flatRateCents: 14500,
+      arrivalDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+      arrivalWindowStart: "11:00",
+      arrivalWindowEnd: "14:00",
+      message: "Happy to handle your recurring weekly reset.",
+      status: BidStatus.ACCEPTED,
+    },
+  });
+
+  await prisma.jobRequest.update({
+    where: { id: awardedJob.id },
+    data: { acceptedBidId: awardedBid.id },
+  });
+
+  const firstJob = await prisma.jobRequest.create({
+    data: {
+      customerId: customer.id,
+      homeProfileId: homeProfile.id,
+      title: "Full house deep clean",
+      addressLine1: homeProfile.addressLine1,
+      addressLine2: homeProfile.addressLine2,
+      city: homeProfile.city,
+      state: homeProfile.state,
+      postalCode: homeProfile.postalCode,
+      serviceNeeds: [
+        ServiceNeed.DEEP_CLEAN,
+        ServiceNeed.KITCHEN,
+        ServiceNeed.BATHROOMS,
+        ServiceNeed.FLOORS,
+      ],
+      roomTypes: [RoomType.KITCHEN, RoomType.BATHROOM, RoomType.BEDROOM, RoomType.LIVING_AREA],
+      priorityTypes: [PriorityType.DEEP_KITCHEN, PriorityType.DEEP_BATHROOM, PriorityType.FLOORS],
+      entryMethod: homeProfile.entryMethod,
+      entryNotes: homeProfile.entryNotes,
+      suppliesSource: homeProfile.suppliesSource,
+      timingPreference: TimingPreference.TIME_SLOT,
+      requestedDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+      requestedWindowStart: "11:00",
+      requestedWindowEnd: "14:00",
+      notes: "Two bedroom condo. Prioritize the kitchen and both bathrooms.",
+      status: JobRequestStatus.OPEN,
+      customerCompletedJobsSnapshot: 3,
+      customerMemberSinceSnapshot: customer.createdAt,
+    },
+  });
+
+  const secondJob = await prisma.jobRequest.create({
+    data: {
+      customerId: customer.id,
+      homeProfileId: homeProfile.id,
+      title: "Kitchen and bathrooms refresh",
+      addressLine1: "55 9th St",
+      city: "San Francisco",
+      state: "CA",
+      postalCode: "94103",
+      serviceNeeds: [ServiceNeed.KITCHEN, ServiceNeed.BATHROOMS, ServiceNeed.DUSTING],
+      roomTypes: [RoomType.KITCHEN, RoomType.BATHROOM],
+      priorityTypes: [PriorityType.DEEP_KITCHEN, PriorityType.DEEP_BATHROOM],
+      entryMethod: EntryMethod.I_WILL_BE_HOME,
+      entryNotes: "Text me when you are 10 minutes away.",
+      suppliesSource: SuppliesSource.MIXED,
+      timingPreference: TimingPreference.ASAP,
+      notes: "Looking for the soonest available cleaner this week.",
+      status: JobRequestStatus.OPEN,
+      customerCompletedJobsSnapshot: 3,
+      customerMemberSinceSnapshot: customer.createdAt,
+    },
+  });
+
+  await prisma.jobBid.createMany({
+    data: [
+      {
+        jobRequestId: firstJob.id,
+        cleanerId: cleanerUsers[0].id,
+        pricingType: BidPricingType.HOURLY,
+        hourlyRateCents: 3500,
+        arrivalDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+        arrivalWindowStart: "10:00",
+        arrivalWindowEnd: "12:00",
+        message: "I can arrive a bit early and stay for the full deep clean.",
+        status: BidStatus.SUBMITTED,
+      },
+      {
+        jobRequestId: firstJob.id,
+        cleanerId: cleanerUsers[1].id,
+        pricingType: BidPricingType.FLAT,
+        flatRateCents: 22000,
+        arrivalDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+        arrivalWindowStart: "11:00",
+        arrivalWindowEnd: "14:00",
+        message: "Flat quote for the whole visit with supplies included.",
+        status: BidStatus.SUBMITTED,
+      },
+      {
+        jobRequestId: firstJob.id,
+        cleanerId: cleanerUsers[2].id,
+        pricingType: BidPricingType.FLAT,
+        flatRateCents: 21000,
+        arrivalDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+        arrivalWindowStart: "14:00",
+        arrivalWindowEnd: "17:00",
+        message: "Licensed team with eco-friendly products and full equipment.",
+        status: BidStatus.SUBMITTED,
+      },
+      {
+        jobRequestId: secondJob.id,
+        cleanerId: cleanerUsers[0].id,
+        pricingType: BidPricingType.FLAT,
+        flatRateCents: 16000,
+        etaMinutes: 45,
+        message: "Available for a same-day kitchen and bath reset.",
+        status: BidStatus.SUBMITTED,
+      },
+      {
+        jobRequestId: secondJob.id,
+        cleanerId: cleanerUsers[2].id,
+        pricingType: BidPricingType.HOURLY,
+        hourlyRateCents: 3800,
+        etaMinutes: 30,
+        message: "Can be there quickly and bring all supplies except specialty products.",
+        status: BidStatus.SUBMITTED,
+      },
+    ],
+  });
 }
 
 main()

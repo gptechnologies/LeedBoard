@@ -29,9 +29,9 @@ export async function SiteHeader() {
               {user.role === UserRole.CUSTOMER ? (
                 <>
                   <Link href="/customer" className="primary">
-                    My Home
+                    Home
                   </Link>
-                  <Link href="/customer/book">Book a Cleaning</Link>
+                  <Link href="/customer/jobs/new">Post a Job</Link>
                 </>
               ) : null}
               {user.role === UserRole.CLEANER ? (

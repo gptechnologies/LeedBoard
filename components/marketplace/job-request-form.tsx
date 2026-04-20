@@ -1,0 +1,468 @@
+"use client";
+
+import Link from "next/link";
+import {
+  EntryMethod,
+  PriorityType,
+  RoomType,
+  ServiceNeed,
+  SuppliesSource,
+  TimingPreference,
+} from "@prisma/client";
+import { useMemo, useState } from "react";
+import {
+  entryMethodOptions,
+  priorityTypeOptions,
+  roomPriorityMap,
+  roomTypeOptions,
+  suppliesSourceOptions,
+  timeWindowOptions,
+} from "@/lib/marketplace-constants";
+
+type WizardHomeProfile = {
+  id: string;
+  label: string;
+  addressLine1: string;
+  addressLine2: string | null;
+  city: string;
+  state: string;
+  postalCode: string;
+  entryMethod: EntryMethod;
+  entryNotes: string | null;
+  suppliesSource: SuppliesSource;
+  defaultRoomTypes: RoomType[];
+  defaultPriorityTypes: PriorityType[];
+  notes: string | null;
+} | null;
+
+const steps = [
+  "Home",
+  "Rooms",
+  "Priorities",
+  "Review",
+] as const;
+
+export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: WizardHomeProfile }) {
+  const [step, setStep] = useState(0);
+  const [addressLine1, setAddressLine1] = useState(defaultHomeProfile?.addressLine1 ?? "");
+  const [addressLine2, setAddressLine2] = useState(defaultHomeProfile?.addressLine2 ?? "");
+  const [city, setCity] = useState(defaultHomeProfile?.city ?? "");
+  const [state, setState] = useState(defaultHomeProfile?.state ?? "CA");
+  const [postalCode, setPostalCode] = useState(defaultHomeProfile?.postalCode ?? "");
+  const [roomTypes, setRoomTypes] = useState<RoomType[]>(defaultHomeProfile?.defaultRoomTypes ?? []);
+  const [priorityTypes, setPriorityTypes] = useState<PriorityType[]>(
+    defaultHomeProfile?.defaultPriorityTypes ?? [],
+  );
+  const [entryMethod, setEntryMethod] = useState<EntryMethod>(
+    defaultHomeProfile?.entryMethod ?? EntryMethod.I_WILL_BE_HOME,
+  );
+  const [entryNotes, setEntryNotes] = useState(defaultHomeProfile?.entryNotes ?? "");
+  const [suppliesSource, setSuppliesSource] = useState<SuppliesSource>(
+    defaultHomeProfile?.suppliesSource ?? SuppliesSource.CLEANER_BRINGS_ALL,
+  );
+  const [timingPreference, setTimingPreference] = useState<TimingPreference>(
+    TimingPreference.ASAP,
+  );
+  const [requestedDate, setRequestedDate] = useState("");
+  const [windowStart, setWindowStart] = useState(timeWindowOptions[0]?.start ?? "08:00");
+  const [notes, setNotes] = useState(defaultHomeProfile?.notes ?? "");
+  const availablePriorities = useMemo(() => {
+    const mapped = roomTypes.flatMap((roomType) => roomPriorityMap[roomType] ?? []);
+    return Array.from(new Set([...mapped, PriorityType.FLOORS, PriorityType.WINDOWS, PriorityType.MOVE_OUT_TOUCHES]));
+  }, [roomTypes]);
+  const serviceNeeds = deriveServiceNeeds(roomTypes, priorityTypes);
+  const selectedWindow = timeWindowOptions.find((option) => option.start === windowStart);
+  const isUsingPreset =
+    !!defaultHomeProfile &&
+    addressLine1 === defaultHomeProfile.addressLine1 &&
+    addressLine2 === (defaultHomeProfile.addressLine2 ?? "") &&
+    city === defaultHomeProfile.city &&
+    state === defaultHomeProfile.state &&
+    postalCode === defaultHomeProfile.postalCode &&
+    entryMethod === defaultHomeProfile.entryMethod &&
+    entryNotes === (defaultHomeProfile.entryNotes ?? "") &&
+    suppliesSource === defaultHomeProfile.suppliesSource;
+
+  function toggleRoomType(value: RoomType) {
+    setRoomTypes((current) =>
+      current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
+    );
+  }
+
+  function togglePriorityType(value: PriorityType) {
+    setPriorityTypes((current) =>
+      current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value],
+    );
+  }
+
+  function goNext() {
+    if (step === 0 && (!addressLine1 || !city || !state || !postalCode)) {
+      return;
+    }
+
+    if (step === 1 && roomTypes.length === 0) {
+      return;
+    }
+
+    if (step === 2 && !entryMethod) {
+      return;
+    }
+
+    setStep((current) => Math.min(current + 1, steps.length - 1));
+  }
+
+  function goBack() {
+    setStep((current) => Math.max(current - 1, 0));
+  }
+
+  return (
+    <form action="/customer/jobs/create" method="post" className="market-form stack">
+      <div className="market-wizard-progress">
+        {steps.map((label, index) => (
+          <div
+            key={label}
+            className={index === step ? "market-wizard-progress__step active" : "market-wizard-progress__step"}
+          >
+            <span>{index + 1}</span>
+            <strong>{label}</strong>
+          </div>
+        ))}
+      </div>
+
+      {step === 0 ? (
+        <section className="market-form-section stack">
+          <div className="market-section-heading">
+            <h2>Choose your home</h2>
+          </div>
+          {defaultHomeProfile ? (
+            <div className="market-preset-card">
+              <div className="stack small">
+                <strong>Using {defaultHomeProfile.label}</strong>
+                <span className="market-card__meta">
+                  {defaultHomeProfile.addressLine1}, {defaultHomeProfile.city}, {defaultHomeProfile.state} {defaultHomeProfile.postalCode}
+                </span>
+              </div>
+              <Link href="/customer/my-home" className="market-text-link">
+                Edit My Home
+              </Link>
+            </div>
+          ) : (
+            <div className="notice">
+              Save your address and access details once in <Link href="/customer/my-home">My Home</Link> to post faster next time.
+            </div>
+          )}
+          <div className="field">
+            <label htmlFor="addressLine1">Street address</label>
+            <input id="addressLine1" value={addressLine1} onChange={(event) => setAddressLine1(event.target.value)} required />
+          </div>
+          <div className="field">
+            <label htmlFor="addressLine2">Apartment or suite</label>
+            <input id="addressLine2" value={addressLine2} onChange={(event) => setAddressLine2(event.target.value)} />
+          </div>
+          <div className="grid two">
+            <div className="field">
+              <label htmlFor="city">City</label>
+              <input id="city" value={city} onChange={(event) => setCity(event.target.value)} required />
+            </div>
+            <div className="field">
+              <label htmlFor="state">State</label>
+              <input id="state" value={state} onChange={(event) => setState(event.target.value)} required />
+            </div>
+          </div>
+          <div className="field">
+            <label htmlFor="postalCode">ZIP code</label>
+            <input id="postalCode" value={postalCode} onChange={(event) => setPostalCode(event.target.value)} required />
+          </div>
+        </section>
+      ) : null}
+
+      {step === 1 ? (
+        <section className="market-form-section stack">
+          <div className="market-section-heading">
+            <h2>Select the rooms</h2>
+          </div>
+          <div className="market-room-grid">
+            {roomTypeOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={roomTypes.includes(option.value) ? "market-room-card active" : "market-room-card"}
+                onClick={() => toggleRoomType(option.value)}
+              >
+                <span className="market-room-card__icon">{option.icon}</span>
+                <strong>{option.label}</strong>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {step === 2 ? (
+        <section className="market-form-section stack">
+          <div className="market-section-heading">
+            <h2>Set priorities and access</h2>
+          </div>
+          <div className="market-chip-grid">
+            {priorityTypeOptions
+              .filter((option) => availablePriorities.includes(option.value))
+              .map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={priorityTypes.includes(option.value) ? "market-chip-button active" : "market-chip-button"}
+                  onClick={() => togglePriorityType(option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+          </div>
+          <div className="field">
+            <label htmlFor="entryMethod">How I’ll let you in</label>
+            <select
+              id="entryMethod"
+              value={entryMethod}
+              onChange={(event) => setEntryMethod(event.target.value as EntryMethod)}
+            >
+              {entryMethodOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="entryNotes">Entry details</label>
+            <textarea
+              id="entryNotes"
+              value={entryNotes}
+              onChange={(event) => setEntryNotes(event.target.value)}
+              placeholder="Door code, hidden key spot, or call box instructions."
+            />
+          </div>
+          <div className="field">
+            <label>Who brings supplies</label>
+            <div className="market-chip-grid">
+              {suppliesSourceOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={suppliesSource === option.value ? "market-chip-button active" : "market-chip-button"}
+                  onClick={() => setSuppliesSource(option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {step === 3 ? (
+        <section className="market-form-section stack">
+          <div className="market-section-heading">
+            <h2>When do you want it?</h2>
+          </div>
+          <div className="market-segmented">
+            <label className={timingPreference === TimingPreference.ASAP ? "market-segmented__option active" : "market-segmented__option"}>
+              <input
+                type="radio"
+                value={TimingPreference.ASAP}
+                checked={timingPreference === TimingPreference.ASAP}
+                onChange={() => setTimingPreference(TimingPreference.ASAP)}
+              />
+              ASAP
+            </label>
+            <label className={timingPreference === TimingPreference.TIME_SLOT ? "market-segmented__option active" : "market-segmented__option"}>
+              <input
+                type="radio"
+                value={TimingPreference.TIME_SLOT}
+                checked={timingPreference === TimingPreference.TIME_SLOT}
+                onChange={() => setTimingPreference(TimingPreference.TIME_SLOT)}
+              />
+              Pick a Time
+            </label>
+          </div>
+
+          {timingPreference === TimingPreference.TIME_SLOT ? (
+            <div className="stack">
+              <div className="field">
+                <label htmlFor="requestedDate">Date</label>
+                <input
+                  id="requestedDate"
+                  type="date"
+                  min={new Date().toISOString().slice(0, 10)}
+                  value={requestedDate}
+                  onChange={(event) => setRequestedDate(event.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="requestedWindowStart">Arrival window</label>
+                <select
+                  id="requestedWindowStart"
+                  value={windowStart}
+                  onChange={(event) => setWindowStart(event.target.value)}
+                >
+                  {timeWindowOptions.map((option) => (
+                    <option key={option.start} value={option.start}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ) : (
+            <div className="market-empty">
+              <strong>ASAP request</strong>
+              <p className="market-card__copy">
+                Pros will bid with how soon they can arrive instead of choosing a fixed time slot.
+              </p>
+            </div>
+          )}
+
+          <div className="field">
+            <label htmlFor="notes">Extra notes</label>
+            <textarea
+              id="notes"
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              placeholder="Pets, parking, or anything else the cleaner should know."
+            />
+          </div>
+
+          <article className="market-card">
+            <div className="stack small">
+              <strong>Review your request</strong>
+              <span className="market-card__meta">{addressLine1}, {city}, {state} {postalCode}</span>
+              <span className="market-card__meta">{formatRoomTypesLocal(roomTypes)}</span>
+              <span className="market-card__meta">{priorityTypes.length > 0 ? formatPriorityTypesLocal(priorityTypes) : "General cleaning priorities"}</span>
+              <span className="market-card__meta">{getEntryMethodLabelLocal(entryMethod)} · {getSuppliesSourceLabelLocal(suppliesSource)}</span>
+              <span className="market-card__meta">
+                {timingPreference === TimingPreference.ASAP
+                  ? "ASAP request"
+                  : `${requestedDate || "Choose a date"} · ${selectedWindow?.label ?? "Choose a window"}`}
+              </span>
+            </div>
+          </article>
+
+          <div className="notice">
+            No charge during testing. In production, accepting a bid places a temporary authorization hold.
+          </div>
+        </section>
+      ) : null}
+
+      <input type="hidden" name="homeProfileId" value={isUsingPreset ? defaultHomeProfile?.id ?? "" : ""} />
+      <input type="hidden" name="addressLine1" value={addressLine1} />
+      <input type="hidden" name="addressLine2" value={addressLine2} />
+      <input type="hidden" name="city" value={city} />
+      <input type="hidden" name="state" value={state} />
+      <input type="hidden" name="postalCode" value={postalCode} />
+      <input type="hidden" name="entryMethod" value={entryMethod} />
+      <input type="hidden" name="entryNotes" value={entryNotes} />
+      <input type="hidden" name="suppliesSource" value={suppliesSource} />
+      <input type="hidden" name="timingPreference" value={timingPreference} />
+      <input type="hidden" name="requestedDate" value={requestedDate} />
+      <input type="hidden" name="requestedWindowStart" value={windowStart} />
+      <input type="hidden" name="requestedWindowEnd" value={selectedWindow?.end ?? ""} />
+      <input type="hidden" name="notes" value={notes} />
+      {roomTypes.map((roomType) => (
+        <input key={roomType} type="hidden" name="roomTypes" value={roomType} />
+      ))}
+      {priorityTypes.map((priorityType) => (
+        <input key={priorityType} type="hidden" name="priorityTypes" value={priorityType} />
+      ))}
+      {serviceNeeds.map((serviceNeed) => (
+        <input key={serviceNeed} type="hidden" name="serviceNeeds" value={serviceNeed} />
+      ))}
+
+      <div className="market-wizard-actions">
+        {step > 0 ? (
+          <button type="button" className="secondary-submit" onClick={goBack}>
+            Back
+          </button>
+        ) : null}
+        {step < steps.length - 1 ? (
+          <button type="button" onClick={goNext}>
+            Continue
+          </button>
+        ) : (
+          <button
+            type="submit"
+            disabled={
+              timingPreference === TimingPreference.TIME_SLOT &&
+              (!requestedDate || !selectedWindow)
+            }
+          >
+            Post Job
+          </button>
+        )}
+      </div>
+    </form>
+  );
+}
+
+function deriveServiceNeeds(roomTypes: RoomType[], priorityTypes: PriorityType[]) {
+  const needs = new Set<ServiceNeed>([ServiceNeed.GENERAL_CLEANING]);
+
+  for (const roomType of roomTypes) {
+    if (roomType === RoomType.KITCHEN) {
+      needs.add(ServiceNeed.KITCHEN);
+    }
+
+    if (roomType === RoomType.BATHROOM) {
+      needs.add(ServiceNeed.BATHROOMS);
+    }
+
+    if (roomType === RoomType.LAUNDRY) {
+      needs.add(ServiceNeed.LAUNDRY);
+    }
+  }
+
+  for (const priorityType of priorityTypes) {
+    if (priorityType === PriorityType.DEEP_BATHROOM || priorityType === PriorityType.DEEP_KITCHEN) {
+      needs.add(ServiceNeed.DEEP_CLEAN);
+    }
+
+    if (priorityType === PriorityType.WINDOWS) {
+      needs.add(ServiceNeed.WINDOWS);
+    }
+
+    if (priorityType === PriorityType.MOVE_OUT_TOUCHES) {
+      needs.add(ServiceNeed.MOVE_OUT);
+    }
+
+    if (priorityType === PriorityType.FLOORS) {
+      needs.add(ServiceNeed.FLOORS);
+    }
+
+    if (priorityType === PriorityType.GENERAL_DUST) {
+      needs.add(ServiceNeed.DUSTING);
+    }
+  }
+
+  return Array.from(needs);
+}
+
+function formatRoomTypesLocal(roomTypes: RoomType[]) {
+  return roomTypes
+    .map((roomType) => roomTypeOptions.find((option) => option.value === roomType)?.label ?? roomType)
+    .join(", ");
+}
+
+function formatPriorityTypesLocal(priorityTypes: PriorityType[]) {
+  return priorityTypes
+    .map(
+      (priorityType) =>
+        priorityTypeOptions.find((option) => option.value === priorityType)?.label ?? priorityType,
+    )
+    .join(", ");
+}
+
+function getEntryMethodLabelLocal(value: EntryMethod) {
+  return entryMethodOptions.find((option) => option.value === value)?.label ?? value;
+}
+
+function getSuppliesSourceLabelLocal(value: SuppliesSource) {
+  return suppliesSourceOptions.find((option) => option.value === value)?.label ?? value;
+}

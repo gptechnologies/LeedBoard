@@ -1,83 +1,98 @@
-import Link from "next/link";
-import { BookingStatus, PaymentStatus, UserRole } from "@prisma/client";
-import { StatusBadge } from "@/components/status-badge";
-import { prisma } from "@/lib/prisma";
+import { UserRole } from "@prisma/client";
+import { AvailableJobCard, BidCard } from "@/components/marketplace/cards";
+import { CleanerDefaultsForm } from "@/components/marketplace/cleaner-defaults-form";
+import { MobileNav } from "@/components/marketplace/mobile-nav";
+import { getCleanerHomeData } from "@/lib/marketplace";
 import { requireUser } from "@/lib/session";
-import { formatDateTimeRange } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-export default async function CleanerDashboard() {
+type CleanerDashboardProps = {
+  searchParams: Promise<{
+    error?: string;
+  }>;
+};
+
+export default async function CleanerDashboard({ searchParams }: CleanerDashboardProps) {
   const user = await requireUser(UserRole.CLEANER);
-  const bookings = await prisma.booking.findMany({
-    where: {
-      cleanerId: user.id,
-      status: {
-        not: BookingStatus.CANCELLED,
-      },
-      paymentStatus: PaymentStatus.PAID,
-    },
-    include: {
-      customer: true,
-      service: true,
-      slot: true,
-    },
-    orderBy: { slot: { startsAt: "asc" } },
-  });
+  const params = await searchParams;
+  const { cleaner, openJobs, bids } = await getCleanerHomeData(user.id);
 
   return (
-    <div className="stack">
-      <section className="panel stack">
-        <div className="actions-row" style={{ justifyContent: "space-between" }}>
+    <div className="market-shell">
+      <section className="market-surface">
+        <header className="market-topbar">
           <div>
-            <div className="eyebrow">Today's schedule</div>
-            <h1>Stay ahead of every assigned visit.</h1>
-            <p className="subtle">
-              Review your next arrival window, confirm your availability, and move each
-              home through the visit stages with confidence.
-            </p>
+            <div className="market-kicker">Cleaner workspace</div>
+            <h1>Review open jobs and submit bids.</h1>
           </div>
-          <form action="/cleaner/availability" method="post" className="inline-list">
+          <form action="/cleaner/availability" method="post">
             <input
               type="hidden"
               name="isAvailable"
               value={user.cleanerProfile?.isAvailable ? "false" : "true"}
             />
-            <button type="submit" className="secondary-submit">
-              {user.cleanerProfile?.isAvailable ? "Pause availability" : "Accept visits"}
+            <button type="submit" className="secondary-submit market-pill-button">
+              {user.cleanerProfile?.isAvailable ? "Pause" : "Available"}
             </button>
           </form>
-        </div>
-        <div className="status-badge">
-          {user.cleanerProfile?.isAvailable ? "Accepting new visits" : "Unavailable for new visits"}
-        </div>
-      </section>
+        </header>
 
-      {bookings.length === 0 ? (
-        <section className="empty-state stack">
-          <h2>No visits are assigned yet.</h2>
-          <p className="subtle">
-            As soon as a confirmed booking is assigned to you, it will appear here with
-            timing, home details, and next steps.
-          </p>
+        {params.error ? <div className="notice error">{params.error}</div> : null}
+
+        <CleanerDefaultsForm
+          defaults={{
+            standardHourlyRateCents: cleaner?.cleanerProfile?.standardHourlyRateCents ?? null,
+            standardFlatRateCents: cleaner?.cleanerProfile?.standardFlatRateCents ?? null,
+            standardDeepCleanFlatRateCents:
+              cleaner?.cleanerProfile?.standardDeepCleanFlatRateCents ?? null,
+            defaultEtaMinutes: cleaner?.cleanerProfile?.defaultEtaMinutes ?? null,
+          }}
+        />
+
+        <section className="stack">
+          <div className="market-section-heading">
+            <h2>Available Jobs</h2>
+            <span>{openJobs.length} matches</span>
+          </div>
+          {openJobs.length === 0 ? (
+            <section className="market-empty">
+              <strong>No open jobs right now.</strong>
+              <p className="market-card__copy">
+                New requests that match your service area and specialties will show here.
+              </p>
+            </section>
+          ) : (
+            <div className="stack">
+              {openJobs.map((job) => (
+                <AvailableJobCard key={job.id} job={job} />
+              ))}
+            </div>
+          )}
         </section>
-      ) : (
-        <section className="grid two">
-          {bookings.map((booking) => (
-            <Link key={booking.id} href={`/cleaner/bookings/${booking.id}`} className="job-card job-card--premium stack small">
-              <div className="actions-row" style={{ justifyContent: "space-between" }}>
-                <strong>{booking.customer.firstName} {booking.customer.lastName}</strong>
-                <StatusBadge status={booking.status} />
-              </div>
-              <div>{booking.service.name}</div>
-              <div className="subtle">
-                {formatDateTimeRange(new Date(booking.slot.startsAt), new Date(booking.slot.endsAt))}
-              </div>
-              <div>{booking.addressLine1}</div>
-            </Link>
-          ))}
+
+        <section className="stack">
+          <div className="market-section-heading">
+            <h2>My Bids</h2>
+            <span>{bids.length} submitted</span>
+          </div>
+          {bids.length === 0 ? (
+            <section className="market-empty">
+              <strong>No bids submitted yet.</strong>
+              <p className="market-card__copy">
+                Your recent quotes and accepted jobs will appear here.
+              </p>
+            </section>
+          ) : (
+            <div className="stack">
+              {bids.map((bid) => (
+                <BidCard key={bid.id} bid={bid} compact />
+              ))}
+            </div>
+          )}
         </section>
-      )}
+      </section>
+      <MobileNav role="cleaner" />
     </div>
   );
 }

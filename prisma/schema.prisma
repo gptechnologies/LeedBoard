@@ -12,6 +12,76 @@ enum UserRole {
   ADMIN
 }
 
+enum JobRequestStatus {
+  OPEN
+  AWARDED
+  CANCELLED
+  EXPIRED
+}
+
+enum TimingPreference {
+  ASAP
+  TIME_SLOT
+}
+
+enum BidStatus {
+  SUBMITTED
+  ACCEPTED
+  DECLINED
+  WITHDRAWN
+}
+
+enum BidPricingType {
+  HOURLY
+  FLAT
+}
+
+enum ServiceNeed {
+  GENERAL_CLEANING
+  DEEP_CLEAN
+  KITCHEN
+  BATHROOMS
+  FLOORS
+  DUSTING
+  MOVE_OUT
+  WINDOWS
+  LAUNDRY
+}
+
+enum RoomType {
+  KITCHEN
+  BATHROOM
+  BEDROOM
+  LIVING_AREA
+  OFFICE
+  LAUNDRY
+}
+
+enum PriorityType {
+  GENERAL_DUST
+  DEEP_BATHROOM
+  DEEP_KITCHEN
+  FLOORS
+  MOVE_OUT_TOUCHES
+  WINDOWS
+  ORGANIZING
+}
+
+enum EntryMethod {
+  HIDDEN_KEY
+  DOOR_CODE
+  BUZZ_IN
+  I_WILL_BE_HOME
+  FRONT_DESK
+  OTHER
+}
+
+enum SuppliesSource {
+  CLEANER_BRINGS_ALL
+  HOMEOWNER_PROVIDES
+  MIXED
+}
+
 enum BookingStatus {
   PENDING_PAYMENT
   BOOKED
@@ -37,29 +107,125 @@ enum BookingEventType {
 }
 
 model User {
-  id               String          @id @default(cuid())
-  clerkUserId      String?         @unique
-  role             UserRole
-  firstName        String
-  lastName         String
-  email            String          @unique
-  phone            String?
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  cleanerProfile   CleanerProfile?
-  customerBookings Booking[]       @relation("CustomerBookings")
-  cleanerBookings  Booking[]       @relation("CleanerBookings")
-  bookingEvents    BookingEvent[]
+  id                  String          @id @default(cuid())
+  clerkUserId         String?         @unique
+  role                UserRole
+  firstName           String
+  lastName            String
+  email               String          @unique
+  phone               String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  cleanerProfile      CleanerProfile?
+  homeProfiles        HomeProfile[]
+  customerBookings    Booking[]       @relation("CustomerBookings")
+  cleanerBookings     Booking[]       @relation("CleanerBookings")
+  customerJobRequests JobRequest[]    @relation("CustomerJobRequests")
+  cleanerBids         JobBid[]        @relation("CleanerBids")
+  bookingEvents       BookingEvent[]
 }
 
 model CleanerProfile {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  isAvailable Boolean  @default(true)
-  bio         String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                             String        @id @default(cuid())
+  userId                         String        @unique
+  isAvailable                    Boolean       @default(true)
+  bio                            String?
+  avatarUrl                      String?
+  headline                       String?
+  hourlyRateFromCents            Int?
+  standardHourlyRateCents        Int?
+  standardFlatRateCents          Int?
+  standardDeepCleanFlatRateCents Int?
+  defaultEtaMinutes              Int?
+  flatRateAvailable              Boolean       @default(false)
+  bidTemplatesEnabled            Boolean       @default(true)
+  googleRating                   Float?
+  googleReviewCount              Int?
+  googleReviewSummary            String?
+  externalReviewSource           String?
+  licensedAndInsured             Boolean       @default(false)
+  serviceAreaPostalCodes         String[]      @default([])
+  serviceNeeds                   ServiceNeed[] @default([])
+  createdAt                      DateTime      @default(now())
+  updatedAt                      DateTime      @updatedAt
+  user                           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model HomeProfile {
+  id                   String         @id @default(cuid())
+  label                String         @default("My Home")
+  addressLine1         String
+  addressLine2         String?
+  city                 String
+  state                String
+  postalCode           String
+  entryMethod          EntryMethod    @default(I_WILL_BE_HOME)
+  entryNotes           String?
+  suppliesSource       SuppliesSource @default(CLEANER_BRINGS_ALL)
+  defaultRoomTypes     RoomType[]     @default([])
+  defaultPriorityTypes PriorityType[] @default([])
+  notes                String?
+  isDefault            Boolean        @default(true)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  customerId           String
+  customer             User           @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  jobRequests          JobRequest[]
+}
+
+model JobRequest {
+  id                            String           @id @default(cuid())
+  title                         String
+  addressLine1                  String
+  addressLine2                  String?
+  city                          String
+  state                         String
+  postalCode                    String
+  serviceNeeds                  ServiceNeed[]
+  roomTypes                     RoomType[]       @default([])
+  priorityTypes                 PriorityType[]   @default([])
+  entryMethod                   EntryMethod      @default(I_WILL_BE_HOME)
+  entryNotes                    String?
+  suppliesSource                SuppliesSource   @default(CLEANER_BRINGS_ALL)
+  timingPreference              TimingPreference
+  requestedDate                 DateTime?
+  requestedWindowStart          String?
+  requestedWindowEnd            String?
+  notes                         String?
+  customerCompletedJobsSnapshot Int              @default(0)
+  customerMemberSinceSnapshot   DateTime?
+  status                        JobRequestStatus @default(OPEN)
+  createdAt                     DateTime         @default(now())
+  updatedAt                     DateTime         @updatedAt
+  customerId                    String
+  homeProfileId                 String?
+  acceptedBidId                 String?          @unique
+  customer                      User             @relation("CustomerJobRequests", fields: [customerId], references: [id], onDelete: Cascade)
+  homeProfile                   HomeProfile?     @relation(fields: [homeProfileId], references: [id], onDelete: SetNull)
+  acceptedBid                   JobBid?          @relation("AcceptedJobBid", fields: [acceptedBidId], references: [id], onDelete: SetNull)
+  bids                          JobBid[]         @relation("JobRequestBids")
+}
+
+model JobBid {
+  id                    String         @id @default(cuid())
+  pricingType           BidPricingType
+  hourlyRateCents       Int?
+  flatRateCents         Int?
+  arrivalDate           DateTime?
+  arrivalWindowStart    String?
+  arrivalWindowEnd      String?
+  etaMinutes            Int?
+  message               String?
+  status                BidStatus      @default(SUBMITTED)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  jobRequestId          String
+  cleanerId             String
+  jobRequest            JobRequest     @relation("JobRequestBids", fields: [jobRequestId], references: [id], onDelete: Cascade)
+  cleaner               User           @relation("CleanerBids", fields: [cleanerId], references: [id], onDelete: Cascade)
+  acceptedForJobRequest JobRequest?    @relation("AcceptedJobBid")
+
+  @@unique([jobRequestId, cleanerId])
 }
 
 model Service {
@@ -76,15 +242,15 @@ model Service {
 }
 
 model AddOn {
-  id              String       @id @default(cuid())
-  slug            String       @unique
+  id              String         @id @default(cuid())
+  slug            String         @unique
   name            String
   description     String
   priceCents      Int
   durationMinutes Int
-  isActive        Boolean      @default(true)
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
   bookingItems    BookingAddOn[]
 }
 
@@ -101,51 +267,51 @@ model TimeSlot {
 }
 
 model Booking {
-  id                     String        @id @default(cuid())
-  bookingNumber          String        @unique
-  status                 BookingStatus
-  paymentStatus          PaymentStatus
-  subtotalCents          Int
-  addOnTotalCents        Int
-  taxCents               Int
-  totalCents             Int
-  addressLine1           String
-  addressLine2           String?
-  city                   String
-  state                  String
-  postalCode             String
-  bedrooms               Int
-  bathrooms              Float
-  notes                  String?
-  stripeCheckoutSessionId String?      @unique
-  stripePaymentIntentId  String?
-  expiresAt              DateTime?
-  paidAt                 DateTime?
-  completedAt            DateTime?
-  cancelledAt            DateTime?
-  createdAt              DateTime      @default(now())
-  updatedAt              DateTime      @updatedAt
-  customerId             String
-  cleanerId              String
-  serviceId              String
-  slotId                 String
-  customer               User          @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: Cascade)
-  cleaner                User          @relation("CleanerBookings", fields: [cleanerId], references: [id], onDelete: Cascade)
-  service                Service       @relation(fields: [serviceId], references: [id], onDelete: Restrict)
-  slot                   TimeSlot      @relation(fields: [slotId], references: [id], onDelete: Restrict)
-  addOns                 BookingAddOn[]
-  events                 BookingEvent[]
+  id                      String         @id @default(cuid())
+  bookingNumber           String         @unique
+  status                  BookingStatus
+  paymentStatus           PaymentStatus
+  subtotalCents           Int
+  addOnTotalCents         Int
+  taxCents                Int
+  totalCents              Int
+  addressLine1            String
+  addressLine2            String?
+  city                    String
+  state                   String
+  postalCode              String
+  bedrooms                Int
+  bathrooms               Float
+  notes                   String?
+  stripeCheckoutSessionId String?        @unique
+  stripePaymentIntentId   String?
+  expiresAt               DateTime?
+  paidAt                  DateTime?
+  completedAt             DateTime?
+  cancelledAt             DateTime?
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
+  customerId              String
+  cleanerId               String
+  serviceId               String
+  slotId                  String
+  customer                User           @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: Cascade)
+  cleaner                 User           @relation("CleanerBookings", fields: [cleanerId], references: [id], onDelete: Cascade)
+  service                 Service        @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  slot                    TimeSlot       @relation(fields: [slotId], references: [id], onDelete: Restrict)
+  addOns                  BookingAddOn[]
+  events                  BookingEvent[]
 }
 
 model BookingAddOn {
-  id             String   @id @default(cuid())
-  quantity       Int
-  unitPriceCents Int
+  id              String  @id @default(cuid())
+  quantity        Int
+  unitPriceCents  Int
   totalPriceCents Int
-  bookingId      String
-  addOnId        String
-  booking        Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  addOn          AddOn    @relation(fields: [addOnId], references: [id], onDelete: Restrict)
+  bookingId       String
+  addOnId         String
+  booking         Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  addOn           AddOn   @relation(fields: [addOnId], references: [id], onDelete: Restrict)
 }
 
 model BookingEvent {
