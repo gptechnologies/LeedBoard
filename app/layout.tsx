@@ -5,8 +5,9 @@ import { SiteHeader } from "@/components/site-header";
 import { clerkAppearance } from "@/lib/clerk";
 
 export const metadata: Metadata = {
-  title: "Archmont Cleaners",
-  description: "Premium home cleaning with trusted professionals, transparent pricing, and seamless booking.",
+  title: "WellKept",
+  description:
+    "WellKept helps homeowners post cleaning jobs, compare bids, and book trusted cleaners in one place.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

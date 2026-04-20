@@ -33,7 +33,7 @@ export async function POST(request: Request) {
 
   try {
     const firstName =
-      String(formData.get("firstName") || "").trim() || identity.firstName || "Archmont";
+      String(formData.get("firstName") || "").trim() || identity.firstName || "WellKept";
     const lastName =
       String(formData.get("lastName") || "").trim() || identity.lastName || "Member";
     const phone = String(formData.get("phone") || "").trim() || null;

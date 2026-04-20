@@ -28,10 +28,10 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
     <section className="auth-shell stack">
       <div>
         <div className="eyebrow">Get started</div>
-        <h1>Create your Archmont account.</h1>
+        <h1>Create your WellKept account.</h1>
         <p className="subtle">
-          Customers can reserve and manage home cleanings. Providers can access assigned
-          visits and day-of service details.
+          Homeowners can post jobs and compare bids. Cleaners can review work, submit
+          offers, and manage active jobs.
         </p>
       </div>
       <SignUp

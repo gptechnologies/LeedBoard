@@ -11,17 +11,17 @@ export async function SiteHeader() {
     <header className="site-header">
       <div className="site-header__inner">
         <Link href="/" className="brand">
-          Archmont Cleaners
+          WellKept
         </Link>
         <nav className="nav-links">
           {!userId ? (
             <>
               <Link href="/signup?role=CUSTOMER" className="primary">
-                Book a Cleaning
+                Find a Cleaner
               </Link>
               <Link href="/login">Sign In</Link>
               <Link href="/signup?role=CLEANER" className="quiet-link">
-                Provider access
+                Cleaner access
               </Link>
             </>
           ) : user ? (

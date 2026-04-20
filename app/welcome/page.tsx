@@ -35,10 +35,10 @@ export default async function WelcomePage({ searchParams }: WelcomePageProps) {
     <section className="auth-shell stack">
       <div>
         <div className="eyebrow">Finish account setup</div>
-        <h1>Tell us how you’ll use Archmont.</h1>
+        <h1>Tell us how you’ll use WellKept.</h1>
         <p className="subtle">
-          Choose the account type that fits your work with us. Homeowners can book and
-          manage visits. Providers can access assigned homes, timing, and service notes.
+          Choose the account type that fits your work with us. Homeowners can post and
+          manage requests. Cleaners can bid on jobs, track work, and get paid.
         </p>
       </div>
 
@@ -49,7 +49,7 @@ export default async function WelcomePage({ searchParams }: WelcomePageProps) {
           <label htmlFor="role">Account type</label>
           <select id="role" name="role" defaultValue={selectedRole}>
             <option value={UserRole.CUSTOMER}>Homeowner</option>
-            <option value={UserRole.CLEANER}>Provider</option>
+            <option value={UserRole.CLEANER}>Cleaner</option>
           </select>
         </div>
 
@@ -75,11 +75,11 @@ export default async function WelcomePage({ searchParams }: WelcomePageProps) {
         </div>
 
         <div className="field">
-          <label htmlFor="bio">Provider introduction</label>
+          <label htmlFor="bio">Cleaner introduction</label>
           <textarea
             id="bio"
             name="bio"
-            placeholder="Optional. Share a short professional introduction if you're joining as a provider."
+            placeholder="Optional. Share a short professional introduction if you're joining as a cleaner."
           />
         </div>
 

@@ -1,37 +1,28 @@
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
-import { prisma } from "@/lib/prisma";
-import { formatCurrency } from "@/lib/format";
 import { getCurrentUser, getRoleHome } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [services, { userId }, user] = await Promise.all([
-    prisma.service.findMany({
-      where: { isActive: true },
-      orderBy: { basePriceCents: "asc" },
-    }),
-    auth(),
-    getCurrentUser(),
-  ]);
+  const [{ userId }, user] = await Promise.all([auth(), getCurrentUser()]);
 
   return (
     <div className="stack">
       <section className="hero hero-premium">
         <div className="stack">
-          <div className="eyebrow">Trusted home care, beautifully handled</div>
-          <h1>Exceptional home cleaning with effortless booking.</h1>
+          <div className="eyebrow">WellKept for cleaners and homeowners</div>
+          <h1>Post jobs, compare bids, and keep every clean moving.</h1>
           <p>
-            Schedule a premium cleaning in minutes, choose the time that fits your week,
-            and keep every visit organized from confirmation to completion.
+            WellKept helps homeowners find the right cleaner and gives cleaners a simple
+            place to win work, stay organized, and get paid automatically.
           </p>
           <div className="hero-actions">
             <Link
               href={user ? getRoleHome(user.role) : userId ? "/welcome" : "/signup?role=CUSTOMER"}
               className="button-link"
             >
-              {user ? "Open my account" : userId ? "Complete setup" : "Book now"}
+              {user ? "Open my account" : userId ? "Complete setup" : "Create an account"}
             </Link>
             <Link href="/login" className="button-link secondary">
               {userId ? "Account access" : "Sign in"}
@@ -39,12 +30,12 @@ export default async function HomePage() {
           </div>
           <div className="inline-metrics">
             <div className="metric-pill">
-              <strong>Transparent pricing</strong>
-              <span>Real-time estimate before checkout</span>
+              <strong>Post once, receive bids</strong>
+              <span>Homeowners can compare cleaners on their own timeline.</span>
             </div>
             <div className="metric-pill">
-              <strong>Arrival windows</strong>
-              <span>Clear scheduling and status updates</span>
+              <strong>Automatic payouts</strong>
+              <span>Cleaners get paid when work is completed and confirmed.</span>
             </div>
           </div>
         </div>
@@ -58,12 +49,12 @@ export default async function HomePage() {
             </div>
           </div>
           <div className="hero-floating-card hero-floating-card--top">
-            <span>Next available</span>
-            <strong>Tomorrow, 9 AM - 12 PM</strong>
+            <span>For homeowners</span>
+            <strong>Accept bids on your schedule</strong>
           </div>
           <div className="hero-floating-card hero-floating-card--bottom">
-            <span>Service standard</span>
-            <strong>Fully confirmed before arrival</strong>
+            <span>For cleaners</span>
+            <strong>Bid, complete the job, get paid</strong>
           </div>
         </div>
       </section>
@@ -71,50 +62,73 @@ export default async function HomePage() {
       <section className="grid three">
         <article className="feature-card stack small">
           <div className="eyebrow">Booking</div>
-          <h2>Reserve in a few quick steps</h2>
+          <h2>Post or bid in a few quick steps</h2>
           <p className="subtle">
-            Select your service, confirm your home details, and secure your visit with a
-            polished checkout experience.
+            Homeowners create a request, cleaners review the details, and both sides move
+            forward without scheduling friction.
           </p>
         </article>
         <article className="feature-card stack small">
           <div className="eyebrow">Service</div>
-          <h2>Know exactly what to expect</h2>
+          <h2>Know what the job requires</h2>
           <p className="subtle">
-            Arrival windows, service notes, and live visit status are all available from
-            one clear booking page.
+            Rooms, timing, access notes, and cleaner offers all stay attached to one clear
+            request flow from bid to completion.
           </p>
         </article>
         <article className="feature-card stack small">
           <div className="eyebrow">Support</div>
-          <h2>Premium care, before and after your visit</h2>
+          <h2>Keep the process straightforward</h2>
           <p className="subtle">
-            Every booking is backed by visible support details and straightforward visit
-            management.
+            WellKept keeps the workflow visible for both sides with cleaner status,
+            homeowner acceptance, and automatic payment handling.
           </p>
         </article>
       </section>
 
-      <section className="section-shell stack">
+      <section className="section-shell stack audience-shell">
         <div className="section-heading">
-          <div className="eyebrow">Services</div>
-          <h2>Choose the level of care that fits your home.</h2>
+          <div className="eyebrow">How it works</div>
+          <h2>Two simple paths, one shared marketplace.</h2>
           <p className="subtle">
-            Each service is built around transparent pricing, careful execution, and a
-            streamlined booking experience.
+            WellKept stays simple: homeowners post the job they need, and cleaners decide
+            what to bid based on the work in front of them.
           </p>
         </div>
 
-        <section className="grid three">
-        {services.map((service) => (
-          <article key={service.id} className="service-card service-card--premium stack small">
-            <h2>{service.name}</h2>
-            <p className="subtle">{service.description}</p>
-            <strong>From {formatCurrency(service.basePriceCents)}</strong>
-            <span className="subtle">Typically around {service.durationMinutes} minutes</span>
+        <div className="audience-grid">
+          <article className="feature-card audience-card stack">
+            <div className="eyebrow">For cleaners</div>
+            <h2>Win work without chasing leads.</h2>
+            <ol className="guide-list">
+              <li className="guide-step">
+                <strong>Sign up with your website or Google Business Profile.</strong>
+              </li>
+              <li className="guide-step">
+                <strong>Start bidding on jobs and complete the work you win.</strong>
+              </li>
+              <li className="guide-step">
+                <strong>Get paid automatically when the job is finished.</strong>
+              </li>
+            </ol>
           </article>
-        ))}
-        </section>
+
+          <article className="feature-card audience-card stack">
+            <div className="eyebrow">For homeowners</div>
+            <h2>Find the right cleaner on your timing.</h2>
+            <ol className="guide-list">
+              <li className="guide-step">
+                <strong>Create your account.</strong>
+              </li>
+              <li className="guide-step">
+                <strong>Post your job with the rooms, timing, and access details.</strong>
+              </li>
+              <li className="guide-step">
+                <strong>Start accepting bids on the schedule that works for you.</strong>
+              </li>
+            </ol>
+          </article>
+        </div>
       </section>
     </div>
   );
