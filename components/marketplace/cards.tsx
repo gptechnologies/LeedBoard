@@ -2,26 +2,24 @@ import Link from "next/link";
 import {
   BidPricingType,
   BidStatus,
+  CleanLevel,
   EntryMethod,
   JobRequestStatus,
-  PriorityType,
   RoomType,
   ServiceNeed,
-  SuppliesSource,
   TimingPreference,
 } from "@prisma/client";
 import { formatDateLabel } from "@/lib/format";
 import {
   formatBidAmount,
   formatBidTiming,
-  formatPriorityTypes,
   formatRoomTypes,
   formatTimingSummary,
   getBidStatusLabel,
+  getCleanLevelLabel,
   getCustomerHistorySummary,
   getEntryMethodLabel,
   getJobRequestStatusLabel,
-  getSuppliesSourceLabel,
 } from "@/lib/marketplace";
 import { StatusPill } from "@/components/marketplace/status-pill";
 
@@ -37,7 +35,7 @@ export function JobRequestCard({
     state: string;
     postalCode: string;
     roomTypes: RoomType[];
-    priorityTypes: PriorityType[];
+    cleanLevel: CleanLevel;
     timingPreference: TimingPreference;
     requestedDate: Date | null;
     requestedWindowStart: string | null;
@@ -75,9 +73,7 @@ export function JobRequestCard({
         <StatusPill label={getJobRequestStatusLabel(job.status)} tone={tone} />
       </div>
       <div className="market-card__meta">{formatRoomTypes(job.roomTypes)}</div>
-      {job.priorityTypes.length > 0 ? (
-        <div className="market-card__meta">{formatPriorityTypes(job.priorityTypes)}</div>
-      ) : null}
+      <div className="market-card__meta">{getCleanLevelLabel(job.cleanLevel)}</div>
       <div className="market-card__meta">{formatTimingSummary(job)}</div>
       <div className="market-progress">
         <strong>{job.bids.length} bids</strong>
@@ -239,9 +235,8 @@ export function AvailableJobCard({
     city: string;
     state: string;
     roomTypes: RoomType[];
-    priorityTypes: PriorityType[];
+    cleanLevel: CleanLevel;
     entryMethod: EntryMethod;
-    suppliesSource: SuppliesSource;
     timingPreference: TimingPreference;
     requestedDate: Date | null;
     requestedWindowStart: string | null;
@@ -272,12 +267,8 @@ export function AvailableJobCard({
         <span className="market-timestamp">{formatDateLabel(job.createdAt)}</span>
       </div>
       <div className="market-card__meta">{formatRoomTypes(job.roomTypes)}</div>
-      {job.priorityTypes.length > 0 ? (
-        <div className="market-card__meta">{formatPriorityTypes(job.priorityTypes)}</div>
-      ) : null}
-      <div className="market-card__meta">
-        {getEntryMethodLabel(job.entryMethod)} · {getSuppliesSourceLabel(job.suppliesSource)}
-      </div>
+      <div className="market-card__meta">{getCleanLevelLabel(job.cleanLevel)}</div>
+      <div className="market-card__meta">{getEntryMethodLabel(job.entryMethod)}</div>
       <div className="market-card__meta">{formatTimingSummary(job)}</div>
       <div className="market-progress">
         <strong>{historySummary}</strong>

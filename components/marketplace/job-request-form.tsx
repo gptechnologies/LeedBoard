@@ -2,20 +2,17 @@
 
 import Link from "next/link";
 import {
+  CleanLevel,
   EntryMethod,
-  PriorityType,
   RoomType,
   ServiceNeed,
-  SuppliesSource,
   TimingPreference,
 } from "@prisma/client";
-import { useMemo, useState } from "react";
+import { FormEvent, useState } from "react";
 import {
+  cleanLevelOptions,
   entryMethodOptions,
-  priorityTypeOptions,
-  roomPriorityMap,
   roomTypeOptions,
-  suppliesSourceOptions,
   timeWindowOptions,
 } from "@/lib/marketplace-constants";
 
@@ -29,18 +26,12 @@ type WizardHomeProfile = {
   postalCode: string;
   entryMethod: EntryMethod;
   entryNotes: string | null;
-  suppliesSource: SuppliesSource;
   defaultRoomTypes: RoomType[];
-  defaultPriorityTypes: PriorityType[];
+  defaultCleanLevel: CleanLevel;
   notes: string | null;
 } | null;
 
-const steps = [
-  "Home",
-  "Rooms",
-  "Priorities",
-  "Review",
-] as const;
+const steps = ["Home", "Rooms + Level", "Timing + Access", "Review"] as const;
 
 export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: WizardHomeProfile }) {
   const [step, setStep] = useState(0);
@@ -50,28 +41,19 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
   const [state, setState] = useState(defaultHomeProfile?.state ?? "CA");
   const [postalCode, setPostalCode] = useState(defaultHomeProfile?.postalCode ?? "");
   const [roomTypes, setRoomTypes] = useState<RoomType[]>(defaultHomeProfile?.defaultRoomTypes ?? []);
-  const [priorityTypes, setPriorityTypes] = useState<PriorityType[]>(
-    defaultHomeProfile?.defaultPriorityTypes ?? [],
+  const [cleanLevel, setCleanLevel] = useState<CleanLevel>(
+    defaultHomeProfile?.defaultCleanLevel ?? CleanLevel.MEDIUM,
   );
   const [entryMethod, setEntryMethod] = useState<EntryMethod>(
     defaultHomeProfile?.entryMethod ?? EntryMethod.I_WILL_BE_HOME,
   );
   const [entryNotes, setEntryNotes] = useState(defaultHomeProfile?.entryNotes ?? "");
-  const [suppliesSource, setSuppliesSource] = useState<SuppliesSource>(
-    defaultHomeProfile?.suppliesSource ?? SuppliesSource.CLEANER_BRINGS_ALL,
-  );
-  const [timingPreference, setTimingPreference] = useState<TimingPreference>(
-    TimingPreference.ASAP,
-  );
+  const [timingPreference, setTimingPreference] = useState<TimingPreference>(TimingPreference.ASAP);
   const [requestedDate, setRequestedDate] = useState("");
   const [windowStart, setWindowStart] = useState(timeWindowOptions[0]?.start ?? "08:00");
-  const [notes, setNotes] = useState(defaultHomeProfile?.notes ?? "");
-  const availablePriorities = useMemo(() => {
-    const mapped = roomTypes.flatMap((roomType) => roomPriorityMap[roomType] ?? []);
-    return Array.from(new Set([...mapped, PriorityType.FLOORS, PriorityType.WINDOWS, PriorityType.MOVE_OUT_TOUCHES]));
-  }, [roomTypes]);
-  const serviceNeeds = deriveServiceNeeds(roomTypes, priorityTypes);
+  const [notes, setNotes] = useState("");
   const selectedWindow = timeWindowOptions.find((option) => option.start === windowStart);
+  const serviceNeeds = deriveServiceNeeds(roomTypes, cleanLevel);
   const isUsingPreset =
     !!defaultHomeProfile &&
     addressLine1 === defaultHomeProfile.addressLine1 &&
@@ -80,20 +62,11 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
     state === defaultHomeProfile.state &&
     postalCode === defaultHomeProfile.postalCode &&
     entryMethod === defaultHomeProfile.entryMethod &&
-    entryNotes === (defaultHomeProfile.entryNotes ?? "") &&
-    suppliesSource === defaultHomeProfile.suppliesSource;
+    entryNotes === (defaultHomeProfile.entryNotes ?? "");
 
   function toggleRoomType(value: RoomType) {
     setRoomTypes((current) =>
       current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
-    );
-  }
-
-  function togglePriorityType(value: PriorityType) {
-    setPriorityTypes((current) =>
-      current.includes(value)
-        ? current.filter((item) => item !== value)
-        : [...current, value],
     );
   }
 
@@ -106,7 +79,7 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
       return;
     }
 
-    if (step === 2 && !entryMethod) {
+    if (step === 2 && timingPreference === TimingPreference.TIME_SLOT && !requestedDate) {
       return;
     }
 
@@ -117,8 +90,19 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
     setStep((current) => Math.max(current - 1, 0));
   }
 
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    if (step < steps.length - 1) {
+      event.preventDefault();
+    }
+  }
+
   return (
-    <form action="/customer/jobs/create" method="post" className="market-form stack">
+    <form
+      action="/customer/jobs/create"
+      method="post"
+      className="market-form stack"
+      onSubmit={handleSubmit}
+    >
       <div className="market-wizard-progress">
         {steps.map((label, index) => (
           <div
@@ -150,7 +134,7 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
             </div>
           ) : (
             <div className="notice">
-              Save your address and access details once in <Link href="/customer/my-home">My Home</Link> to post faster next time.
+              Save your address and entry details once in <Link href="/customer/my-home">My Home</Link> to post faster next time.
             </div>
           )}
           <div className="field">
@@ -181,7 +165,7 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
       {step === 1 ? (
         <section className="market-form-section stack">
           <div className="market-section-heading">
-            <h2>Select the rooms</h2>
+            <h2>Pick the rooms and level of clean</h2>
           </div>
           <div className="market-room-grid">
             {roomTypeOptions.map((option) => (
@@ -196,73 +180,32 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
               </button>
             ))}
           </div>
-        </section>
-      ) : null}
-
-      {step === 2 ? (
-        <section className="market-form-section stack">
-          <div className="market-section-heading">
-            <h2>Set priorities and access</h2>
-          </div>
-          <div className="market-chip-grid">
-            {priorityTypeOptions
-              .filter((option) => availablePriorities.includes(option.value))
-              .map((option) => (
-                <button
+          <div className="field">
+            <label>Level of clean</label>
+            <div className="market-segmented market-segmented--triple">
+              {cleanLevelOptions.map((option) => (
+                <label
                   key={option.value}
-                  type="button"
-                  className={priorityTypes.includes(option.value) ? "market-chip-button active" : "market-chip-button"}
-                  onClick={() => togglePriorityType(option.value)}
+                  className={cleanLevel === option.value ? "market-segmented__option active" : "market-segmented__option"}
                 >
+                  <input
+                    type="radio"
+                    value={option.value}
+                    checked={cleanLevel === option.value}
+                    onChange={() => setCleanLevel(option.value)}
+                  />
                   {option.label}
-                </button>
-              ))}
-          </div>
-          <div className="field">
-            <label htmlFor="entryMethod">How I’ll let you in</label>
-            <select
-              id="entryMethod"
-              value={entryMethod}
-              onChange={(event) => setEntryMethod(event.target.value as EntryMethod)}
-            >
-              {entryMethodOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="entryNotes">Entry details</label>
-            <textarea
-              id="entryNotes"
-              value={entryNotes}
-              onChange={(event) => setEntryNotes(event.target.value)}
-              placeholder="Door code, hidden key spot, or call box instructions."
-            />
-          </div>
-          <div className="field">
-            <label>Who brings supplies</label>
-            <div className="market-chip-grid">
-              {suppliesSourceOptions.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={suppliesSource === option.value ? "market-chip-button active" : "market-chip-button"}
-                  onClick={() => setSuppliesSource(option.value)}
-                >
-                  {option.label}
-                </button>
+                </label>
               ))}
             </div>
           </div>
         </section>
       ) : null}
 
-      {step === 3 ? (
+      {step === 2 ? (
         <section className="market-form-section stack">
           <div className="market-section-heading">
-            <h2>When do you want it?</h2>
+            <h2>Pick the time and how I’ll let you in</h2>
           </div>
           <div className="market-segmented">
             <label className={timingPreference === TimingPreference.ASAP ? "market-segmented__option active" : "market-segmented__option"}>
@@ -316,28 +259,49 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
             <div className="market-empty">
               <strong>ASAP request</strong>
               <p className="market-card__copy">
-                Pros will bid with how soon they can arrive instead of choosing a fixed time slot.
+                Pros will bid with how soon they can arrive instead of choosing a fixed slot.
               </p>
             </div>
           )}
 
           <div className="field">
-            <label htmlFor="notes">Extra notes</label>
+            <label htmlFor="entryMethod">How I’ll let you in</label>
+            <select
+              id="entryMethod"
+              value={entryMethod}
+              onChange={(event) => setEntryMethod(event.target.value as EntryMethod)}
+            >
+              {entryMethodOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="entryNotes">Entry details</label>
             <textarea
-              id="notes"
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              placeholder="Pets, parking, or anything else the cleaner should know."
+              id="entryNotes"
+              value={entryNotes}
+              onChange={(event) => setEntryNotes(event.target.value)}
+              placeholder="Door code, hidden key spot, or call box instructions."
             />
+          </div>
+        </section>
+      ) : null}
+
+      {step === 3 ? (
+        <section className="market-form-section stack">
+          <div className="market-section-heading">
+            <h2>Review</h2>
           </div>
 
           <article className="market-card">
             <div className="stack small">
-              <strong>Review your request</strong>
-              <span className="market-card__meta">{addressLine1}, {city}, {state} {postalCode}</span>
+              <strong>{addressLine1}, {city}, {state} {postalCode}</strong>
               <span className="market-card__meta">{formatRoomTypesLocal(roomTypes)}</span>
-              <span className="market-card__meta">{priorityTypes.length > 0 ? formatPriorityTypesLocal(priorityTypes) : "General cleaning priorities"}</span>
-              <span className="market-card__meta">{getEntryMethodLabelLocal(entryMethod)} · {getSuppliesSourceLabelLocal(suppliesSource)}</span>
+              <span className="market-card__meta">{cleanLevelOptions.find((option) => option.value === cleanLevel)?.label ?? "Medium Clean"}</span>
+              <span className="market-card__meta">{entryMethodOptions.find((option) => option.value === entryMethod)?.label ?? entryMethod}</span>
               <span className="market-card__meta">
                 {timingPreference === TimingPreference.ASAP
                   ? "ASAP request"
@@ -345,6 +309,16 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
               </span>
             </div>
           </article>
+
+          <div className="field">
+            <label htmlFor="notes">Anything specific?</label>
+            <textarea
+              id="notes"
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              placeholder="Pets, parking, or specific areas to focus on."
+            />
+          </div>
 
           <div className="notice">
             No charge during testing. In production, accepting a bid places a temporary authorization hold.
@@ -360,7 +334,7 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
       <input type="hidden" name="postalCode" value={postalCode} />
       <input type="hidden" name="entryMethod" value={entryMethod} />
       <input type="hidden" name="entryNotes" value={entryNotes} />
-      <input type="hidden" name="suppliesSource" value={suppliesSource} />
+      <input type="hidden" name="cleanLevel" value={cleanLevel} />
       <input type="hidden" name="timingPreference" value={timingPreference} />
       <input type="hidden" name="requestedDate" value={requestedDate} />
       <input type="hidden" name="requestedWindowStart" value={windowStart} />
@@ -368,9 +342,6 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
       <input type="hidden" name="notes" value={notes} />
       {roomTypes.map((roomType) => (
         <input key={roomType} type="hidden" name="roomTypes" value={roomType} />
-      ))}
-      {priorityTypes.map((priorityType) => (
-        <input key={priorityType} type="hidden" name="priorityTypes" value={priorityType} />
       ))}
       {serviceNeeds.map((serviceNeed) => (
         <input key={serviceNeed} type="hidden" name="serviceNeeds" value={serviceNeed} />
@@ -402,7 +373,7 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
   );
 }
 
-function deriveServiceNeeds(roomTypes: RoomType[], priorityTypes: PriorityType[]) {
+function deriveServiceNeeds(roomTypes: RoomType[], cleanLevel: CleanLevel) {
   const needs = new Set<ServiceNeed>([ServiceNeed.GENERAL_CLEANING]);
 
   for (const roomType of roomTypes) {
@@ -419,26 +390,13 @@ function deriveServiceNeeds(roomTypes: RoomType[], priorityTypes: PriorityType[]
     }
   }
 
-  for (const priorityType of priorityTypes) {
-    if (priorityType === PriorityType.DEEP_BATHROOM || priorityType === PriorityType.DEEP_KITCHEN) {
-      needs.add(ServiceNeed.DEEP_CLEAN);
-    }
+  if (cleanLevel === CleanLevel.DEEP) {
+    needs.add(ServiceNeed.DEEP_CLEAN);
+  }
 
-    if (priorityType === PriorityType.WINDOWS) {
-      needs.add(ServiceNeed.WINDOWS);
-    }
-
-    if (priorityType === PriorityType.MOVE_OUT_TOUCHES) {
-      needs.add(ServiceNeed.MOVE_OUT);
-    }
-
-    if (priorityType === PriorityType.FLOORS) {
-      needs.add(ServiceNeed.FLOORS);
-    }
-
-    if (priorityType === PriorityType.GENERAL_DUST) {
-      needs.add(ServiceNeed.DUSTING);
-    }
+  if (cleanLevel !== CleanLevel.LIGHT) {
+    needs.add(ServiceNeed.FLOORS);
+    needs.add(ServiceNeed.DUSTING);
   }
 
   return Array.from(needs);
@@ -448,21 +406,4 @@ function formatRoomTypesLocal(roomTypes: RoomType[]) {
   return roomTypes
     .map((roomType) => roomTypeOptions.find((option) => option.value === roomType)?.label ?? roomType)
     .join(", ");
-}
-
-function formatPriorityTypesLocal(priorityTypes: PriorityType[]) {
-  return priorityTypes
-    .map(
-      (priorityType) =>
-        priorityTypeOptions.find((option) => option.value === priorityType)?.label ?? priorityType,
-    )
-    .join(", ");
-}
-
-function getEntryMethodLabelLocal(value: EntryMethod) {
-  return entryMethodOptions.find((option) => option.value === value)?.label ?? value;
-}
-
-function getSuppliesSourceLabelLocal(value: SuppliesSource) {
-  return suppliesSourceOptions.find((option) => option.value === value)?.label ?? value;
 }

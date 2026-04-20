@@ -41,7 +41,7 @@ export async function POST(request: Request) {
       });
     }
 
-    return NextResponse.redirect(new URL("/customer", request.url));
+    return NextResponse.redirect(new URL("/customer/my-home", request.url));
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unable to save your home preset right now.";

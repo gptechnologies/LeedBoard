@@ -1,9 +1,9 @@
 import { BidStatus, JobRequestStatus, UserRole } from "@prisma/client";
 import { BidCard } from "@/components/marketplace/cards";
 import {
-  formatPriorityTypes,
   formatRoomTypes,
   formatTimingSummary,
+  getCleanLevelLabel,
   rankVisibleBids,
 } from "@/lib/marketplace";
 import { prisma } from "@/lib/prisma";
@@ -79,15 +79,19 @@ export default async function CustomerJobBidsPage({
         <article className="market-card">
           <div className="stack small">
             <strong>{formatRoomTypes(job.roomTypes)}</strong>
-            {job.priorityTypes.length > 0 ? (
-              <span className="market-card__meta">{formatPriorityTypes(job.priorityTypes)}</span>
-            ) : null}
+            <span className="market-card__meta">{getCleanLevelLabel(job.cleanLevel)}</span>
             <span className="market-card__meta">
               {job.addressLine1}, {job.city}, {job.state} {job.postalCode}
             </span>
             <span className="market-card__meta">{formatTimingSummary(job)}</span>
           </div>
         </article>
+
+        <form action={`/customer/jobs/${job.id}/delete`} method="post" className="market-card__actions">
+          <button type="submit" className="secondary-submit">
+            Delete Job
+          </button>
+        </form>
 
         {activeBids.length === 0 ? (
           <section className="market-empty">

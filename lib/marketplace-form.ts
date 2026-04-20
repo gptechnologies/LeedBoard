@@ -1,7 +1,7 @@
 import {
   BidPricingType,
+  CleanLevel,
   EntryMethod,
-  PriorityType,
   RoomType,
   ServiceNeed,
   SuppliesSource,
@@ -46,10 +46,6 @@ function parseRoomTypes(values: FormDataEntryValue[]) {
   return roomTypes;
 }
 
-function parsePriorityTypes(values: FormDataEntryValue[]) {
-  return parseEnumList(values, Object.values(PriorityType));
-}
-
 function parseEntryMethod(value: FormDataEntryValue | null) {
   const entryMethod = getRequiredString(value, "Entry method");
 
@@ -60,14 +56,14 @@ function parseEntryMethod(value: FormDataEntryValue | null) {
   return entryMethod as EntryMethod;
 }
 
-function parseSuppliesSource(value: FormDataEntryValue | null) {
-  const suppliesSource = getRequiredString(value, "Supplies source");
+function parseCleanLevel(value: FormDataEntryValue | null) {
+  const cleanLevel = getRequiredString(value, "Clean level");
 
-  if (!Object.values(SuppliesSource).includes(suppliesSource as SuppliesSource)) {
-    throw new Error("Choose who is bringing supplies.");
+  if (!Object.values(CleanLevel).includes(cleanLevel as CleanLevel)) {
+    throw new Error("Choose a valid clean level.");
   }
 
-  return suppliesSource as SuppliesSource;
+  return cleanLevel as CleanLevel;
 }
 
 export function parseHomeProfileForm(formData: FormData) {
@@ -80,12 +76,10 @@ export function parseHomeProfileForm(formData: FormData) {
     postalCode: getRequiredString(formData.get("postalCode"), "ZIP code"),
     entryMethod: parseEntryMethod(formData.get("entryMethod")),
     entryNotes: String(formData.get("entryNotes") || "").trim() || null,
-    suppliesSource: parseSuppliesSource(formData.get("suppliesSource")),
+    suppliesSource: SuppliesSource.CLEANER_BRINGS_ALL,
     defaultRoomTypes: parseEnumList(formData.getAll("defaultRoomTypes"), Object.values(RoomType)),
-    defaultPriorityTypes: parseEnumList(
-      formData.getAll("defaultPriorityTypes"),
-      Object.values(PriorityType),
-    ),
+    defaultCleanLevel: parseCleanLevel(formData.get("defaultCleanLevel")),
+    defaultPriorityTypes: [],
     notes: String(formData.get("notes") || "").trim() || null,
     isDefault: true,
   };
@@ -98,7 +92,7 @@ export function parseJobRequestForm(formData: FormData) {
       : TimingPreference.ASAP;
   const serviceNeeds = parseServiceNeeds(formData.getAll("serviceNeeds"));
   const roomTypes = parseRoomTypes(formData.getAll("roomTypes"));
-  const priorityTypes = parsePriorityTypes(formData.getAll("priorityTypes"));
+  const cleanLevel = parseCleanLevel(formData.get("cleanLevel"));
   const addressLine1 = getRequiredString(formData.get("addressLine1"), "Street address");
   const city = getRequiredString(formData.get("city"), "City");
   const state = getRequiredString(formData.get("state"), "State");
@@ -116,10 +110,11 @@ export function parseJobRequestForm(formData: FormData) {
     postalCode,
     serviceNeeds,
     roomTypes,
-    priorityTypes,
+    cleanLevel,
+    priorityTypes: [],
     entryMethod: parseEntryMethod(formData.get("entryMethod")),
     entryNotes: String(formData.get("entryNotes") || "").trim() || null,
-    suppliesSource: parseSuppliesSource(formData.get("suppliesSource")),
+    suppliesSource: SuppliesSource.CLEANER_BRINGS_ALL,
     timingPreference,
     notes,
   };

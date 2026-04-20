@@ -82,6 +82,12 @@ enum SuppliesSource {
   MIXED
 }
 
+enum CleanLevel {
+  LIGHT
+  MEDIUM
+  DEEP
+}
+
 enum BookingStatus {
   PENDING_PAYMENT
   BOOKED
@@ -163,6 +169,7 @@ model HomeProfile {
   entryNotes           String?
   suppliesSource       SuppliesSource @default(CLEANER_BRINGS_ALL)
   defaultRoomTypes     RoomType[]     @default([])
+  defaultCleanLevel    CleanLevel     @default(MEDIUM)
   defaultPriorityTypes PriorityType[] @default([])
   notes                String?
   isDefault            Boolean        @default(true)
@@ -183,6 +190,7 @@ model JobRequest {
   postalCode                    String
   serviceNeeds                  ServiceNeed[]
   roomTypes                     RoomType[]       @default([])
+  cleanLevel                    CleanLevel       @default(MEDIUM)
   priorityTypes                 PriorityType[]   @default([])
   entryMethod                   EntryMethod      @default(I_WILL_BE_HOME)
   entryNotes                    String?

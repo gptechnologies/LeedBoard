@@ -2,7 +2,7 @@ import Link from "next/link";
 import { UserRole } from "@prisma/client";
 import { JobRequestCard, RecommendedCleanerCard } from "@/components/marketplace/cards";
 import { MobileNav } from "@/components/marketplace/mobile-nav";
-import { getCustomerHomeData, getEntryMethodLabel, getSuppliesSourceLabel } from "@/lib/marketplace";
+import { getCustomerHomeData } from "@/lib/marketplace";
 import { requireUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,7 @@ type CustomerDashboardProps = {
 export default async function CustomerDashboard({ searchParams }: CustomerDashboardProps) {
   const user = await requireUser(UserRole.CUSTOMER);
   const params = await searchParams;
-  const { jobs, homeProfile, recommendedCleaners } = await getCustomerHomeData(user.id);
+  const { jobs, recommendedCleaners } = await getCustomerHomeData(user.id);
   const openJobs = jobs.filter((job) => job.status === "OPEN");
 
   return (
@@ -37,38 +37,14 @@ export default async function CustomerDashboard({ searchParams }: CustomerDashbo
         <section className="market-hero-card">
           <div className="stack small">
             <span className="market-kicker">Start a new request</span>
-            <strong>Post a job with your saved home setup.</strong>
+            <strong>Post a job in a few quick steps.</strong>
             <p className="market-card__copy">
-              Pick the rooms, set your priorities, and let cleaners come to you with bids.
+              Pick the rooms, choose the level of clean, and let cleaners come to you with bids.
             </p>
           </div>
           <Link href="/customer/jobs/new" className="button-link">
-            {homeProfile ? "Post with My Home" : "Set Up and Post"}
+            Post a Job
           </Link>
-        </section>
-
-        <section className="market-card">
-          <div className="market-section-heading">
-            <h2>My Home</h2>
-            <Link href="/customer/my-home" className="market-text-link">
-              {homeProfile ? "Edit" : "Set up"}
-            </Link>
-          </div>
-          {homeProfile ? (
-            <div className="stack small">
-              <strong>{homeProfile.label}</strong>
-              <span className="market-card__meta">
-                {homeProfile.addressLine1}, {homeProfile.city}, {homeProfile.state} {homeProfile.postalCode}
-              </span>
-              <span className="market-card__meta">
-                {getEntryMethodLabel(homeProfile.entryMethod)} · {getSuppliesSourceLabel(homeProfile.suppliesSource)}
-              </span>
-            </div>
-          ) : (
-            <p className="market-card__copy">
-              Save your address, entry notes, and supply preference once so future jobs are mostly prefilled.
-            </p>
-          )}
         </section>
 
         <section className="stack">

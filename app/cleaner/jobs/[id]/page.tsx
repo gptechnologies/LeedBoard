@@ -1,12 +1,11 @@
 import { JobRequestStatus, UserRole } from "@prisma/client";
 import { BidForm } from "@/components/marketplace/bid-form";
 import {
-  formatPriorityTypes,
   formatRoomTypes,
   formatTimingSummary,
+  getCleanLevelLabel,
   getCustomerHistorySummary,
   getEntryMethodLabel,
-  getSuppliesSourceLabel,
 } from "@/lib/marketplace";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
@@ -79,12 +78,9 @@ export default async function CleanerJobDetailPage({
               {job.city}, {job.state} {job.postalCode}
             </span>
             <span className="market-card__meta">{formatRoomTypes(job.roomTypes)}</span>
-            {job.priorityTypes.length > 0 ? (
-              <span className="market-card__meta">{formatPriorityTypes(job.priorityTypes)}</span>
-            ) : null}
-            <span className="market-card__meta">
-              {getEntryMethodLabel(job.entryMethod)} · {getSuppliesSourceLabel(job.suppliesSource)}
-            </span>
+            <span className="market-card__meta">{getCleanLevelLabel(job.cleanLevel)}</span>
+            <span className="market-card__meta">{getEntryMethodLabel(job.entryMethod)}</span>
+            {job.entryNotes ? <p className="market-card__copy">{job.entryNotes}</p> : null}
             <span className="market-card__meta">
               {getCustomerHistorySummary({
                 completedJobs: job.customerCompletedJobsSnapshot,

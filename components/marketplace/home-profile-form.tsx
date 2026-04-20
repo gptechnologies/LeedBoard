@@ -1,9 +1,8 @@
-import { EntryMethod, PriorityType, RoomType, SuppliesSource } from "@prisma/client";
+import { CleanLevel, EntryMethod, RoomType } from "@prisma/client";
 import {
+  cleanLevelOptions,
   entryMethodOptions,
-  priorityTypeOptions,
   roomTypeOptions,
-  suppliesSourceOptions,
 } from "@/lib/marketplace-constants";
 
 type HomeProfileFormProps = {
@@ -16,9 +15,8 @@ type HomeProfileFormProps = {
     postalCode: string;
     entryMethod: EntryMethod;
     entryNotes: string;
-    suppliesSource: SuppliesSource;
     defaultRoomTypes: RoomType[];
-    defaultPriorityTypes: PriorityType[];
+    defaultCleanLevel: CleanLevel;
     notes: string;
   };
 };
@@ -75,16 +73,6 @@ export function HomeProfileForm({ defaults }: HomeProfileFormProps) {
             placeholder="Door code, call box, or where to find the key."
           />
         </div>
-        <div className="field">
-          <label htmlFor="suppliesSource">Who brings supplies</label>
-          <select id="suppliesSource" name="suppliesSource" defaultValue={defaults.suppliesSource}>
-            {suppliesSourceOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
       </section>
 
       <section className="market-form-section stack">
@@ -107,21 +95,15 @@ export function HomeProfileForm({ defaults }: HomeProfileFormProps) {
       </section>
 
       <section className="market-form-section stack">
-        <div className="market-section-heading">
-          <h2>Typical priorities</h2>
-        </div>
-        <div className="market-checkbox-grid">
-          {priorityTypeOptions.map((option) => (
-            <label key={option.value} className="market-check-card">
-              <input
-                type="checkbox"
-                name="defaultPriorityTypes"
-                value={option.value}
-                defaultChecked={defaults.defaultPriorityTypes.includes(option.value)}
-              />
-              <span>{option.label}</span>
-            </label>
-          ))}
+        <div className="field">
+          <label htmlFor="defaultCleanLevel">Default level of clean</label>
+          <select id="defaultCleanLevel" name="defaultCleanLevel" defaultValue={defaults.defaultCleanLevel}>
+            {cleanLevelOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </div>
       </section>
 

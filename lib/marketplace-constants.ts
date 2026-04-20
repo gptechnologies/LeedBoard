@@ -1,4 +1,5 @@
 import {
+  CleanLevel,
   EntryMethod,
   PriorityType,
   RoomType,
@@ -29,6 +30,12 @@ export const roomTypeOptions: Array<{
   { value: RoomType.LIVING_AREA, label: "Living Area", icon: "Sofa" },
   { value: RoomType.OFFICE, label: "Office", icon: "Desk" },
   { value: RoomType.LAUNDRY, label: "Laundry", icon: "Laundry" },
+];
+
+export const cleanLevelOptions: Array<{ value: CleanLevel; label: string }> = [
+  { value: CleanLevel.LIGHT, label: "Light Clean" },
+  { value: CleanLevel.MEDIUM, label: "Medium Clean" },
+  { value: CleanLevel.DEEP, label: "Deep Clean" },
 ];
 
 export const priorityTypeOptions: Array<{ value: PriorityType; label: string }> = [

@@ -1,22 +1,19 @@
 import {
   BidPricingType,
   BidStatus,
+  CleanLevel,
   EntryMethod,
   HomeProfile,
   JobRequestStatus,
-  PriorityType,
   RoomType,
   ServiceNeed,
-  SuppliesSource,
   TimingPreference,
   UserRole,
 } from "@prisma/client";
 import {
   entryMethodOptions,
-  priorityTypeOptions,
   roomTypeOptions,
   serviceNeedOptions,
-  suppliesSourceOptions,
 } from "@/lib/marketplace-constants";
 import { prisma } from "@/lib/prisma";
 
@@ -28,16 +25,20 @@ export function getRoomTypeLabel(value: RoomType) {
   return roomTypeOptions.find((option) => option.value === value)?.label ?? value;
 }
 
-export function getPriorityTypeLabel(value: PriorityType) {
-  return priorityTypeOptions.find((option) => option.value === value)?.label ?? value;
-}
-
 export function getEntryMethodLabel(value: EntryMethod) {
   return entryMethodOptions.find((option) => option.value === value)?.label ?? value;
 }
 
-export function getSuppliesSourceLabel(value: SuppliesSource) {
-  return suppliesSourceOptions.find((option) => option.value === value)?.label ?? value;
+export function getCleanLevelLabel(value: CleanLevel) {
+  if (value === CleanLevel.LIGHT) {
+    return "Light Clean";
+  }
+
+  if (value === CleanLevel.DEEP) {
+    return "Deep Clean";
+  }
+
+  return "Medium Clean";
 }
 
 export function formatServiceNeeds(needs: ServiceNeed[]) {
@@ -46,10 +47,6 @@ export function formatServiceNeeds(needs: ServiceNeed[]) {
 
 export function formatRoomTypes(roomTypes: RoomType[]) {
   return roomTypes.map(getRoomTypeLabel).join(", ");
-}
-
-export function formatPriorityTypes(priorityTypes: PriorityType[]) {
-  return priorityTypes.map(getPriorityTypeLabel).join(", ");
 }
 
 export function formatTimingSummary(job: {
@@ -411,9 +408,8 @@ export function buildHomeProfileFormDefaults(homeProfile: HomeProfile | null) {
     postalCode: homeProfile?.postalCode ?? "",
     entryMethod: homeProfile?.entryMethod ?? EntryMethod.I_WILL_BE_HOME,
     entryNotes: homeProfile?.entryNotes ?? "",
-    suppliesSource: homeProfile?.suppliesSource ?? SuppliesSource.CLEANER_BRINGS_ALL,
     defaultRoomTypes: homeProfile?.defaultRoomTypes ?? [],
-    defaultPriorityTypes: homeProfile?.defaultPriorityTypes ?? [],
+    defaultCleanLevel: homeProfile?.defaultCleanLevel ?? CleanLevel.MEDIUM,
     notes: homeProfile?.notes ?? "",
   };
 }
