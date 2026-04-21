@@ -7,7 +7,7 @@ import { clerkAppearance } from "@/lib/clerk";
 export const metadata: Metadata = {
   title: "Well Kept",
   description:
-    "Well Kept helps homeowners post cleaning jobs, compare bids, and book trusted cleaners in one place.",
+    "Well Kept is a New York home cleaning marketplace where homeowners and apartment renters post cleaning jobs, compare bids, and book professional cleaners.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
