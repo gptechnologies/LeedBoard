@@ -11,7 +11,7 @@ export async function SiteHeader() {
     <header className="site-header">
       <div className="site-header__inner">
         <Link href="/" className="brand">
-          WellKept
+          Well Kept
         </Link>
         <nav className="nav-links">
           {!userId ? (

@@ -5,9 +5,9 @@ import { SiteHeader } from "@/components/site-header";
 import { clerkAppearance } from "@/lib/clerk";
 
 export const metadata: Metadata = {
-  title: "WellKept",
+  title: "Well Kept",
   description:
-    "WellKept helps homeowners post cleaning jobs, compare bids, and book trusted cleaners in one place.",
+    "Well Kept helps homeowners post cleaning jobs, compare bids, and book trusted cleaners in one place.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

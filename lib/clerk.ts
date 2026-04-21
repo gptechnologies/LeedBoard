@@ -1,14 +1,14 @@
 export const clerkAppearance = {
   variables: {
-    colorPrimary: "#8bc1ff",
-    colorBackground: "#0f1328",
-    colorInputBackground: "rgba(255, 255, 255, 0.08)",
-    colorInputText: "#f4f7ff",
-    colorText: "#f4f7ff",
-    colorTextSecondary: "rgba(224, 231, 255, 0.72)",
-    colorNeutral: "rgba(255, 255, 255, 0.12)",
-    borderRadius: "20px",
-    fontFamily: "var(--font-sans, \"Segoe UI\", sans-serif)",
+    colorPrimary: "#4b285f",
+    colorBackground: "#fffdf7",
+    colorInputBackground: "#fffaf1",
+    colorInputText: "#1f1a16",
+    colorText: "#1f1a16",
+    colorTextSecondary: "#6f665e",
+    colorNeutral: "#ded4c4",
+    borderRadius: "8px",
+    fontFamily: "\"Avenir Next\", \"Segoe UI\", sans-serif",
   },
   elements: {
     cardBox: {
@@ -16,62 +16,63 @@ export const clerkAppearance = {
       width: "100%",
     },
     card: {
-      background: "rgba(11, 18, 42, 0.78)",
-      border: "1px solid rgba(139, 193, 255, 0.18)",
-      boxShadow: "0 24px 80px rgba(5, 10, 28, 0.45)",
-      backdropFilter: "blur(24px)",
+      background: "#fffdf7",
+      border: "1px solid #ded4c4",
+      boxShadow: "0 10px 28px rgba(54, 43, 32, 0.08)",
     },
     headerTitle: {
-      color: "#f4f7ff",
-      fontSize: "1.85rem",
+      color: "#1f1a16",
+      fontSize: "1.55rem",
       fontWeight: "600",
     },
     headerSubtitle: {
-      color: "rgba(224, 231, 255, 0.72)",
+      color: "#6f665e",
     },
     socialButtonsBlockButton: {
-      background: "rgba(255, 255, 255, 0.08)",
-      border: "1px solid rgba(139, 193, 255, 0.18)",
-      color: "#f4f7ff",
+      background: "#fffaf1",
+      border: "1px solid #ded4c4",
+      color: "#1f1a16",
+      borderRadius: "4px",
     },
     formButtonPrimary: {
-      background:
-        "linear-gradient(135deg, rgba(124, 194, 255, 0.98), rgba(188, 231, 255, 0.95))",
-      color: "#05101f",
-      boxShadow: "0 20px 45px rgba(111, 193, 255, 0.22)",
+      background: "#4b285f",
+      color: "#fffdf7",
+      borderRadius: "4px",
+      boxShadow: "0 12px 26px rgba(75, 40, 95, 0.16)",
     },
     footerActionLink: {
-      color: "#8bc1ff",
+      color: "#4b285f",
     },
     formFieldInput: {
-      background: "rgba(255, 255, 255, 0.08)",
-      borderColor: "rgba(139, 193, 255, 0.18)",
-      color: "#f4f7ff",
+      background: "#fffaf1",
+      borderColor: "#ded4c4",
+      color: "#1f1a16",
+      borderRadius: "4px",
     },
     formFieldLabel: {
-      color: "#dfe7ff",
+      color: "#1f1a16",
     },
     dividerLine: {
-      background: "rgba(139, 193, 255, 0.12)",
+      background: "#ded4c4",
     },
     dividerText: {
-      color: "rgba(224, 231, 255, 0.72)",
+      color: "#6f665e",
     },
     identityPreviewText: {
-      color: "#f4f7ff",
+      color: "#1f1a16",
     },
     identityPreviewEditButton: {
-      color: "#8bc1ff",
+      color: "#4b285f",
     },
     userButtonPopoverCard: {
-      background: "rgba(11, 18, 42, 0.96)",
-      border: "1px solid rgba(139, 193, 255, 0.18)",
+      background: "#fffdf7",
+      border: "1px solid #ded4c4",
     },
     userButtonPopoverActionButtonText: {
-      color: "#f4f7ff",
+      color: "#1f1a16",
     },
     userButtonPopoverActionButtonIcon: {
-      color: "#8bc1ff",
+      color: "#4b285f",
     },
   },
 };
