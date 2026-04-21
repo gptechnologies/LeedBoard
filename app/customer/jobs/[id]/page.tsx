@@ -7,6 +7,7 @@ import {
   formatTimingSummary,
   getCleanLevelLabel,
   getEntryMethodLabel,
+  getJobRequestStatusLabel,
 } from "@/lib/marketplace";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
@@ -59,6 +60,15 @@ export default async function CustomerJobDetailPage({
     notFound();
   }
 
+  const statusTone =
+    job.status === JobRequestStatus.OPEN
+      ? "active"
+      : job.status === JobRequestStatus.AWARDED
+        ? "success"
+        : job.status === JobRequestStatus.CANCELLED
+          ? "danger"
+          : "warning";
+
   return (
     <div className="market-shell market-shell--detail">
       <section className="market-surface">
@@ -67,7 +77,10 @@ export default async function CustomerJobDetailPage({
             <div className="market-kicker">Job detail</div>
             <h1>{job.title}</h1>
           </div>
-          <StatusPill label={job.status === "AWARDED" ? "Bid accepted" : "Open for bids"} tone={job.status === "AWARDED" ? "success" : "default"} />
+          <StatusPill
+            label={getJobRequestStatusLabel(job.status)}
+            tone={statusTone}
+          />
         </header>
 
         {query.error ? <div className="notice error">{query.error}</div> : null}
@@ -98,7 +111,7 @@ export default async function CustomerJobDetailPage({
 
         {job.status === JobRequestStatus.OPEN ? (
           <form action={`/customer/jobs/${job.id}/delete`} method="post" className="market-card__actions">
-            <button type="submit" className="secondary-submit">
+            <button type="submit" className="button secondary">
               Delete Job
             </button>
           </form>

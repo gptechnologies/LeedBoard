@@ -24,12 +24,12 @@ export const roomTypeOptions: Array<{
   label: string;
   icon: string;
 }> = [
-  { value: RoomType.KITCHEN, label: "Kitchen", icon: "Kitchen" },
-  { value: RoomType.BATHROOM, label: "Bathroom", icon: "Bath" },
-  { value: RoomType.BEDROOM, label: "Bedroom", icon: "Bed" },
-  { value: RoomType.LIVING_AREA, label: "Living Area", icon: "Sofa" },
-  { value: RoomType.OFFICE, label: "Office", icon: "Desk" },
-  { value: RoomType.LAUNDRY, label: "Laundry", icon: "Laundry" },
+  { value: RoomType.KITCHEN, label: "Kitchen", icon: "🍳" },
+  { value: RoomType.BATHROOM, label: "Bathroom", icon: "🛁" },
+  { value: RoomType.BEDROOM, label: "Bedroom", icon: "🛏" },
+  { value: RoomType.LIVING_AREA, label: "Living room", icon: "🛋" },
+  { value: RoomType.DINING_ROOM, label: "Dining room", icon: "🍽" },
+  { value: RoomType.ENTRYWAY, label: "Entryway", icon: "🚪" },
 ];
 
 export const cleanLevelOptions: Array<{ value: CleanLevel; label: string }> = [
@@ -53,6 +53,8 @@ export const roomPriorityMap: Record<RoomType, PriorityType[]> = {
   [RoomType.BATHROOM]: [PriorityType.DEEP_BATHROOM, PriorityType.GENERAL_DUST],
   [RoomType.BEDROOM]: [PriorityType.GENERAL_DUST, PriorityType.ORGANIZING],
   [RoomType.LIVING_AREA]: [PriorityType.GENERAL_DUST, PriorityType.FLOORS, PriorityType.ORGANIZING],
+  [RoomType.DINING_ROOM]: [PriorityType.GENERAL_DUST, PriorityType.FLOORS, PriorityType.ORGANIZING],
+  [RoomType.ENTRYWAY]: [PriorityType.GENERAL_DUST, PriorityType.FLOORS, PriorityType.ORGANIZING],
   [RoomType.OFFICE]: [PriorityType.GENERAL_DUST, PriorityType.ORGANIZING],
   [RoomType.LAUNDRY]: [PriorityType.GENERAL_DUST, PriorityType.ORGANIZING],
 };

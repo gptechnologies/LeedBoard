@@ -171,7 +171,14 @@ async function main() {
       postalCode: "94103",
       entryMethod: EntryMethod.DOOR_CODE,
       entryNotes: "Use the call box and I will buzz you in if needed.",
-      defaultRoomTypes: [RoomType.KITCHEN, RoomType.BATHROOM, RoomType.BEDROOM, RoomType.LIVING_AREA],
+      defaultRoomTypes: [
+        RoomType.KITCHEN,
+        RoomType.BATHROOM,
+        RoomType.BEDROOM,
+        RoomType.LIVING_AREA,
+        RoomType.DINING_ROOM,
+        RoomType.ENTRYWAY,
+      ],
       defaultCleanLevel: CleanLevel.MEDIUM,
       notes: "Two-bedroom condo on the fifth floor. Elevator available.",
       isDefault: true,
@@ -180,13 +187,13 @@ async function main() {
 
   const cleaners = [
     {
-      email: "maria@archmontcleaners.local",
-      firstName: "Maria",
-      lastName: "Garcia",
+      email: "brightnest@archmontcleaners.local",
+      firstName: "BrightNest",
+      lastName: "Cleaning Co.",
       phone: "(415) 555-0101",
       profile: {
-        bio: "Reliable home cleaner focused on kitchens, bathrooms, and deep refreshes.",
-        headline: "Detail-focused residential cleaner",
+        bio: "Licensed residential cleaning business focused on kitchens, bathrooms, and detailed full-home resets.",
+        headline: "Detail-focused home cleaning company",
         hourlyRateFromCents: 3500,
         standardHourlyRateCents: 3500,
         standardFlatRateCents: 15000,
@@ -196,7 +203,7 @@ async function main() {
         bidTemplatesEnabled: true,
         googleRating: 4.9,
         googleReviewCount: 112,
-        googleReviewSummary: "Clients mention punctual arrivals, thorough bathrooms, and polished kitchen work.",
+        googleReviewSummary: "Clients mention punctual crews, thorough bathrooms, and polished kitchen work.",
         externalReviewSource: "Google",
         licensedAndInsured: true,
         serviceAreaPostalCodes: ["94103", "94107", "94110"],
@@ -210,13 +217,13 @@ async function main() {
       },
     },
     {
-      email: "savanah@archmontcleaners.local",
-      firstName: "Savanah",
-      lastName: "Lee",
+      email: "bayviewhome@archmontcleaners.local",
+      firstName: "Bayview",
+      lastName: "Home Services",
       phone: "(415) 555-0102",
       profile: {
-        bio: "Fast, dependable home cleaning for recurring upkeep and move-out prep.",
-        headline: "Quick turn and move-out specialist",
+        bio: "Local cleaning team offering recurring upkeep, fast turnovers, and move-out prep.",
+        headline: "Quick-turn home service team",
         hourlyRateFromCents: 3200,
         standardHourlyRateCents: 3200,
         standardFlatRateCents: 14000,
@@ -239,13 +246,13 @@ async function main() {
       },
     },
     {
-      email: "marcus@archmontcleaners.local",
-      firstName: "Marcus",
-      lastName: "Mane",
+      email: "freshfold@archmontcleaners.local",
+      firstName: "FreshFold",
+      lastName: "Cleaning Group",
       phone: "(415) 555-0103",
       profile: {
-        bio: "Residential cleaner available for flexible evening and weekend jobs.",
-        headline: "Flexible schedule and flat-fee quotes",
+        bio: "Flexible residential cleaning group available for evenings, weekends, and same-day bids.",
+        headline: "Flexible crews and flat-fee quotes",
         hourlyRateFromCents: 3800,
         standardHourlyRateCents: 3800,
         standardFlatRateCents: 16500,
@@ -315,6 +322,18 @@ async function main() {
 
   await prisma.jobBid.deleteMany();
   await prisma.jobRequest.deleteMany();
+  await prisma.user.deleteMany({
+    where: {
+      role: UserRole.CLEANER,
+      email: {
+        in: [
+          "maria@archmontcleaners.local",
+          "savanah@archmontcleaners.local",
+          "marcus@archmontcleaners.local",
+        ],
+      },
+    },
+  });
 
   const awardedJob = await prisma.jobRequest.create({
     data: {
@@ -333,7 +352,7 @@ async function main() {
         ServiceNeed.FLOORS,
         ServiceNeed.DUSTING,
       ],
-      roomTypes: [RoomType.KITCHEN, RoomType.BATHROOM, RoomType.LIVING_AREA],
+      roomTypes: [RoomType.KITCHEN, RoomType.BATHROOM, RoomType.LIVING_AREA, RoomType.ENTRYWAY],
       cleanLevel: CleanLevel.MEDIUM,
       entryMethod: homeProfile.entryMethod,
       entryNotes: homeProfile.entryNotes,
@@ -385,7 +404,13 @@ async function main() {
         ServiceNeed.FLOORS,
         ServiceNeed.DUSTING,
       ],
-      roomTypes: [RoomType.KITCHEN, RoomType.BATHROOM, RoomType.BEDROOM, RoomType.LIVING_AREA],
+      roomTypes: [
+        RoomType.KITCHEN,
+        RoomType.BATHROOM,
+        RoomType.BEDROOM,
+        RoomType.LIVING_AREA,
+        RoomType.DINING_ROOM,
+      ],
       cleanLevel: CleanLevel.DEEP,
       entryMethod: homeProfile.entryMethod,
       entryNotes: homeProfile.entryNotes,
@@ -438,7 +463,7 @@ async function main() {
         arrivalDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
         arrivalWindowStart: "10:00",
         arrivalWindowEnd: "12:00",
-        message: "I can arrive a bit early and stay for the full deep clean.",
+        message: "Our crew can arrive a bit early and stay for the full deep clean.",
         status: BidStatus.SUBMITTED,
       },
       {
@@ -449,7 +474,7 @@ async function main() {
         arrivalDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
         arrivalWindowStart: "11:00",
         arrivalWindowEnd: "14:00",
-        message: "Flat quote for the whole visit with supplies included.",
+        message: "Flat quote for the whole visit with supplies and a two-person team included.",
         status: BidStatus.SUBMITTED,
       },
       {
@@ -460,7 +485,7 @@ async function main() {
         arrivalDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
         arrivalWindowStart: "14:00",
         arrivalWindowEnd: "17:00",
-        message: "Licensed team with eco-friendly products and full equipment.",
+        message: "Eco-friendly products, full equipment, and a dedicated field lead included.",
         status: BidStatus.SUBMITTED,
       },
       {
@@ -469,7 +494,7 @@ async function main() {
         pricingType: BidPricingType.FLAT,
         flatRateCents: 16000,
         etaMinutes: 45,
-        message: "Available for a same-day kitchen and bath reset.",
+        message: "Available for a same-day kitchen and bath reset with supplies included.",
         status: BidStatus.SUBMITTED,
       },
       {
@@ -478,7 +503,7 @@ async function main() {
         pricingType: BidPricingType.HOURLY,
         hourlyRateCents: 3800,
         etaMinutes: 30,
-        message: "Can be there quickly and bring all supplies except specialty products.",
+        message: "We can be there quickly and bring all standard supplies except specialty products.",
         status: BidStatus.SUBMITTED,
       },
     ],

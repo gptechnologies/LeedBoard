@@ -20,6 +20,8 @@ import {
   getCustomerHistorySummary,
   getEntryMethodLabel,
   getJobRequestStatusLabel,
+  getRoomTypeIcon,
+  getRoomTypeLabel,
 } from "@/lib/marketplace";
 import { StatusPill } from "@/components/marketplace/status-pill";
 
@@ -53,7 +55,9 @@ export function JobRequestCard({
   showAcceptedCleaner?: boolean;
 }) {
   const tone =
-    job.status === JobRequestStatus.AWARDED
+    job.status === JobRequestStatus.OPEN
+      ? "active"
+      : job.status === JobRequestStatus.AWARDED
       ? "success"
       : job.status === JobRequestStatus.CANCELLED
         ? "danger"
@@ -72,7 +76,17 @@ export function JobRequestCard({
         </div>
         <StatusPill label={getJobRequestStatusLabel(job.status)} tone={tone} />
       </div>
-      <div className="market-card__meta">{formatRoomTypes(job.roomTypes)}</div>
+      <div className="market-room-symbol-row" aria-label={`Rooms: ${formatRoomTypes(job.roomTypes)}`}>
+        {job.roomTypes.map((roomType) => (
+          <span
+            key={roomType}
+            className="market-room-symbol"
+            title={getRoomTypeLabel(roomType)}
+          >
+            {getRoomTypeIcon(roomType)}
+          </span>
+        ))}
+      </div>
       <div className="market-card__meta">{getCleanLevelLabel(job.cleanLevel)}</div>
       <div className="market-card__meta">{formatTimingSummary(job)}</div>
       <div className="market-progress">
@@ -112,9 +126,7 @@ export function RecommendedCleanerCard({
       <div className="market-avatar">{cleaner.firstName.charAt(0)}</div>
       <div className="stack small">
         <div>
-          <strong>
-            {cleaner.firstName} {cleaner.lastName.charAt(0)}.
-          </strong>
+          <strong>{cleaner.firstName} {cleaner.lastName}</strong>
           <div className="market-card__meta">
             {cleaner.cleanerProfile?.headline ?? "Available for residential jobs"}
           </div>

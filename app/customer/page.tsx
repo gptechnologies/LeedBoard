@@ -22,25 +22,12 @@ export default async function CustomerDashboard({ searchParams }: CustomerDashbo
   return (
     <div className="market-shell">
       <section className="market-surface">
-        <header className="market-topbar">
-          <div>
-            <div className="market-kicker">Welcome back</div>
-            <h1>{user.firstName}, book a cleaner fast.</h1>
-          </div>
-          <Link href="/customer/jobs/new" className="market-icon-button">
-            +
-          </Link>
-        </header>
-
         {params.error ? <div className="notice error">{params.error}</div> : null}
 
-        <section className="market-hero-card">
+        <section className="market-hero-card market-hero-card--compact">
           <div className="stack small">
-            <span className="market-kicker">Start a new request</span>
-            <strong>Post a job in a few quick steps.</strong>
-            <p className="market-card__copy">
-              Pick the rooms, choose the level of clean, and let cleaners come to you with bids.
-            </p>
+            <span className="market-kicker">Welcome back</span>
+            <strong className="market-hero-card__title">{user.firstName}, book a clean home fast</strong>
           </div>
           <Link href="/customer/jobs/new" className="button-link">
             Post a Job
@@ -79,7 +66,7 @@ export default async function CustomerDashboard({ searchParams }: CustomerDashbo
 
         <section className="stack">
           <div className="market-section-heading">
-            <h2>Recommended Cleaners</h2>
+            <h2>Top Rated Cleaners</h2>
             <span>Near your latest request</span>
           </div>
           <div className="market-rail">

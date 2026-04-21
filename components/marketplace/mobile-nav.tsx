@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 const customerNav = [
   { href: "/customer", label: "Home" },
   { href: "/customer/my-home", label: "My Home" },
-  { href: "/customer/jobs/new", label: "Post Job" },
+  { href: "/customer/account", label: "My Account" },
 ];
 
 const cleanerNav = [

@@ -8,7 +8,7 @@ import {
   ServiceNeed,
   TimingPreference,
 } from "@prisma/client";
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import {
   cleanLevelOptions,
   entryMethodOptions,
@@ -52,6 +52,7 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
   const [requestedDate, setRequestedDate] = useState("");
   const [windowStart, setWindowStart] = useState(timeWindowOptions[0]?.start ?? "08:00");
   const [notes, setNotes] = useState("");
+  const submitIntentRef = useRef(false);
   const selectedWindow = timeWindowOptions.find((option) => option.start === windowStart);
   const serviceNeeds = deriveServiceNeeds(roomTypes, cleanLevel);
   const isUsingPreset =
@@ -91,7 +92,7 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    if (step < steps.length - 1) {
+    if (step < steps.length - 1 || !submitIntentRef.current) {
       event.preventDefault();
     }
   }
@@ -104,15 +105,22 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
       onSubmit={handleSubmit}
     >
       <div className="market-wizard-progress">
-        {steps.map((label, index) => (
-          <div
-            key={label}
-            className={index === step ? "market-wizard-progress__step active" : "market-wizard-progress__step"}
-          >
-            <span>{index + 1}</span>
-            <strong>{label}</strong>
-          </div>
-        ))}
+        {steps.map((label, index) => {
+          const className = [
+            "market-wizard-progress__step",
+            index === step ? "active" : "",
+            index < step ? "complete" : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
+
+          return (
+            <div key={label} className={className}>
+              <span>{index + 1}</span>
+              <strong>{label}</strong>
+            </div>
+          );
+        })}
       </div>
 
       {step === 0 ? (
@@ -205,7 +213,7 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
       {step === 2 ? (
         <section className="market-form-section stack">
           <div className="market-section-heading">
-            <h2>Pick the time and how I’ll let you in</h2>
+            <h2>Pick the time and how you will be let in</h2>
           </div>
           <div className="market-segmented">
             <label className={timingPreference === TimingPreference.ASAP ? "market-segmented__option active" : "market-segmented__option"}>
@@ -229,9 +237,9 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
           </div>
 
           {timingPreference === TimingPreference.TIME_SLOT ? (
-            <div className="stack">
-              <div className="field">
-                <label htmlFor="requestedDate">Date</label>
+            <div className="market-time-picker">
+              <label className="market-time-field" htmlFor="requestedDate">
+                <span>Date</span>
                 <input
                   id="requestedDate"
                   type="date"
@@ -239,20 +247,25 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
                   value={requestedDate}
                   onChange={(event) => setRequestedDate(event.target.value)}
                 />
-              </div>
-              <div className="field">
-                <label htmlFor="requestedWindowStart">Arrival window</label>
-                <select
-                  id="requestedWindowStart"
-                  value={windowStart}
-                  onChange={(event) => setWindowStart(event.target.value)}
-                >
+              </label>
+              <div className="market-time-field">
+                <span>Arrival window</span>
+                <div className="market-time-window-grid" aria-label="Arrival window">
                   {timeWindowOptions.map((option) => (
-                    <option key={option.start} value={option.start}>
+                    <button
+                      key={option.start}
+                      type="button"
+                      className={
+                        windowStart === option.start
+                          ? "market-time-window active"
+                          : "market-time-window"
+                      }
+                      onClick={() => setWindowStart(option.start)}
+                    >
                       {option.label}
-                    </option>
+                    </button>
                   ))}
-                </select>
+                </div>
               </div>
             </div>
           ) : (
@@ -265,7 +278,7 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
           )}
 
           <div className="field">
-            <label htmlFor="entryMethod">How I’ll let you in</label>
+            <label htmlFor="entryMethod">How you will be let in</label>
             <select
               id="entryMethod"
               value={entryMethod}
@@ -349,17 +362,21 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
 
       <div className="market-wizard-actions">
         {step > 0 ? (
-          <button type="button" className="secondary-submit" onClick={goBack}>
+          <button type="button" className="button secondary" onClick={goBack}>
             Back
           </button>
         ) : null}
         {step < steps.length - 1 ? (
-          <button type="button" onClick={goNext}>
+          <button type="button" className="button" onClick={goNext}>
             Continue
           </button>
         ) : (
           <button
             type="submit"
+            className="button"
+            onClick={() => {
+              submitIntentRef.current = true;
+            }}
             disabled={
               timingPreference === TimingPreference.TIME_SLOT &&
               (!requestedDate || !selectedWindow)

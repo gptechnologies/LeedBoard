@@ -25,6 +25,10 @@ export function getRoomTypeLabel(value: RoomType) {
   return roomTypeOptions.find((option) => option.value === value)?.label ?? value;
 }
 
+export function getRoomTypeIcon(value: RoomType) {
+  return roomTypeOptions.find((option) => option.value === value)?.icon ?? "•";
+}
+
 export function getEntryMethodLabel(value: EntryMethod) {
   return entryMethodOptions.find((option) => option.value === value)?.label ?? value;
 }
@@ -120,7 +124,7 @@ export function getJobRequestStatusLabel(status: JobRequestStatus) {
     case JobRequestStatus.EXPIRED:
       return "Expired";
     default:
-      return "Open for bids";
+      return "Accepting Bids";
   }
 }
 

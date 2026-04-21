@@ -24,16 +24,8 @@ export async function SiteHeader() {
                 Cleaner access
               </Link>
             </>
-          ) : user ? (
+          ) : user?.role === UserRole.CUSTOMER ? null : user ? (
             <>
-              {user.role === UserRole.CUSTOMER ? (
-                <>
-                  <Link href="/customer" className="primary">
-                    Home
-                  </Link>
-                  <Link href="/customer/jobs/new">Post a Job</Link>
-                </>
-              ) : null}
               {user.role === UserRole.CLEANER ? (
                 <Link href="/cleaner" className="primary">
                   My Schedule

@@ -55,7 +55,7 @@ export function HomeProfileForm({ defaults }: HomeProfileFormProps) {
 
       <section className="market-form-section stack">
         <div className="field">
-          <label htmlFor="entryMethod">How I’ll let you in</label>
+          <label htmlFor="entryMethod">How you will be let in</label>
           <select id="entryMethod" name="entryMethod" defaultValue={defaults.entryMethod}>
             {entryMethodOptions.map((option) => (
               <option key={option.value} value={option.value}>
