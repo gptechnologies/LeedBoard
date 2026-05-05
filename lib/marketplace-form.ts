@@ -67,6 +67,12 @@ function parseCleanLevel(value: FormDataEntryValue | null) {
 }
 
 export function parseHomeProfileForm(formData: FormData) {
+  const roomCleanLevels = parseRoomCleanLevels(formData.get("roomCleanLevels"));
+  const defaultRoomTypes = Object.keys(roomCleanLevels).length > 0
+    ? (Object.keys(roomCleanLevels) as RoomType[])
+    : parseEnumList(formData.getAll("defaultRoomTypes"), Object.values(RoomType));
+  const defaultCleanLevel = getDominantLevel(roomCleanLevels);
+
   return {
     label: String(formData.get("label") || "").trim() || "My Home",
     addressLine1: getRequiredString(formData.get("addressLine1"), "Street address"),
@@ -77,8 +83,9 @@ export function parseHomeProfileForm(formData: FormData) {
     entryMethod: parseEntryMethod(formData.get("entryMethod")),
     entryNotes: String(formData.get("entryNotes") || "").trim() || null,
     suppliesSource: SuppliesSource.CLEANER_BRINGS_ALL,
-    defaultRoomTypes: parseEnumList(formData.getAll("defaultRoomTypes"), Object.values(RoomType)),
-    defaultCleanLevel: parseCleanLevel(formData.get("defaultCleanLevel")),
+    defaultRoomTypes,
+    defaultCleanLevel,
+    roomCleanLevels,
     defaultPriorityTypes: [],
     notes: String(formData.get("notes") || "").trim() || null,
     isDefault: true,
@@ -91,8 +98,13 @@ export function parseJobRequestForm(formData: FormData) {
       ? TimingPreference.TIME_SLOT
       : TimingPreference.ASAP;
   const serviceNeeds = parseServiceNeeds(formData.getAll("serviceNeeds"));
-  const roomTypes = parseRoomTypes(formData.getAll("roomTypes"));
-  const cleanLevel = parseCleanLevel(formData.get("cleanLevel"));
+  const roomCleanLevels = parseRoomCleanLevels(formData.get("roomCleanLevels"));
+  const roomTypes = Object.keys(roomCleanLevels).length > 0
+    ? (Object.keys(roomCleanLevels) as RoomType[])
+    : parseRoomTypes(formData.getAll("roomTypes"));
+  const cleanLevel = Object.keys(roomCleanLevels).length > 0
+    ? getDominantLevel(roomCleanLevels)
+    : parseCleanLevel(formData.get("cleanLevel"));
   const addressLine1 = getRequiredString(formData.get("addressLine1"), "Street address");
   const city = getRequiredString(formData.get("city"), "City");
   const state = getRequiredString(formData.get("state"), "State");
@@ -111,6 +123,7 @@ export function parseJobRequestForm(formData: FormData) {
     serviceNeeds,
     roomTypes,
     cleanLevel,
+    roomCleanLevels,
     priorityTypes: [],
     entryMethod: parseEntryMethod(formData.get("entryMethod")),
     entryNotes: String(formData.get("entryNotes") || "").trim() || null,
@@ -231,4 +244,31 @@ function humanizeValue(value: string) {
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function parseRoomCleanLevels(raw: FormDataEntryValue | null): Record<string, string> {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(String(raw));
+    if (typeof parsed !== "object" || parsed === null) return {};
+    const result: Record<string, string> = {};
+    const validRooms = Object.values(RoomType) as string[];
+    const validLevels = Object.values(CleanLevel) as string[];
+    for (const [key, value] of Object.entries(parsed)) {
+      if (validRooms.includes(key) && validLevels.includes(String(value))) {
+        result[key] = String(value);
+      }
+    }
+    return result;
+  } catch {
+    return {};
+  }
+}
+
+function getDominantLevel(levels: Record<string, string>): CleanLevel {
+  const values = Object.values(levels);
+  if (values.includes(CleanLevel.DEEP)) return CleanLevel.DEEP;
+  if (values.includes(CleanLevel.MEDIUM)) return CleanLevel.MEDIUM;
+  if (values.length > 0) return CleanLevel.LIGHT;
+  return CleanLevel.MEDIUM;
 }

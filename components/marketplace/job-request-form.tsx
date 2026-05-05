@@ -10,11 +10,16 @@ import {
 } from "@prisma/client";
 import { FormEvent, useRef, useState } from "react";
 import {
+  cleanLevelCycle,
   cleanLevelOptions,
   entryMethodOptions,
   roomTypeOptions,
-  timeWindowOptions,
 } from "@/lib/marketplace-constants";
+import { RoomIcon } from "@/components/marketplace/room-icons";
+
+type RoomCleanLevels = Partial<Record<RoomType, CleanLevel>>;
+type DayChoice = "" | "today" | "another";
+type ArrivalChoice = "" | "asap" | "window";
 
 type WizardHomeProfile = {
   id: string;
@@ -28,10 +33,48 @@ type WizardHomeProfile = {
   entryNotes: string | null;
   defaultRoomTypes: RoomType[];
   defaultCleanLevel: CleanLevel;
+  roomCleanLevels: unknown;
   notes: string | null;
 } | null;
 
-const steps = ["Home", "Rooms + Level", "Timing + Access", "Review"] as const;
+const steps = ["Details", "Schedule", "Review"] as const;
+const dateHints = ["Fastest", "Popular", "Flexible", "Good fit", "Open", "Open", "Open", "Open"];
+
+function parseRawRoomCleanLevels(raw: unknown): RoomCleanLevels {
+  if (!raw || typeof raw !== "object") return {};
+  const result: RoomCleanLevels = {};
+  const validRooms = Object.values(RoomType) as string[];
+  const validLevels = Object.values(CleanLevel) as string[];
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (validRooms.includes(key) && validLevels.includes(String(value))) {
+      result[key as RoomType] = String(value) as CleanLevel;
+    }
+  }
+  return result;
+}
+
+function initRoomCleanLevels(profile: WizardHomeProfile): RoomCleanLevels {
+  if (!profile) return {};
+  const parsed = parseRawRoomCleanLevels(profile.roomCleanLevels);
+  if (Object.keys(parsed).length > 0) return parsed;
+  const map: RoomCleanLevels = {};
+  for (const room of profile.defaultRoomTypes) {
+    map[room] = profile.defaultCleanLevel;
+  }
+  return map;
+}
+
+function getCleanLevelLabel(level: CleanLevel): string {
+  return cleanLevelOptions.find((o) => o.value === level)?.label ?? level;
+}
+
+function getDominantCleanLevel(levels: RoomCleanLevels): CleanLevel {
+  const values = Object.values(levels);
+  if (values.length === 0) return CleanLevel.MEDIUM;
+  if (values.includes(CleanLevel.DEEP)) return CleanLevel.DEEP;
+  if (values.includes(CleanLevel.MEDIUM)) return CleanLevel.MEDIUM;
+  return CleanLevel.LIGHT;
+}
 
 export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: WizardHomeProfile }) {
   const [step, setStep] = useState(0);
@@ -40,21 +83,44 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
   const [city, setCity] = useState(defaultHomeProfile?.city ?? "");
   const [state, setState] = useState(defaultHomeProfile?.state ?? "CA");
   const [postalCode, setPostalCode] = useState(defaultHomeProfile?.postalCode ?? "");
-  const [roomTypes, setRoomTypes] = useState<RoomType[]>(defaultHomeProfile?.defaultRoomTypes ?? []);
-  const [cleanLevel, setCleanLevel] = useState<CleanLevel>(
-    defaultHomeProfile?.defaultCleanLevel ?? CleanLevel.MEDIUM,
+  const [roomCleanLevels, setRoomCleanLevels] = useState<RoomCleanLevels>(
+    () => initRoomCleanLevels(defaultHomeProfile),
   );
   const [entryMethod, setEntryMethod] = useState<EntryMethod>(
     defaultHomeProfile?.entryMethod ?? EntryMethod.I_WILL_BE_HOME,
   );
   const [entryNotes, setEntryNotes] = useState(defaultHomeProfile?.entryNotes ?? "");
   const [timingPreference, setTimingPreference] = useState<TimingPreference>(TimingPreference.ASAP);
+  const [dayChoice, setDayChoice] = useState<DayChoice>("");
+  const [arrivalChoice, setArrivalChoice] = useState<ArrivalChoice>("");
   const [requestedDate, setRequestedDate] = useState("");
-  const [windowStart, setWindowStart] = useState(timeWindowOptions[0]?.start ?? "08:00");
+  const [startHour, setStartHour] = useState("");
+  const [startPeriod, setStartPeriod] = useState<"AM" | "PM">("AM");
+  const [endHour, setEndHour] = useState("");
+  const [endPeriod, setEndPeriod] = useState<"AM" | "PM">("PM");
   const [notes, setNotes] = useState("");
+  const [addressExpanded, setAddressExpanded] = useState(!defaultHomeProfile);
+  const [validationMessage, setValidationMessage] = useState("");
+  const wizardTopRef = useRef<HTMLDivElement>(null);
   const submitIntentRef = useRef(false);
-  const selectedWindow = timeWindowOptions.find((option) => option.start === windowStart);
+
+  const roomTypes = Object.keys(roomCleanLevels) as RoomType[];
+  const cleanLevel = getDominantCleanLevel(roomCleanLevels);
   const serviceNeeds = deriveServiceNeeds(roomTypes, cleanLevel);
+  const dateOptions = getDateOptions();
+  const hourOptions = getHourOptions();
+  const todayValue = dateOptions[0]?.value ?? toDateInputValue(new Date());
+  const windowStartTime = startHour ? to24h(startHour, startPeriod) : "";
+  const windowEndTime = endHour ? to24h(endHour, endPeriod) : "";
+  const selectedWindow = getWindowLabel(windowStartTime, windowEndTime);
+  const hasAddress = Boolean(addressLine1.trim() && city.trim() && state.trim() && postalCode.trim());
+  const hasRooms = roomTypes.length > 0;
+  const hasScheduleDay = dayChoice === "today" || (dayChoice === "another" && Boolean(requestedDate));
+  const hasScheduleArrival =
+    arrivalChoice === "asap" ||
+    (arrivalChoice === "window" && Boolean(startHour && endHour));
+  const canContinueFromSchedule = hasScheduleDay && hasScheduleArrival;
+
   const isUsingPreset =
     !!defaultHomeProfile &&
     addressLine1 === defaultHomeProfile.addressLine1 &&
@@ -65,30 +131,81 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
     entryMethod === defaultHomeProfile.entryMethod &&
     entryNotes === (defaultHomeProfile.entryNotes ?? "");
 
-  function toggleRoomType(value: RoomType) {
-    setRoomTypes((current) =>
-      current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
-    );
+  function cycleRoomCleanLevel(room: RoomType) {
+    setRoomCleanLevels((current) => {
+      const currentLevel = current[room];
+      if (!currentLevel) {
+        return { ...current, [room]: cleanLevelCycle[0] };
+      }
+      const idx = cleanLevelCycle.indexOf(currentLevel);
+      if (idx < cleanLevelCycle.length - 1) {
+        return { ...current, [room]: cleanLevelCycle[idx + 1] };
+      }
+      const next = { ...current };
+      delete next[room];
+      return next;
+    });
   }
 
   function goNext() {
-    if (step === 0 && (!addressLine1 || !city || !state || !postalCode)) {
+    if (step === 0 && (!hasAddress || !hasRooms)) {
+      setValidationMessage(
+        !hasRooms
+          ? "Choose at least one room to clean."
+          : "Add the address before continuing.",
+      );
       return;
     }
 
-    if (step === 1 && roomTypes.length === 0) {
+    if (step === 1 && !hasScheduleDay) {
+      setValidationMessage("Choose a day so cleaners know when to bid.");
       return;
     }
 
-    if (step === 2 && timingPreference === TimingPreference.TIME_SLOT && !requestedDate) {
+    if (step === 1 && !hasScheduleArrival) {
+      setValidationMessage("Choose ASAP or an arrival window to continue.");
       return;
     }
 
+    setValidationMessage("");
     setStep((current) => Math.min(current + 1, steps.length - 1));
+    window.setTimeout(() => {
+      wizardTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
   }
 
   function goBack() {
+    setValidationMessage("");
     setStep((current) => Math.max(current - 1, 0));
+    window.setTimeout(() => {
+      wizardTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+  }
+
+  function chooseToday() {
+    setDayChoice("today");
+    setRequestedDate(todayValue);
+    setValidationMessage("");
+  }
+
+  function chooseAnotherDay() {
+    setDayChoice("another");
+    setRequestedDate("");
+    setValidationMessage("");
+  }
+
+  function chooseAsap() {
+    setArrivalChoice("asap");
+    setTimingPreference(TimingPreference.ASAP);
+    setStartHour("");
+    setEndHour("");
+    setValidationMessage("");
+  }
+
+  function chooseTimeSlot() {
+    setArrivalChoice("window");
+    setTimingPreference(TimingPreference.TIME_SLOT);
+    setValidationMessage("");
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -104,6 +221,10 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
       className="market-form stack"
       onSubmit={handleSubmit}
     >
+      <div ref={wizardTopRef} className="market-form-heading">
+        <h1>Post A Job</h1>
+      </div>
+
       <div className="market-wizard-progress">
         {steps.map((label, index) => {
           const className = [
@@ -124,186 +245,354 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
       </div>
 
       {step === 0 ? (
-        <section className="market-form-section stack">
+        <section className="market-form-section market-question-flow">
           <div className="market-section-heading">
-            <h2>Choose your home</h2>
+            <h2>1. Job details</h2>
           </div>
-          {defaultHomeProfile ? (
-            <div className="market-preset-card">
-              <div className="stack small">
-                <strong>Using {defaultHomeProfile.label}</strong>
-                <span className="market-card__meta">
-                  {defaultHomeProfile.addressLine1}, {defaultHomeProfile.city}, {defaultHomeProfile.state} {defaultHomeProfile.postalCode}
-                </span>
+
+          <section className="market-question-block stack">
+            <div className="market-question-copy">
+              <span>First</span>
+              <h3>Where should cleaners go?</h3>
+            </div>
+            {defaultHomeProfile ? (
+              <div className="market-preset-card">
+                <div className="market-preset-card__row">
+                  <span className="market-preset-card__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m3 9 9-7 9 7" /><path d="M9 22V12h6v10" />
+                    </svg>
+                  </span>
+                  <div className="stack small">
+                    <strong>{addressLine1}, {city}, {state} {postalCode}</strong>
+                  </div>
+                  <button
+                    type="button"
+                    className="market-text-link"
+                    onClick={() => setAddressExpanded((v) => !v)}
+                  >
+                    {addressExpanded ? "Hide" : "Edit"}
+                  </button>
+                </div>
               </div>
-              <Link href="/customer/my-home" className="market-text-link">
-                Edit My Home
-              </Link>
-            </div>
-          ) : (
-            <div className="notice">
-              Save your address and entry details once in <Link href="/customer/my-home">My Home</Link> to post faster next time.
-            </div>
-          )}
-          <div className="field">
-            <label htmlFor="addressLine1">Street address</label>
-            <input id="addressLine1" value={addressLine1} onChange={(event) => setAddressLine1(event.target.value)} required />
-          </div>
-          <div className="field">
-            <label htmlFor="addressLine2">Apartment or suite</label>
-            <input id="addressLine2" value={addressLine2} onChange={(event) => setAddressLine2(event.target.value)} />
-          </div>
-          <div className="grid two">
-            <div className="field">
-              <label htmlFor="city">City</label>
-              <input id="city" value={city} onChange={(event) => setCity(event.target.value)} required />
-            </div>
-            <div className="field">
-              <label htmlFor="state">State</label>
-              <input id="state" value={state} onChange={(event) => setState(event.target.value)} required />
-            </div>
-          </div>
-          <div className="field">
-            <label htmlFor="postalCode">ZIP code</label>
-            <input id="postalCode" value={postalCode} onChange={(event) => setPostalCode(event.target.value)} required />
-          </div>
+            ) : (
+              <div className="notice">
+                Save your address and entry details once in <Link href="/customer/my-home">My Home</Link> to post faster next time.
+              </div>
+            )}
+            {addressExpanded ? (
+              <>
+                <div className="field">
+                  <label htmlFor="addressLine1">Street address</label>
+                  <input id="addressLine1" value={addressLine1} onChange={(event) => setAddressLine1(event.target.value)} required />
+                </div>
+                <div className="field">
+                  <label htmlFor="addressLine2">Apartment or suite</label>
+                  <input id="addressLine2" value={addressLine2} onChange={(event) => setAddressLine2(event.target.value)} />
+                </div>
+                <div className="grid two">
+                  <div className="field">
+                    <label htmlFor="city">City</label>
+                    <input id="city" value={city} onChange={(event) => setCity(event.target.value)} required />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="state">State</label>
+                    <input id="state" value={state} onChange={(event) => setState(event.target.value)} required />
+                  </div>
+                </div>
+                <div className="field">
+                  <label htmlFor="postalCode">ZIP code</label>
+                  <input id="postalCode" value={postalCode} onChange={(event) => setPostalCode(event.target.value)} required />
+                </div>
+              </>
+            ) : null}
+          </section>
+
+          {hasAddress ? (
+            <section className="market-question-block stack">
+              <div className="market-question-copy">
+                <span>Next</span>
+                <h3>Which rooms need cleaning?</h3>
+                <p>Tap to add a room. Tap again to change the clean level.</p>
+              </div>
+              <div className="market-room-grid">
+                {roomTypeOptions.map((option) => {
+                  const level = roomCleanLevels[option.value];
+                  const isActive = !!level;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={isActive ? "market-room-card active" : "market-room-card"}
+                      onClick={() => cycleRoomCleanLevel(option.value)}
+                      aria-pressed={isActive}
+                    >
+                      <span className="market-room-card__icon">
+                        <RoomIcon room={option.value} />
+                      </span>
+                      <strong>{option.label}</strong>
+                      {level ? (
+                        <span className="market-room-card__level">{getCleanLevelLabel(level)}</span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
+
+          {hasRooms ? (
+            <section className="market-question-block stack">
+              <div className="market-question-copy">
+                <span>Optional</span>
+                <h3>Anything cleaners should know?</h3>
+              </div>
+              <div className="field">
+                <label htmlFor="notes">Notes</label>
+                <textarea
+                  id="notes"
+                  value={notes}
+                  onChange={(event) => setNotes(event.target.value)}
+                  placeholder="Pets, parking, or specific areas to focus on."
+                />
+              </div>
+            </section>
+          ) : null}
         </section>
       ) : null}
 
       {step === 1 ? (
-        <section className="market-form-section stack">
+        <section className="market-form-section market-question-flow">
           <div className="market-section-heading">
-            <h2>Pick the rooms and level of clean</h2>
+            <h2>3. When do you need it?</h2>
           </div>
-          <div className="market-room-grid">
-            {roomTypeOptions.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                className={roomTypes.includes(option.value) ? "market-room-card active" : "market-room-card"}
-                onClick={() => toggleRoomType(option.value)}
-              >
-                <span className="market-room-card__icon">{option.icon}</span>
-                <strong>{option.label}</strong>
-              </button>
-            ))}
-          </div>
-          <div className="field">
-            <label>Level of clean</label>
-            <div className="market-segmented market-segmented--triple">
-              {cleanLevelOptions.map((option) => (
-                <label
-                  key={option.value}
-                  className={cleanLevel === option.value ? "market-segmented__option active" : "market-segmented__option"}
-                >
-                  <input
-                    type="radio"
-                    value={option.value}
-                    checked={cleanLevel === option.value}
-                    onChange={() => setCleanLevel(option.value)}
-                  />
-                  {option.label}
-                </label>
-              ))}
+
+          <section className="market-question-block stack">
+            <div className="market-question-copy">
+              <span>Choose a day:</span>
+              <h3>When should cleaners plan around?</h3>
             </div>
-          </div>
-        </section>
-      ) : null}
-
-      {step === 2 ? (
-        <section className="market-form-section stack">
-          <div className="market-section-heading">
-            <h2>Pick the time and how you will be let in</h2>
-          </div>
-          <div className="market-segmented">
-            <label className={timingPreference === TimingPreference.ASAP ? "market-segmented__option active" : "market-segmented__option"}>
-              <input
-                type="radio"
-                value={TimingPreference.ASAP}
-                checked={timingPreference === TimingPreference.ASAP}
-                onChange={() => setTimingPreference(TimingPreference.ASAP)}
-              />
-              ASAP
-            </label>
-            <label className={timingPreference === TimingPreference.TIME_SLOT ? "market-segmented__option active" : "market-segmented__option"}>
-              <input
-                type="radio"
-                value={TimingPreference.TIME_SLOT}
-                checked={timingPreference === TimingPreference.TIME_SLOT}
-                onChange={() => setTimingPreference(TimingPreference.TIME_SLOT)}
-              />
-              Pick a Time
-            </label>
-          </div>
-
-          {timingPreference === TimingPreference.TIME_SLOT ? (
-            <div className="market-time-picker">
-              <label className="market-time-field" htmlFor="requestedDate">
-                <span>Date</span>
+            <div className="market-segmented">
+              <label className={dayChoice === "today" ? "market-segmented__option active" : "market-segmented__option"}>
                 <input
-                  id="requestedDate"
-                  type="date"
-                  min={new Date().toISOString().slice(0, 10)}
-                  value={requestedDate}
-                  onChange={(event) => setRequestedDate(event.target.value)}
+                  type="radio"
+                  value="today"
+                  checked={dayChoice === "today"}
+                  onChange={chooseToday}
                 />
+                Today
               </label>
-              <div className="market-time-field">
-                <span>Arrival window</span>
-                <div className="market-time-window-grid" aria-label="Arrival window">
-                  {timeWindowOptions.map((option) => (
+              <label className={dayChoice === "another" ? "market-segmented__option active" : "market-segmented__option"}>
+                <input
+                  type="radio"
+                  value="another"
+                  checked={dayChoice === "another"}
+                  onChange={chooseAnotherDay}
+                />
+                Another day
+              </label>
+            </div>
+          </section>
+
+          {dayChoice === "another" ? (
+            <section className="market-question-block stack">
+              <div className="market-schedule-label">
+                <strong>Choose a day</strong>
+                <span>No calendar popup, just tap a date.</span>
+              </div>
+              <div className="market-schedule-picker">
+                <div className="market-date-strip" role="list" aria-label="Available dates">
+                  {dateOptions.slice(1).map((option, index) => (
                     <button
-                      key={option.start}
+                      key={option.value}
                       type="button"
-                      className={
-                        windowStart === option.start
-                          ? "market-time-window active"
-                          : "market-time-window"
-                      }
-                      onClick={() => setWindowStart(option.start)}
+                      className={requestedDate === option.value ? "market-date-card active" : "market-date-card"}
+                      onClick={() => {
+                        setRequestedDate(option.value);
+                        setValidationMessage("");
+                      }}
+                      aria-pressed={requestedDate === option.value}
                     >
-                      {option.label}
+                      <span>{option.label}</span>
+                      <strong>{option.day}</strong>
+                      <small>{option.month}</small>
+                      <em>{dateHints[index + 1] ?? "Open"}</em>
                     </button>
                   ))}
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="market-empty">
-              <strong>ASAP request</strong>
-              <p className="market-card__copy">
-                Pros will bid with how soon they can arrive instead of choosing a fixed slot.
-              </p>
-            </div>
-          )}
+            </section>
+          ) : null}
 
-          <div className="field">
-            <label htmlFor="entryMethod">How you will be let in</label>
-            <select
-              id="entryMethod"
-              value={entryMethod}
-              onChange={(event) => setEntryMethod(event.target.value as EntryMethod)}
-            >
-              {entryMethodOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="entryNotes">Entry details</label>
-            <textarea
-              id="entryNotes"
-              value={entryNotes}
-              onChange={(event) => setEntryNotes(event.target.value)}
-              placeholder="Door code, hidden key spot, or call box instructions."
-            />
-          </div>
+          {hasScheduleDay ? (
+            <section className="market-question-block stack">
+              <div className="market-schedule-label">
+                <strong>Arrival window</strong>
+                <span>Choose speed or set a custom window.</span>
+              </div>
+              <div className="market-segmented">
+                <label className={arrivalChoice === "asap" ? "market-segmented__option active" : "market-segmented__option"}>
+                  <input
+                    type="radio"
+                    value="asap"
+                    checked={arrivalChoice === "asap"}
+                    onChange={chooseAsap}
+                  />
+                  ASAP
+                </label>
+                <label className={arrivalChoice === "window" ? "market-segmented__option active" : "market-segmented__option"}>
+                  <input
+                    type="radio"
+                    value="window"
+                    checked={arrivalChoice === "window"}
+                    onChange={chooseTimeSlot}
+                  />
+                  Choose a time slot
+                </label>
+              </div>
+
+              {arrivalChoice === "window" ? (
+                <div className="market-custom-window">
+                  <div className="market-time-slot">
+                    <span className="market-time-slot__icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 7v5l3 2" />
+                      </svg>
+                    </span>
+                    <label className="market-time-slot__copy" htmlFor="startHour">
+                      <span>Arrival time</span>
+                      <span className="market-time-slot__display">
+                        {startHour || "Choose"}
+                      </span>
+                    </label>
+                    <select
+                      id="startHour"
+                      value={startHour}
+                      onChange={(event) => {
+                        setStartHour(event.target.value);
+                        setArrivalChoice("window");
+                        setTimingPreference(TimingPreference.TIME_SLOT);
+                        setValidationMessage("");
+                      }}
+                    >
+                      <option value="">--:--</option>
+                      {hourOptions.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                    <div className="market-time-slot__period">
+                      <button
+                        type="button"
+                        className={startPeriod === "AM" ? "active" : ""}
+                        onClick={() => setStartPeriod("AM")}
+                      >
+                        AM
+                      </button>
+                      <button
+                        type="button"
+                        className={startPeriod === "PM" ? "active" : ""}
+                        onClick={() => setStartPeriod("PM")}
+                      >
+                        PM
+                      </button>
+                    </div>
+                  </div>
+                  <div className="market-time-slot">
+                    <span className="market-time-slot__icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 7v5l3 2" />
+                      </svg>
+                    </span>
+                    <label className="market-time-slot__copy" htmlFor="endHour">
+                      <span>Finish time</span>
+                      <span className="market-time-slot__display">
+                        {endHour || "Choose"}
+                      </span>
+                    </label>
+                    <select
+                      id="endHour"
+                      value={endHour}
+                      onChange={(event) => {
+                        setEndHour(event.target.value);
+                        setArrivalChoice("window");
+                        setTimingPreference(TimingPreference.TIME_SLOT);
+                        setValidationMessage("");
+                      }}
+                    >
+                      <option value="">--:--</option>
+                      {hourOptions.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                    <div className="market-time-slot__period">
+                      <button
+                        type="button"
+                        className={endPeriod === "AM" ? "active" : ""}
+                        onClick={() => setEndPeriod("AM")}
+                      >
+                        AM
+                      </button>
+                      <button
+                        type="button"
+                        className={endPeriod === "PM" ? "active" : ""}
+                        onClick={() => setEndPeriod("PM")}
+                      >
+                        PM
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {canContinueFromSchedule ? (
+                <div className="market-schedule-summary" aria-live="polite">
+                  <span>Selected</span>
+                  <strong>
+                    {arrivalChoice === "asap"
+                      ? `${formatDateForReview(requestedDate)} · ASAP`
+                      : `${formatDateForReview(requestedDate)} · ${selectedWindow}`}
+                  </strong>
+                </div>
+              ) : null}
+              {validationMessage ? (
+                <p className="market-form-error" aria-live="polite">{validationMessage}</p>
+              ) : null}
+            </section>
+          ) : null}
+
+          {canContinueFromSchedule ? (
+            <section className="market-question-block stack">
+              <div className="field">
+                <label htmlFor="entryMethod">How will the cleaners enter</label>
+                <select
+                  id="entryMethod"
+                  value={entryMethod}
+                  onChange={(event) => setEntryMethod(event.target.value as EntryMethod)}
+                >
+                  {entryMethodOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="entryNotes">Entry details</label>
+                <textarea
+                  id="entryNotes"
+                  value={entryNotes}
+                  onChange={(event) => setEntryNotes(event.target.value)}
+                  placeholder="Door code, hidden key spot, or call box instructions."
+                />
+              </div>
+            </section>
+          ) : null}
         </section>
       ) : null}
 
-      {step === 3 ? (
+      {step === 2 ? (
         <section className="market-form-section stack">
           <div className="market-section-heading">
             <h2>Review</h2>
@@ -312,13 +601,12 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
           <article className="market-card">
             <div className="stack small">
               <strong>{addressLine1}, {city}, {state} {postalCode}</strong>
-              <span className="market-card__meta">{formatRoomTypesLocal(roomTypes)}</span>
-              <span className="market-card__meta">{cleanLevelOptions.find((option) => option.value === cleanLevel)?.label ?? "Medium Clean"}</span>
+              <span className="market-card__meta">{formatRoomSummary(roomCleanLevels)}</span>
               <span className="market-card__meta">{entryMethodOptions.find((option) => option.value === entryMethod)?.label ?? entryMethod}</span>
               <span className="market-card__meta">
                 {timingPreference === TimingPreference.ASAP
                   ? "ASAP request"
-                  : `${requestedDate || "Choose a date"} · ${selectedWindow?.label ?? "Choose a window"}`}
+                  : `${formatDateForReview(requestedDate) || "Choose a date"} · ${selectedWindow ?? "Choose an arrival window"}`}
               </span>
             </div>
           </article>
@@ -334,7 +622,7 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
           </div>
 
           <div className="notice">
-            No charge during testing. In production, accepting a bid places a temporary authorization hold.
+            Cleaners will submit their own prices. You choose which bid to accept.
           </div>
         </section>
       ) : null}
@@ -348,10 +636,11 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
       <input type="hidden" name="entryMethod" value={entryMethod} />
       <input type="hidden" name="entryNotes" value={entryNotes} />
       <input type="hidden" name="cleanLevel" value={cleanLevel} />
+      <input type="hidden" name="roomCleanLevels" value={JSON.stringify(roomCleanLevels)} />
       <input type="hidden" name="timingPreference" value={timingPreference} />
       <input type="hidden" name="requestedDate" value={requestedDate} />
-      <input type="hidden" name="requestedWindowStart" value={windowStart} />
-      <input type="hidden" name="requestedWindowEnd" value={selectedWindow?.end ?? ""} />
+      <input type="hidden" name="requestedWindowStart" value={windowStartTime} />
+      <input type="hidden" name="requestedWindowEnd" value={windowEndTime} />
       <input type="hidden" name="notes" value={notes} />
       {roomTypes.map((roomType) => (
         <input key={roomType} type="hidden" name="roomTypes" value={roomType} />
@@ -360,31 +649,42 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
         <input key={serviceNeed} type="hidden" name="serviceNeeds" value={serviceNeed} />
       ))}
 
-      <div className="market-wizard-actions">
-        {step > 0 ? (
-          <button type="button" className="button secondary" onClick={goBack}>
-            Back
-          </button>
-        ) : null}
-        {step < steps.length - 1 ? (
-          <button type="button" className="button" onClick={goNext}>
-            Continue
-          </button>
-        ) : (
-          <button
-            type="submit"
-            className="button"
-            onClick={() => {
-              submitIntentRef.current = true;
-            }}
-            disabled={
-              timingPreference === TimingPreference.TIME_SLOT &&
-              (!requestedDate || !selectedWindow)
-            }
-          >
-            Post Job
-          </button>
-        )}
+      {validationMessage && step !== 1 ? (
+        <p className="market-form-error market-form-error--footer" aria-live="polite">
+          {validationMessage}
+        </p>
+      ) : null}
+
+      <div className={step > 0 ? "market-wizard-actions" : "market-wizard-actions market-wizard-actions--first"}>
+        <div className="market-wizard-actions__row">
+          {step > 0 ? (
+            <button type="button" className="button secondary" onClick={goBack}>
+              Back
+            </button>
+          ) : null}
+          {step < steps.length - 1 ? (
+            <button type="button" className="button" onClick={goNext}>
+              Continue
+            </button>
+          ) : (
+            <button
+              type="submit"
+              className="button"
+              onClick={() => {
+                submitIntentRef.current = true;
+              }}
+              disabled={
+                timingPreference === TimingPreference.TIME_SLOT &&
+                (!requestedDate || !windowStartTime || !windowEndTime)
+              }
+            >
+              Post Job for Bids
+            </button>
+          )}
+        </div>
+        <Link href="/customer" className="market-cancel-link">
+          Cancel
+        </Link>
       </div>
     </form>
   );
@@ -419,8 +719,89 @@ function deriveServiceNeeds(roomTypes: RoomType[], cleanLevel: CleanLevel) {
   return Array.from(needs);
 }
 
-function formatRoomTypesLocal(roomTypes: RoomType[]) {
-  return roomTypes
-    .map((roomType) => roomTypeOptions.find((option) => option.value === roomType)?.label ?? roomType)
+function formatTime(time: string) {
+  if (!time) return "";
+  const [h, m] = time.split(":").map(Number);
+  const suffix = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 || 12;
+  return m === 0 ? `${hour} ${suffix}` : `${hour}:${String(m).padStart(2, "0")} ${suffix}`;
+}
+
+function getDateOptions() {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+  });
+  const dayFormatter = new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+  });
+  const today = new Date();
+
+  return Array.from({ length: 8 }, (_, index) => {
+    const date = addDays(today, index);
+    return {
+      value: toDateInputValue(date),
+      label: index === 0 ? "Today" : index === 1 ? "Tomorrow" : dayFormatter.format(date),
+      day: String(date.getDate()),
+      month: formatter.format(date),
+    };
+  });
+}
+
+function getHourOptions() {
+  const options: { value: string; label: string }[] = [];
+  for (let h = 0; h < 12; h++) {
+    for (const m of [0, 30]) {
+      const display = h === 0 ? 12 : h;
+      const label = m === 0 ? `${display}:00` : `${display}:30`;
+      options.push({ value: label, label });
+    }
+  }
+  return options;
+}
+
+function to24h(hour12: string, period: "AM" | "PM"): string {
+  const [hStr, mStr] = hour12.split(":");
+  let h = Number(hStr);
+  if (h === 12) h = 0;
+  if (period === "PM") h += 12;
+  return `${String(h).padStart(2, "0")}:${mStr}`;
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(date.getDate() + days);
+  return next;
+}
+
+function toDateInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatDateForReview(value: string) {
+  if (!value) return "";
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  const today = toDateInputValue(new Date());
+  const tomorrow = toDateInputValue(addDays(new Date(), 1));
+  const prefix = value === today ? "Today" : value === tomorrow ? "Tomorrow" : date.toLocaleDateString("en-US", { weekday: "short" });
+  return `${prefix}, ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+}
+
+function getWindowLabel(start: string, end: string) {
+  if (!start || !end) return null;
+  if (start === "08:00" && end === "20:00") return "Anytime, 8 AM - 8 PM";
+  return `${formatTime(start)} - ${formatTime(end)}`;
+}
+
+function formatRoomSummary(levels: RoomCleanLevels) {
+  return Object.entries(levels)
+    .map(([room, level]) => {
+      const label = roomTypeOptions.find((o) => o.value === room)?.label ?? room;
+      const lvl = cleanLevelOptions.find((o) => o.value === level)?.label ?? level;
+      return `${label} (${lvl})`;
+    })
     .join(", ");
 }

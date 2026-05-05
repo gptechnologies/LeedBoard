@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import "@/app/globals.css";
 import { SiteHeader } from "@/components/site-header";
@@ -10,13 +10,22 @@ export const metadata: Metadata = {
     "Well Kept is a New York home cleaning marketplace where homeowners and apartment renters post cleaning jobs, compare bids, and book professional cleaners.",
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <ClerkProvider appearance={clerkAppearance}>
       <html lang="en">
         <body>
+          <a href="#main-content" className="skip-link">
+            Skip to content
+          </a>
           <SiteHeader />
-          <main>{children}</main>
+          <main id="main-content">{children}</main>
         </body>
       </html>
     </ClerkProvider>

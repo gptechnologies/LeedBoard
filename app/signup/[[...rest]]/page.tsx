@@ -28,7 +28,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
     <section className="auth-shell stack">
       <div>
         <div className="eyebrow">Get started</div>
-        <h1>Create your WellKept account.</h1>
+        <h1>Create your Well Kept account.</h1>
         <p className="subtle">
           Homeowners can post jobs and compare bids. Cleaners can review work, submit
           offers, and manage active jobs.

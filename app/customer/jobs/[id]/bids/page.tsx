@@ -68,15 +68,17 @@ export default async function CustomerJobBidsPage({
       <section className="market-surface">
         <header className="market-topbar market-topbar--detail">
           <div>
-            <div className="market-kicker">Compare bids</div>
             <h1>{job.title}</h1>
+            <p className="market-title-subcopy">
+              {activeBids.length} {activeBids.length === 1 ? "bid" : "bids"} received
+            </p>
           </div>
-          <span className="market-count-pill">{visibleBids.length} of {activeBids.length} shown</span>
+          <span className="notification-dot" aria-label="Notifications" />
         </header>
 
         {query.error ? <div className="notice error">{query.error}</div> : null}
 
-        <article className="market-card">
+        <article className="market-card market-card--summary">
           <div className="stack small">
             <strong>{formatRoomTypes(job.roomTypes)}</strong>
             <span className="market-card__meta">{getCleanLevelLabel(job.cleanLevel)}</span>
@@ -87,7 +89,7 @@ export default async function CustomerJobBidsPage({
           </div>
         </article>
 
-        <form action={`/customer/jobs/${job.id}/delete`} method="post" className="market-card__actions">
+        <form action={`/customer/jobs/${job.id}/delete`} method="post" className="market-card__actions market-danger-action">
           <button type="submit" className="secondary-submit">
             Delete Job
           </button>
@@ -102,17 +104,19 @@ export default async function CustomerJobBidsPage({
           </section>
         ) : (
           <div className="stack">
-            {visibleBids.map((bid) => (
-              <BidCard
-                key={bid.id}
-                bid={bid}
-                action={
-                  <form action={`/customer/jobs/${job.id}/accept-bid`} method="post">
-                    <input type="hidden" name="bidId" value={bid.id} />
-                    <button type="submit">Accept Bid</button>
-                  </form>
-                }
-              />
+            {visibleBids.map((bid, index) => (
+              <div key={bid.id} className={index === 0 ? "market-featured-bid" : undefined}>
+                {index === 0 ? <span className="best-value-flag">Best match</span> : null}
+                <BidCard
+                  bid={bid}
+                  action={
+                    <form action={`/customer/jobs/${job.id}/accept-bid`} method="post">
+                      <input type="hidden" name="bidId" value={bid.id} />
+                      <button type="submit">Accept Bid</button>
+                    </form>
+                  }
+                />
+              </div>
             ))}
             {activeBids.length > visibleBids.length ? (
               <div className="notice">
@@ -121,6 +125,16 @@ export default async function CustomerJobBidsPage({
             ) : null}
           </div>
         )}
+
+        {activeBids.length > 0 ? (
+          <aside className="market-bottom-action">
+            <div>
+              <strong>All cleaners are vetted</strong>
+              <span>Reviewed before bidding.</span>
+            </div>
+            <a href="#main-content" className="button-link">Compare Bids</a>
+          </aside>
+        ) : null}
       </section>
     </div>
   );

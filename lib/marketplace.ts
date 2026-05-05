@@ -35,14 +35,14 @@ export function getEntryMethodLabel(value: EntryMethod) {
 
 export function getCleanLevelLabel(value: CleanLevel) {
   if (value === CleanLevel.LIGHT) {
-    return "Light Clean";
+    return "Light";
   }
 
   if (value === CleanLevel.DEEP) {
-    return "Deep Clean";
+    return "Deep";
   }
 
-  return "Medium Clean";
+  return "Standard";
 }
 
 export function formatServiceNeeds(needs: ServiceNeed[]) {
@@ -306,18 +306,9 @@ export async function getCustomerHomeData(customerId: string) {
     getDefaultHomeProfile(customerId),
   ]);
 
-  const latestOpenJob = jobs.find((job) => job.status === JobRequestStatus.OPEN) ?? jobs[0];
-  const recommendedCleaners = await getRecommendedCleaners({
-    postalCode: latestOpenJob?.postalCode ?? homeProfile?.postalCode,
-    city: latestOpenJob?.city ?? homeProfile?.city,
-    serviceNeeds: latestOpenJob?.serviceNeeds ?? [],
-    limit: 6,
-  });
-
   return {
     jobs,
     homeProfile,
-    recommendedCleaners,
   };
 }
 
@@ -414,6 +405,7 @@ export function buildHomeProfileFormDefaults(homeProfile: HomeProfile | null) {
     entryNotes: homeProfile?.entryNotes ?? "",
     defaultRoomTypes: homeProfile?.defaultRoomTypes ?? [],
     defaultCleanLevel: homeProfile?.defaultCleanLevel ?? CleanLevel.MEDIUM,
+    roomCleanLevels: homeProfile?.roomCleanLevels ?? {},
     notes: homeProfile?.notes ?? "",
   };
 }

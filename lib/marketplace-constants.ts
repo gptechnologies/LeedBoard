@@ -24,18 +24,24 @@ export const roomTypeOptions: Array<{
   label: string;
   icon: string;
 }> = [
-  { value: RoomType.KITCHEN, label: "Kitchen", icon: "🍳" },
-  { value: RoomType.BATHROOM, label: "Bathroom", icon: "🛁" },
-  { value: RoomType.BEDROOM, label: "Bedroom", icon: "🛏" },
-  { value: RoomType.LIVING_AREA, label: "Living room", icon: "🛋" },
-  { value: RoomType.DINING_ROOM, label: "Dining room", icon: "🍽" },
-  { value: RoomType.ENTRYWAY, label: "Entryway", icon: "🚪" },
+  { value: RoomType.KITCHEN, label: "Kitchen", icon: "Kt" },
+  { value: RoomType.BATHROOM, label: "Bathroom", icon: "Ba" },
+  { value: RoomType.BEDROOM, label: "Bedroom", icon: "Bd" },
+  { value: RoomType.LIVING_AREA, label: "Living room", icon: "Lv" },
+  { value: RoomType.DINING_ROOM, label: "Dining room", icon: "Dn" },
+  { value: RoomType.ENTRYWAY, label: "Entryway", icon: "En" },
 ];
 
 export const cleanLevelOptions: Array<{ value: CleanLevel; label: string }> = [
-  { value: CleanLevel.LIGHT, label: "Light Clean" },
-  { value: CleanLevel.MEDIUM, label: "Medium Clean" },
-  { value: CleanLevel.DEEP, label: "Deep Clean" },
+  { value: CleanLevel.LIGHT, label: "Light" },
+  { value: CleanLevel.MEDIUM, label: "Standard" },
+  { value: CleanLevel.DEEP, label: "Deep" },
+];
+
+export const cleanLevelCycle: CleanLevel[] = [
+  CleanLevel.LIGHT,
+  CleanLevel.MEDIUM,
+  CleanLevel.DEEP,
 ];
 
 export const priorityTypeOptions: Array<{ value: PriorityType; label: string }> = [

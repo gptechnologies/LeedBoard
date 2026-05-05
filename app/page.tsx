@@ -57,26 +57,6 @@ export default async function HomePage() {
             <span>On-demand job requests</span>
           </div>
         </div>
-
-        <div className="landing-glass-preview" aria-hidden="true">
-          <div className="landing-request-card glass-card">
-            <span>Homeowner request</span>
-            <strong>2 bed apartment cleaning</strong>
-            <p>Upper West Side · Flexible today</p>
-          </div>
-          <div className="landing-bid-stack">
-            <div className="landing-bid-card glass-card">
-              <span>Cleaner bid</span>
-              <strong>$140 flat</strong>
-              <p>4.9 rating · arrives 2-4 PM</p>
-            </div>
-            <div className="landing-bid-card glass-card is-featured">
-              <span>Confirmed</span>
-              <strong>Cleaner booked</strong>
-              <p>Payment handled after completion</p>
-            </div>
-          </div>
-        </div>
       </section>
 
       <section className="landing-flow-grid" aria-labelledby="marketplace-flow-heading">

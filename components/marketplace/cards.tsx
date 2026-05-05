@@ -68,7 +68,7 @@ export function JobRequestCard({
   return (
     <Link href={href} className="market-card market-card--job">
       <div className="market-card__header">
-        <div>
+        <div className="market-card__title-group">
           <strong>{job.title}</strong>
           <div className="market-card__meta">
             {job.city}, {job.state} {job.postalCode}
@@ -90,7 +90,7 @@ export function JobRequestCard({
       <div className="market-card__meta">{getCleanLevelLabel(job.cleanLevel)}</div>
       <div className="market-card__meta">{formatTimingSummary(job)}</div>
       <div className="market-progress">
-        <strong>{job.bids.length} bids</strong>
+        <strong>{job.bids.length} {job.bids.length === 1 ? "bid" : "bids"}</strong>
         {showAcceptedCleaner && job.acceptedBid ? (
           <span>
             Accepted: {job.acceptedBid.cleaner.firstName} {job.acceptedBid.cleaner.lastName}
@@ -123,7 +123,7 @@ export function RecommendedCleanerCard({
 }) {
   return (
     <article className="market-card market-card--cleaner">
-      <div className="market-avatar">{cleaner.firstName.charAt(0)}</div>
+      <div className="market-avatar" aria-hidden="true">{cleaner.firstName.charAt(0)}</div>
       <div className="stack small">
         <div>
           <strong>{cleaner.firstName} {cleaner.lastName}</strong>
@@ -134,7 +134,7 @@ export function RecommendedCleanerCard({
         <div className="market-trust-row">
           <span>
             {cleaner.cleanerProfile?.googleRating
-              ? `★ ${cleaner.cleanerProfile.googleRating.toFixed(1)}`
+              ? `Rating ${cleaner.cleanerProfile.googleRating.toFixed(1)}`
               : "New"}
           </span>
           <span>
@@ -145,10 +145,7 @@ export function RecommendedCleanerCard({
           {cleaner.cleanerProfile?.licensedAndInsured ? <span>Licensed & insured</span> : null}
         </div>
         <div className="market-card__meta">
-          {cleaner.cleanerProfile?.hourlyRateFromCents
-            ? `From $${(cleaner.cleanerProfile.hourlyRateFromCents / 100).toFixed(0)}/hr`
-            : "Rate on request"}
-          {cleaner.cleanerProfile?.flatRateAvailable ? " · Flat fee available" : ""}
+          Cleaners submit bids after you post a job.
         </div>
       </div>
     </article>
@@ -196,29 +193,36 @@ export function BidCard({
       : bid.status === BidStatus.DECLINED || bid.status === BidStatus.WITHDRAWN
         ? "danger"
         : "default";
+  const rating = bid.cleaner.cleanerProfile?.googleRating;
+  const reviewCount = bid.cleaner.cleanerProfile?.googleReviewCount;
 
   return (
     <article className={compact ? "market-card market-card--bid compact" : "market-card market-card--bid"}>
       <div className="market-card__header">
-        <div>
-          <strong>
-            {bid.cleaner.firstName} {bid.cleaner.lastName}
-          </strong>
-          <div className="market-card__meta">
-            {bid.cleaner.cleanerProfile?.headline ?? "Available cleaner"}
+        <div className="market-bid-identity">
+          <div className="market-avatar market-avatar--small" aria-hidden="true">
+            {bid.cleaner.firstName.charAt(0)}
+          </div>
+          <div>
+            <strong>
+              {bid.cleaner.firstName} {bid.cleaner.lastName}
+            </strong>
+            <div className="market-card__meta">
+              {bid.cleaner.cleanerProfile?.headline ?? "Available cleaner"}
+            </div>
           </div>
         </div>
         <StatusPill label={getBidStatusLabel(bid.status)} tone={tone} />
       </div>
       <div className="market-trust-row">
         <span>
-          {bid.cleaner.cleanerProfile?.googleRating
-            ? `★ ${bid.cleaner.cleanerProfile.googleRating.toFixed(1)}`
+          {rating
+            ? `Rating ${rating.toFixed(1)}`
             : "New"}
         </span>
         <span>
-          {bid.cleaner.cleanerProfile?.googleReviewCount
-            ? `${bid.cleaner.cleanerProfile.googleReviewCount}+ Google reviews`
+          {reviewCount
+            ? `${reviewCount}+ reviews`
             : "No reviews yet"}
         </span>
         {bid.cleaner.cleanerProfile?.licensedAndInsured ? <span>Licensed & insured</span> : null}
@@ -231,7 +235,7 @@ export function BidCard({
       ) : null}
       <div className="market-price-row">
         <span>{formatBidTiming(bid)}</span>
-        <strong>{formatBidAmount(bid)}</strong>
+        <strong><span>Bid</span>{formatBidAmount(bid)}</strong>
       </div>
       {action ? <div className="market-card__actions">{action}</div> : null}
     </article>

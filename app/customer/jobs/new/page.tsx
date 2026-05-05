@@ -23,8 +23,8 @@ export default async function CustomerNewJobPage({
       <section className="market-surface">
         <header className="market-topbar market-topbar--detail">
           <div>
-            <div className="market-kicker">New cleaning request</div>
-            <h1>Post a job</h1>
+            <div className="market-kicker">Post a job</div>
+            <h1>Post for cleaner bids</h1>
           </div>
         </header>
 

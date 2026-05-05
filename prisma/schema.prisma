@@ -172,6 +172,7 @@ model HomeProfile {
   suppliesSource       SuppliesSource @default(CLEANER_BRINGS_ALL)
   defaultRoomTypes     RoomType[]     @default([])
   defaultCleanLevel    CleanLevel     @default(MEDIUM)
+  roomCleanLevels      Json           @default("{}")
   defaultPriorityTypes PriorityType[] @default([])
   notes                String?
   isDefault            Boolean        @default(true)
@@ -193,6 +194,7 @@ model JobRequest {
   serviceNeeds                  ServiceNeed[]
   roomTypes                     RoomType[]       @default([])
   cleanLevel                    CleanLevel       @default(MEDIUM)
+  roomCleanLevels               Json             @default("{}")
   priorityTypes                 PriorityType[]   @default([])
   entryMethod                   EntryMethod      @default(I_WILL_BE_HOME)
   entryNotes                    String?

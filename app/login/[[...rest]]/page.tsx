@@ -18,7 +18,7 @@ export default async function LoginPage() {
     <section className="auth-shell stack">
       <div>
         <div className="eyebrow">Welcome back</div>
-        <h1>Sign in to your WellKept account.</h1>
+        <h1>Sign in to your Well Kept account.</h1>
         <p className="subtle">
           Access your jobs, bids, schedules, and account details in one place.
         </p>

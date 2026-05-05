@@ -76,6 +76,9 @@ export default async function CustomerJobDetailPage({
           <div>
             <div className="market-kicker">Job detail</div>
             <h1>{job.title}</h1>
+            <p className="market-title-subcopy">
+              {job.bids.length} active {job.bids.length === 1 ? "bid" : "bids"}
+            </p>
           </div>
           <StatusPill
             label={getJobRequestStatusLabel(job.status)}
@@ -85,7 +88,7 @@ export default async function CustomerJobDetailPage({
 
         {query.error ? <div className="notice error">{query.error}</div> : null}
 
-        <article className="market-card">
+        <article className="market-card market-card--summary">
           <div className="stack small">
             <strong>Rooms</strong>
             <span className="market-card__meta">{formatRoomTypes(job.roomTypes)}</span>
@@ -135,6 +138,18 @@ export default async function CustomerJobDetailPage({
             </Link>
           </section>
         )}
+
+        {job.status === JobRequestStatus.OPEN ? (
+          <aside className="market-bottom-action">
+            <div>
+              <strong>{job.bids.length} active {job.bids.length === 1 ? "bid" : "bids"}</strong>
+              <span>Cleaners set their own offer.</span>
+            </div>
+            <Link href={`/customer/jobs/${job.id}/bids`} className="button-link">
+              Review Bids
+            </Link>
+          </aside>
+        ) : null}
       </section>
     </div>
   );
