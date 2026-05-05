@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { UserRole } from "@prisma/client";
 import { JobRequestCard } from "@/components/marketplace/cards";
-import { MobileNav } from "@/components/marketplace/mobile-nav";
+
 import { getCustomerHomeData } from "@/lib/marketplace";
 import { requireUser } from "@/lib/session";
 
@@ -115,7 +115,6 @@ export default async function CustomerDashboard({ searchParams }: CustomerDashbo
         </section>
 
       </section>
-      <MobileNav role="customer" />
     </div>
   );
 }

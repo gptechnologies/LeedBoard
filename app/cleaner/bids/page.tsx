@@ -1,6 +1,6 @@
 import { UserRole } from "@prisma/client";
 import { BidCard } from "@/components/marketplace/cards";
-import { MobileNav } from "@/components/marketplace/mobile-nav";
+
 import { getCleanerHomeData } from "@/lib/marketplace";
 import { requireUser } from "@/lib/session";
 
@@ -35,7 +35,6 @@ export default async function CleanerBidsPage() {
           </div>
         )}
       </section>
-      <MobileNav role="cleaner" />
     </div>
   );
 }

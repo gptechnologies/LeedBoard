@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { UserRole } from "@prisma/client";
 import { AccountUserButton } from "@/components/account-user-button";
-import { MobileNav } from "@/components/marketplace/mobile-nav";
+
 import { requireUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +37,6 @@ export default async function CustomerAccountPage() {
           </div>
         </section>
       </section>
-      <MobileNav role="customer" />
     </div>
   );
 }

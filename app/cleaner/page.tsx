@@ -1,7 +1,7 @@
 import { UserRole } from "@prisma/client";
 import { AvailableJobCard, BidCard } from "@/components/marketplace/cards";
 import { CleanerDefaultsForm } from "@/components/marketplace/cleaner-defaults-form";
-import { MobileNav } from "@/components/marketplace/mobile-nav";
+
 import { getCleanerHomeData } from "@/lib/marketplace";
 import { requireUser } from "@/lib/session";
 
@@ -92,7 +92,6 @@ export default async function CleanerDashboard({ searchParams }: CleanerDashboar
           )}
         </section>
       </section>
-      <MobileNav role="cleaner" />
     </div>
   );
 }

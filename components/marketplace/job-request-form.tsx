@@ -447,7 +447,7 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
                     checked={arrivalChoice === "window"}
                     onChange={chooseTimeSlot}
                   />
-                  Choose a time slot
+                  Create a schedule
                 </label>
               </div>
 

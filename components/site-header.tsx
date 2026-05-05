@@ -7,10 +7,20 @@ import { getCurrentUser } from "@/lib/session";
 export async function SiteHeader() {
   const [{ userId }, user] = await Promise.all([auth(), getCurrentUser()]);
 
+  const brandHref = user
+    ? user.role === UserRole.CUSTOMER
+      ? "/customer"
+      : user.role === UserRole.CLEANER
+        ? "/cleaner"
+        : user.role === UserRole.ADMIN
+          ? "/admin"
+          : "/"
+    : "/";
+
   return (
     <header className="site-header">
       <div className="site-header__inner">
-        <Link href="/" className="brand">
+        <Link href={brandHref} className="brand">
           Well Kept
         </Link>
         <nav className="nav-links">
