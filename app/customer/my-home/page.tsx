@@ -1,11 +1,6 @@
 import { UserRole } from "@prisma/client";
-import { HomeProfileForm } from "@/components/marketplace/home-profile-form";
-import {
-  buildHomeProfileFormDefaults,
-  formatRoomTypes,
-  getCustomerHomeProfiles,
-  getEntryMethodLabel,
-} from "@/lib/marketplace";
+import { HomePresetsManager } from "@/components/marketplace/home-presets-manager";
+import { getCustomerHomeProfiles } from "@/lib/marketplace";
 import { requireUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -35,49 +30,7 @@ export default async function CustomerMyHomePage({
 
         {params.error ? <div className="notice error">{params.error}</div> : null}
 
-        <section className="stack">
-          <div className="market-section-heading">
-            <h2>Saved homes ({homeProfiles.length})</h2>
-          </div>
-          {homeProfiles.length > 0 ? (
-            <div className="market-home-preset-list">
-              {homeProfiles.map((home) => (
-                <article key={home.id} className="market-card market-home-preset-card">
-                  <div className="stack small">
-                    <strong>{home.label}</strong>
-                    <span className="market-card__meta">
-                      {home.addressLine1}, {home.city}, {home.state} {home.postalCode}
-                    </span>
-                    <span className="market-card__meta">
-                      {home.defaultRoomTypes.length > 0
-                        ? formatRoomTypes(home.defaultRoomTypes)
-                        : "No typical rooms saved"} · {getEntryMethodLabel(home.entryMethod)}
-                    </span>
-                  </div>
-                  <form action={`/customer/my-home/${home.id}/delete`} method="post">
-                    <button type="submit" className="secondary-submit">
-                      Delete
-                    </button>
-                  </form>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <section className="market-empty">
-              <strong>No home presets saved yet.</strong>
-              <p className="market-card__copy">
-                Add a nickname, address, and typical rooms so they appear when you post a job.
-              </p>
-            </section>
-          )}
-        </section>
-
-        <section className="stack">
-          <div className="market-section-heading">
-            <h2>Add a home preset</h2>
-          </div>
-          <HomeProfileForm defaults={buildHomeProfileFormDefaults(null)} />
-        </section>
+        <HomePresetsManager homeProfiles={homeProfiles} />
       </section>
     </div>
   );

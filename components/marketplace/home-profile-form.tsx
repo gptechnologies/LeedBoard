@@ -13,6 +13,8 @@ import { RoomIcon } from "@/components/marketplace/room-icons";
 type RoomCleanLevels = Partial<Record<RoomType, CleanLevel>>;
 
 type HomeProfileFormProps = {
+  homeProfileId?: string;
+  submitLabel?: string;
   defaults: {
     label: string;
     addressLine1: string;
@@ -56,7 +58,11 @@ function getCleanLevelLabel(level: CleanLevel): string {
   return cleanLevelOptions.find((o) => o.value === level)?.label ?? level;
 }
 
-export function HomeProfileForm({ defaults }: HomeProfileFormProps) {
+export function HomeProfileForm({
+  defaults,
+  homeProfileId,
+  submitLabel = "Save Home Preset",
+}: HomeProfileFormProps) {
   const [roomCleanLevels, setRoomCleanLevels] = useState<RoomCleanLevels>(
     () => initRoomCleanLevels(defaults),
   );
@@ -81,6 +87,7 @@ export function HomeProfileForm({ defaults }: HomeProfileFormProps) {
 
   return (
     <form action="/customer/my-home/save" method="post" className="market-form stack">
+      {homeProfileId ? <input type="hidden" name="homeProfileId" value={homeProfileId} /> : null}
       <section className="market-form-section stack">
         <div className="field">
           <label htmlFor="label">Home nickname</label>
@@ -179,7 +186,7 @@ export function HomeProfileForm({ defaults }: HomeProfileFormProps) {
       </section>
 
       <div className="market-sticky-submit">
-        <button type="submit">Add Home Preset</button>
+        <button type="submit">{submitLabel}</button>
       </div>
     </form>
   );

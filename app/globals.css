@@ -1457,8 +1457,47 @@ button[type="submit"]:disabled {
 }
 
 .market-home-preset-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.market-home-preset-summary {
+  width: 100%;
+  display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
+  gap: 14px;
+  border: 0;
+  padding: 16px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.market-home-preset-summary:focus-visible {
+  outline: 3px solid oklch(61% 0.09 145 / 0.42);
+  outline-offset: -3px;
+}
+
+.market-home-preset-editor {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  padding: 16px;
+}
+
+.market-home-preset-editor .market-form {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.market-home-preset-editor .market-sticky-submit {
+  position: static;
 }
 
 .market-home-preset-choice {
@@ -1498,8 +1537,13 @@ button[type="submit"]:disabled {
   box-shadow: 0 0 0 2px oklch(61% 0.09 145 / 0.16);
 }
 
+.market-add-preset-button {
+  width: 100%;
+}
+
 @media (hover: hover) {
   .market-preset-card--button:hover,
+  .market-home-preset-summary:hover,
   .market-home-preset-choice:hover {
     border-color: oklch(70% 0.045 145);
     background: oklch(98% 0.012 112);

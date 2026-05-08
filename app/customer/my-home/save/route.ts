@@ -20,12 +20,34 @@ export async function POST(request: Request) {
 
   try {
     const input = parseHomeProfileForm(formData);
-    const existingCount = await prisma.homeProfile.count({
-      where: {
-        customerId: user.id,
-      },
-    });
+    const homeProfileId = String(formData.get("homeProfileId") || "").trim();
 
+    if (homeProfileId) {
+      const existing = await prisma.homeProfile.findFirst({
+        where: {
+          id: homeProfileId,
+          customerId: user.id,
+        },
+      });
+
+      if (!existing) {
+        return redirectWithError(request, "That home preset could not be found.");
+      }
+
+      await prisma.homeProfile.update({
+        where: { id: existing.id },
+        data: {
+          ...input,
+          isDefault: existing.isDefault,
+        },
+      });
+
+      return NextResponse.redirect(new URL("/customer/my-home", request.url));
+    }
+
+    const existingCount = await prisma.homeProfile.count({
+      where: { customerId: user.id },
+    });
     await prisma.homeProfile.create({
       data: {
         ...input,
