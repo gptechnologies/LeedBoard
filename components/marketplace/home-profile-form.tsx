@@ -83,8 +83,8 @@ export function HomeProfileForm({ defaults }: HomeProfileFormProps) {
     <form action="/customer/my-home/save" method="post" className="market-form stack">
       <section className="market-form-section stack">
         <div className="field">
-          <label htmlFor="label">Preset name</label>
-          <input id="label" name="label" defaultValue={defaults.label} />
+          <label htmlFor="label">Home nickname</label>
+          <input id="label" name="label" defaultValue={defaults.label} placeholder="Apartment, Mom's house, Office" />
         </div>
         <div className="field">
           <label htmlFor="addressLine1">Street address</label>
@@ -179,7 +179,7 @@ export function HomeProfileForm({ defaults }: HomeProfileFormProps) {
       </section>
 
       <div className="market-sticky-submit">
-        <button type="submit">Save My Home</button>
+        <button type="submit">Add Home Preset</button>
       </div>
     </form>
   );

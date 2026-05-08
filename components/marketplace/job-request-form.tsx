@@ -35,7 +35,7 @@ type WizardHomeProfile = {
   defaultCleanLevel: CleanLevel;
   roomCleanLevels: unknown;
   notes: string | null;
-} | null;
+};
 
 const steps = ["Details", "Schedule", "Review"] as const;
 const dateHints = ["Fastest", "Popular", "Flexible", "Good fit", "Open", "Open", "Open", "Open"];
@@ -53,7 +53,7 @@ function parseRawRoomCleanLevels(raw: unknown): RoomCleanLevels {
   return result;
 }
 
-function initRoomCleanLevels(profile: WizardHomeProfile): RoomCleanLevels {
+function initRoomCleanLevels(profile: WizardHomeProfile | null): RoomCleanLevels {
   if (!profile) return {};
   const parsed = parseRawRoomCleanLevels(profile.roomCleanLevels);
   if (Object.keys(parsed).length > 0) return parsed;
@@ -76,20 +76,22 @@ function getDominantCleanLevel(levels: RoomCleanLevels): CleanLevel {
   return CleanLevel.LIGHT;
 }
 
-export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: WizardHomeProfile }) {
+export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfile[] }) {
+  const initialHomeProfile = homeProfiles[0] ?? null;
+  const [selectedHomeProfileId, setSelectedHomeProfileId] = useState(initialHomeProfile?.id ?? "");
   const [step, setStep] = useState(0);
-  const [addressLine1, setAddressLine1] = useState(defaultHomeProfile?.addressLine1 ?? "");
-  const [addressLine2, setAddressLine2] = useState(defaultHomeProfile?.addressLine2 ?? "");
-  const [city, setCity] = useState(defaultHomeProfile?.city ?? "");
-  const [state, setState] = useState(defaultHomeProfile?.state ?? "CA");
-  const [postalCode, setPostalCode] = useState(defaultHomeProfile?.postalCode ?? "");
+  const [addressLine1, setAddressLine1] = useState(initialHomeProfile?.addressLine1 ?? "");
+  const [addressLine2, setAddressLine2] = useState(initialHomeProfile?.addressLine2 ?? "");
+  const [city, setCity] = useState(initialHomeProfile?.city ?? "");
+  const [state, setState] = useState(initialHomeProfile?.state ?? "CA");
+  const [postalCode, setPostalCode] = useState(initialHomeProfile?.postalCode ?? "");
   const [roomCleanLevels, setRoomCleanLevels] = useState<RoomCleanLevels>(
-    () => initRoomCleanLevels(defaultHomeProfile),
+    () => initRoomCleanLevels(initialHomeProfile),
   );
   const [entryMethod, setEntryMethod] = useState<EntryMethod>(
-    defaultHomeProfile?.entryMethod ?? EntryMethod.I_WILL_BE_HOME,
+    initialHomeProfile?.entryMethod ?? EntryMethod.I_WILL_BE_HOME,
   );
-  const [entryNotes, setEntryNotes] = useState(defaultHomeProfile?.entryNotes ?? "");
+  const [entryNotes, setEntryNotes] = useState(initialHomeProfile?.entryNotes ?? "");
   const [timingPreference, setTimingPreference] = useState<TimingPreference>(TimingPreference.ASAP);
   const [dayChoice, setDayChoice] = useState<DayChoice>("");
   const [arrivalChoice, setArrivalChoice] = useState<ArrivalChoice>("");
@@ -99,7 +101,7 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
   const [endHour, setEndHour] = useState("");
   const [endPeriod, setEndPeriod] = useState<"AM" | "PM">("AM");
   const [notes, setNotes] = useState("");
-  const [addressExpanded, setAddressExpanded] = useState(!defaultHomeProfile);
+  const [addressExpanded, setAddressExpanded] = useState(!initialHomeProfile);
   const [validationMessage, setValidationMessage] = useState("");
   const wizardTopRef = useRef<HTMLDivElement>(null);
   const submitIntentRef = useRef(false);
@@ -121,15 +123,31 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
     (arrivalChoice === "window" && Boolean(startHour && endHour));
   const canContinueFromSchedule = hasScheduleDay && hasScheduleArrival;
 
+  const selectedHomeProfile =
+    homeProfiles.find((homeProfile) => homeProfile.id === selectedHomeProfileId) ?? null;
   const isUsingPreset =
-    !!defaultHomeProfile &&
-    addressLine1 === defaultHomeProfile.addressLine1 &&
-    addressLine2 === (defaultHomeProfile.addressLine2 ?? "") &&
-    city === defaultHomeProfile.city &&
-    state === defaultHomeProfile.state &&
-    postalCode === defaultHomeProfile.postalCode &&
-    entryMethod === defaultHomeProfile.entryMethod &&
-    entryNotes === (defaultHomeProfile.entryNotes ?? "");
+    !!selectedHomeProfile &&
+    addressLine1 === selectedHomeProfile.addressLine1 &&
+    addressLine2 === (selectedHomeProfile.addressLine2 ?? "") &&
+    city === selectedHomeProfile.city &&
+    state === selectedHomeProfile.state &&
+    postalCode === selectedHomeProfile.postalCode &&
+    entryMethod === selectedHomeProfile.entryMethod &&
+    entryNotes === (selectedHomeProfile.entryNotes ?? "");
+
+  function chooseHomeProfile(profile: WizardHomeProfile) {
+    setSelectedHomeProfileId(profile.id);
+    setAddressLine1(profile.addressLine1);
+    setAddressLine2(profile.addressLine2 ?? "");
+    setCity(profile.city);
+    setState(profile.state);
+    setPostalCode(profile.postalCode);
+    setRoomCleanLevels(initRoomCleanLevels(profile));
+    setEntryMethod(profile.entryMethod);
+    setEntryNotes(profile.entryNotes ?? "");
+    setAddressExpanded(false);
+    setValidationMessage("");
+  }
 
   function cycleRoomCleanLevel(room: RoomType) {
     setRoomCleanLevels((current) => {
@@ -254,7 +272,32 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
             <div className="market-question-copy">
               <h3>Where should cleaners go?</h3>
             </div>
-            {defaultHomeProfile ? (
+            {homeProfiles.length > 0 ? (
+              <div className="market-home-preset-list" aria-label="Saved home presets">
+                {homeProfiles.map((profile) => {
+                  const isSelected = profile.id === selectedHomeProfileId;
+                  return (
+                    <button
+                      key={profile.id}
+                      type="button"
+                      className={
+                        isSelected
+                          ? "market-home-preset-choice active"
+                          : "market-home-preset-choice"
+                      }
+                      onClick={() => chooseHomeProfile(profile)}
+                      aria-pressed={isSelected}
+                    >
+                      <strong>{profile.label}</strong>
+                      <span>
+                        {profile.addressLine1}, {profile.city}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+            {selectedHomeProfile ? (
               <button
                 type="button"
                 className="market-preset-card market-preset-card--button"
@@ -268,6 +311,7 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
                     </svg>
                   </span>
                   <div className="stack small">
+                    <span className="market-card__meta">{selectedHomeProfile.label}</span>
                     <strong>{addressLine1}, {city}, {state} {postalCode}</strong>
                   </div>
                   <span className="market-preset-card__chevron" aria-hidden="true">
@@ -277,7 +321,7 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
               </button>
             ) : (
               <div className="notice">
-                Save your address and entry details once in <Link href="/customer/my-home">My Home</Link> to post faster next time.
+                Save homes as presets in <Link href="/customer/my-home">Account</Link> to post faster next time.
               </div>
             )}
             {addressExpanded ? (
@@ -621,7 +665,7 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
         </section>
       ) : null}
 
-      <input type="hidden" name="homeProfileId" value={isUsingPreset ? defaultHomeProfile?.id ?? "" : ""} />
+      <input type="hidden" name="homeProfileId" value={isUsingPreset ? selectedHomeProfile?.id ?? "" : ""} />
       <input type="hidden" name="addressLine1" value={addressLine1} />
       <input type="hidden" name="addressLine2" value={addressLine2} />
       <input type="hidden" name="city" value={city} />

@@ -20,26 +20,19 @@ export async function POST(request: Request) {
 
   try {
     const input = parseHomeProfileForm(formData);
-    const existing = await prisma.homeProfile.findFirst({
+    const existingCount = await prisma.homeProfile.count({
       where: {
         customerId: user.id,
-        isDefault: true,
       },
     });
 
-    if (existing) {
-      await prisma.homeProfile.update({
-        where: { id: existing.id },
-        data: input,
-      });
-    } else {
-      await prisma.homeProfile.create({
-        data: {
-          ...input,
-          customerId: user.id,
-        },
-      });
-    }
+    await prisma.homeProfile.create({
+      data: {
+        ...input,
+        isDefault: existingCount === 0,
+        customerId: user.id,
+      },
+    });
 
     return NextResponse.redirect(new URL("/customer/my-home", request.url));
   } catch (error) {

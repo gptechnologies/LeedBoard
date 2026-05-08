@@ -1,6 +1,6 @@
 import { UserRole } from "@prisma/client";
 import { JobRequestForm } from "@/components/marketplace/job-request-form";
-import { getDefaultHomeProfile } from "@/lib/marketplace";
+import { getCustomerHomeProfiles } from "@/lib/marketplace";
 import { requireUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,7 @@ export default async function CustomerNewJobPage({
 }: CustomerNewJobPageProps) {
   const user = await requireUser(UserRole.CUSTOMER);
   const params = await searchParams;
-  const homeProfile = await getDefaultHomeProfile(user.id);
+  const homeProfiles = await getCustomerHomeProfiles(user.id);
 
   return (
     <div className="market-shell market-shell--detail">
@@ -30,7 +30,7 @@ export default async function CustomerNewJobPage({
 
         {params.error ? <div className="notice error">{params.error}</div> : null}
 
-        <JobRequestForm defaultHomeProfile={homeProfile} />
+        <JobRequestForm homeProfiles={homeProfiles} />
       </section>
     </div>
   );

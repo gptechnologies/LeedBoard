@@ -1451,8 +1451,56 @@ button[type="submit"]:disabled {
   line-height: 1;
 }
 
+.market-home-preset-list {
+  display: grid;
+  gap: 10px;
+}
+
+.market-home-preset-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.market-home-preset-choice {
+  width: 100%;
+  min-height: 58px;
+  display: grid;
+  gap: 3px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: var(--surface-strong);
+  color: var(--body);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 170ms ease,
+    background 170ms ease,
+    box-shadow 170ms ease,
+    transform 170ms ease;
+}
+
+.market-home-preset-choice strong {
+  color: var(--ink);
+  font-size: 0.96rem;
+}
+
+.market-home-preset-choice span {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.25;
+}
+
+.market-home-preset-choice.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 2px oklch(61% 0.09 145 / 0.16);
+}
+
 @media (hover: hover) {
-  .market-preset-card--button:hover {
+  .market-preset-card--button:hover,
+  .market-home-preset-choice:hover {
     border-color: oklch(70% 0.045 145);
     background: oklch(98% 0.012 112);
     box-shadow: 0 12px 26px oklch(45% 0.035 112 / 0.1);

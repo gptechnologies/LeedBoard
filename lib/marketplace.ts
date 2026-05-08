@@ -395,7 +395,7 @@ export async function getCleanerHomeData(cleanerId: string) {
 
 export function buildHomeProfileFormDefaults(homeProfile: HomeProfile | null) {
   return {
-    label: homeProfile?.label ?? "My Home",
+    label: homeProfile?.label ?? "",
     addressLine1: homeProfile?.addressLine1 ?? "",
     addressLine2: homeProfile?.addressLine2 ?? "",
     city: homeProfile?.city ?? "",

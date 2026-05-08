@@ -32,7 +32,7 @@ export default async function CustomerAccountPage() {
           </p>
           <div className="market-card__actions market-card__actions--start">
             <Link href="/customer/my-home" className="button-link secondary">
-              Edit My Home
+              Manage Home Presets
             </Link>
           </div>
         </section>
