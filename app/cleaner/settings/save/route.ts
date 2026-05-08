@@ -50,8 +50,10 @@ export async function POST(request: Request) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unable to save your bid defaults right now.";
-    return NextResponse.redirect(new URL(`/cleaner?error=${encodeURIComponent(message)}`, request.url));
+    return NextResponse.redirect(
+      new URL(`/cleaner/account?error=${encodeURIComponent(message)}`, request.url),
+    );
   }
 
-  return NextResponse.redirect(new URL("/cleaner", request.url));
+  return NextResponse.redirect(new URL("/cleaner/account", request.url));
 }

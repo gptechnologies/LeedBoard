@@ -1,25 +1,19 @@
-import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
-import { getCurrentUser, getRoleHome } from "@/lib/session";
+import { Suspense } from "react";
+import { ContinueBridge } from "@/app/auth/continue/continue-bridge";
 
-type ContinuePageProps = {
-  searchParams: Promise<{
-    role?: string;
-  }>;
-};
+export const dynamic = "force-dynamic";
 
-export default async function ContinuePage({ searchParams }: ContinuePageProps) {
-  const params = await searchParams;
-  const [{ userId }, user] = await Promise.all([auth(), getCurrentUser()]);
-
-  if (!userId) {
-    redirect("/login");
-  }
-
-  if (user) {
-    redirect(getRoleHome(user.role));
-  }
-
-  const query = params.role ? `?role=${encodeURIComponent(params.role)}` : "";
-  redirect(`/welcome${query}`);
+export default function ContinuePage() {
+  return (
+    <section className="auth-shell stack">
+      <div>
+        <div className="eyebrow">Setting up</div>
+        <h1>Opening your Well Kept account.</h1>
+        <p className="subtle">This should only take a moment.</p>
+      </div>
+      <Suspense fallback={null}>
+        <ContinueBridge />
+      </Suspense>
+    </section>
+  );
 }

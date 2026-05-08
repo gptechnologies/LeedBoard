@@ -40,11 +40,6 @@ export async function SiteHeader() {
             </Link>
           ) : user ? (
             <>
-              {user.role === UserRole.CLEANER ? (
-                <Link href="/cleaner" className="primary">
-                  My Schedule
-                </Link>
-              ) : null}
               {user.role === UserRole.ADMIN ? (
                 <Link href="/admin" className="primary">
                   Operations

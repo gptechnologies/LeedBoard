@@ -77,7 +77,8 @@ export async function POST(request: Request) {
       });
     }
 
-    return NextResponse.redirect(new URL(getRoleHome(role), request.url));
+    const nextPath = role === UserRole.CUSTOMER ? "/onboarding/homeowner" : getRoleHome(role);
+    return NextResponse.redirect(new URL(nextPath, request.url));
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "We couldn't complete your account setup.";

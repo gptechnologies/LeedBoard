@@ -9,7 +9,7 @@ import {
   ServiceNeed,
   TimingPreference,
 } from "@prisma/client";
-import { formatDateLabel } from "@/lib/format";
+import { formatCurrency, formatDateLabel, formatRelativeDate } from "@/lib/format";
 import {
   formatBidAmount,
   formatBidTiming,
@@ -291,5 +291,192 @@ export function AvailableJobCard({
         <span>{job.bids.length} bids</span>
       </div>
     </Link>
+  );
+}
+
+export function CleanerUpNextCard({
+  booking,
+}: {
+  booking: {
+    id: string;
+    city: string;
+    state: string;
+    service: {
+      name: string;
+    };
+    slot: {
+      startsAt: Date;
+    };
+  };
+}) {
+  return (
+    <article className="cleaner-feature-card">
+      <div className="cleaner-feature-card__heading">
+        <h2>Up next (1)</h2>
+        <span aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </span>
+      </div>
+      <div className="cleaner-feature-card__body">
+        <ServiceSymbol kind="home" prominent />
+        <div className="cleaner-job-card__content">
+          <strong>{booking.service.name}</strong>
+          <span className="cleaner-job-card__meta">
+            <MetaIcon name="pin" />
+            {booking.city}, {booking.state}
+          </span>
+          <span className="cleaner-job-card__meta">
+            <MetaIcon name="clock" />
+            {formatVisitTime(booking.slot.startsAt)}
+          </span>
+        </div>
+        <Link href={`/cleaner/bookings/${booking.id}`} className="cleaner-action-button">
+          Open
+        </Link>
+      </div>
+    </article>
+  );
+}
+
+export function CleanerNearbyJobCard({
+  job,
+  estimateCents,
+  distanceLabel,
+}: {
+  job: {
+    id: string;
+    title: string;
+    serviceNeeds: ServiceNeed[];
+    roomTypes: RoomType[];
+    timingPreference: TimingPreference;
+    requestedDate: Date | null;
+    requestedWindowStart: string | null;
+    requestedWindowEnd: string | null;
+  };
+  estimateCents: number | null;
+  distanceLabel: string;
+}) {
+  return (
+    <article className="cleaner-job-card">
+      <ServiceSymbol kind={getCleanerJobIconKind(job)} />
+      <div className="cleaner-job-card__content">
+        <strong>{job.title}</strong>
+        <span className="cleaner-job-card__meta">
+          <MetaIcon name="pin" />
+          {distanceLabel}
+        </span>
+        <span className="cleaner-job-card__meta">
+          <MetaIcon name="clock" />
+          {formatTimingSummary(job)}
+        </span>
+      </div>
+      <div className="cleaner-job-card__bid">
+        {estimateCents ? <strong>{formatWholeCurrency(estimateCents)}</strong> : null}
+        <Link href={`/cleaner/jobs/${job.id}`} className="cleaner-action-button">
+          Bid
+        </Link>
+      </div>
+    </article>
+  );
+}
+
+function formatVisitTime(date: Date) {
+  return `${formatRelativeDate(date)} · ${date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+  })}`;
+}
+
+function formatWholeCurrency(cents: number) {
+  return formatCurrency(cents).replace(".00", "");
+}
+
+function getCleanerJobIconKind(job: {
+  serviceNeeds: ServiceNeed[];
+  roomTypes: RoomType[];
+}) {
+  if (job.serviceNeeds.includes(ServiceNeed.MOVE_OUT)) {
+    return "box";
+  }
+
+  if (job.serviceNeeds.includes(ServiceNeed.KITCHEN) || job.roomTypes.includes(RoomType.KITCHEN)) {
+    return "kitchen";
+  }
+
+  return "apartment";
+}
+
+function ServiceSymbol({
+  kind,
+  prominent = false,
+}: {
+  kind: string;
+  prominent?: boolean;
+}) {
+  return (
+    <span
+      className={
+        prominent
+          ? "cleaner-service-symbol cleaner-service-symbol--prominent"
+          : "cleaner-service-symbol"
+      }
+      aria-hidden="true"
+    >
+      <svg viewBox="0 0 24 24">
+        {kind === "kitchen" ? (
+          <>
+            <path d="M7 4h10v16H7z" />
+            <path d="M9 4v4h6V4" />
+            <path d="M10 12h4v4h-4z" />
+            <path d="M9.5 7h.01" />
+            <path d="M12 7h.01" />
+            <path d="M14.5 7h.01" />
+          </>
+        ) : null}
+        {kind === "box" ? (
+          <>
+            <path d="m4 8 8-4 8 4-8 4z" />
+            <path d="M4 8v8l8 4 8-4V8" />
+            <path d="M12 12v8" />
+            <path d="m16 6-8 4" />
+          </>
+        ) : null}
+        {kind === "apartment" ? (
+          <>
+            <path d="M5 21V5h10v16" />
+            <path d="M15 10h4v11" />
+            <path d="M9 9h2" />
+            <path d="M9 13h2" />
+            <path d="M9 21v-4h2v4" />
+          </>
+        ) : null}
+        {kind === "home" ? (
+          <>
+            <path d="m4 11 8-7 8 7" />
+            <path d="M6.5 10.5V20h11v-9.5" />
+            <path d="M10 20v-5h4v5" />
+          </>
+        ) : null}
+      </svg>
+    </span>
+  );
+}
+
+function MetaIcon({ name }: { name: "pin" | "clock" }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      {name === "pin" ? (
+        <>
+          <path d="M12 21s6-5.3 6-11a6 6 0 0 0-12 0c0 5.7 6 11 6 11z" />
+          <path d="M12 10.5h.01" />
+        </>
+      ) : (
+        <>
+          <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z" />
+          <path d="M12 7v5l3 2" />
+        </>
+      )}
+    </svg>
   );
 }

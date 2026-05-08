@@ -115,22 +115,26 @@ enum BookingEventType {
 }
 
 model User {
-  id                  String          @id @default(cuid())
-  clerkUserId         String?         @unique
-  role                UserRole
-  firstName           String
-  lastName            String
-  email               String          @unique
-  phone               String?
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
-  cleanerProfile      CleanerProfile?
-  homeProfiles        HomeProfile[]
-  customerBookings    Booking[]       @relation("CustomerBookings")
-  cleanerBookings     Booking[]       @relation("CleanerBookings")
-  customerJobRequests JobRequest[]    @relation("CustomerJobRequests")
-  cleanerBids         JobBid[]        @relation("CleanerBids")
-  bookingEvents       BookingEvent[]
+  id                             String          @id @default(cuid())
+  clerkUserId                    String?         @unique
+  role                           UserRole
+  firstName                      String
+  lastName                       String
+  email                          String          @unique
+  phone                          String?
+  homeownerOnboardingCompletedAt DateTime?
+  pushNotificationsRequestedAt   DateTime?
+  pushNotificationsEnabled       Boolean         @default(false)
+  heardAboutUs                   String?
+  createdAt                      DateTime        @default(now())
+  updatedAt                      DateTime        @updatedAt
+  cleanerProfile                 CleanerProfile?
+  homeProfiles                   HomeProfile[]
+  customerBookings               Booking[]       @relation("CustomerBookings")
+  cleanerBookings                Booking[]       @relation("CleanerBookings")
+  customerJobRequests            JobRequest[]    @relation("CustomerJobRequests")
+  cleanerBids                    JobBid[]        @relation("CleanerBids")
+  bookingEvents                  BookingEvent[]
 }
 
 model CleanerProfile {

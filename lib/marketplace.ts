@@ -1,6 +1,7 @@
 import {
   BidPricingType,
   BidStatus,
+  BookingStatus,
   CleanLevel,
   EntryMethod,
   HomeProfile,
@@ -313,16 +314,47 @@ export async function getCustomerHomeData(customerId: string) {
 }
 
 export async function getCleanerHomeData(cleanerId: string) {
-  const cleaner = await prisma.user.findUnique({
-    where: { id: cleanerId },
-    include: {
-      cleanerProfile: true,
-    },
-  });
+  const [cleaner, nextBooking] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: cleanerId },
+      include: {
+        cleanerProfile: true,
+      },
+    }),
+    prisma.booking.findFirst({
+      where: {
+        cleanerId,
+        status: {
+          in: [
+            BookingStatus.BOOKED,
+            BookingStatus.EN_ROUTE,
+            BookingStatus.ARRIVED,
+            BookingStatus.IN_PROGRESS,
+          ],
+        },
+        slot: {
+          startsAt: {
+            gte: new Date(),
+          },
+        },
+      },
+      include: {
+        customer: true,
+        service: true,
+        slot: true,
+      },
+      orderBy: {
+        slot: {
+          startsAt: "asc",
+        },
+      },
+    }),
+  ]);
 
   if (!cleaner?.cleanerProfile) {
     return {
       cleaner: null,
+      nextBooking,
       openJobs: [],
       bids: [],
     };
@@ -388,6 +420,7 @@ export async function getCleanerHomeData(cleanerId: string) {
 
   return {
     cleaner,
+    nextBooking,
     openJobs: matchingOpenJobs,
     bids,
   };

@@ -71,25 +71,48 @@ export default async function CleanerJobDetailPage({
 
         {query.error ? <div className="notice error">{query.error}</div> : null}
 
-        <article className="market-card">
-          <div className="stack small">
-            <strong>{job.customer.firstName} {job.customer.lastName}</strong>
-            <span className="market-card__meta">
-              {job.city}, {job.state} {job.postalCode}
-            </span>
-            <span className="market-card__meta">{formatRoomTypes(job.roomTypes)}</span>
-            <span className="market-card__meta">{getCleanLevelLabel(job.cleanLevel)}</span>
-            <span className="market-card__meta">{getEntryMethodLabel(job.entryMethod)}</span>
-            {job.entryNotes ? <p className="market-card__copy">{job.entryNotes}</p> : null}
-            <span className="market-card__meta">
-              {getCustomerHistorySummary({
-                completedJobs: job.customerCompletedJobsSnapshot,
-                customerCreatedAt: job.customerMemberSinceSnapshot ?? job.customer.createdAt,
-              })}
-            </span>
-            <span className="market-card__meta">{formatTimingSummary(job)}</span>
-            {job.notes ? <p className="market-card__copy">{job.notes}</p> : null}
-          </div>
+        <article className="market-card cleaner-detail-summary">
+          <dl className="cleaner-job-summary cleaner-job-summary--detail">
+            <div>
+              <dt>Requested time</dt>
+              <dd>{formatTimingSummary(job)}</dd>
+            </div>
+            <div>
+              <dt>Area</dt>
+              <dd>{job.city}, {job.state}</dd>
+            </div>
+            <div>
+              <dt>Request</dt>
+              <dd>{job.title}</dd>
+            </div>
+            <div>
+              <dt>Rooms</dt>
+              <dd>{formatRoomTypes(job.roomTypes)}</dd>
+            </div>
+            <div>
+              <dt>Clean level</dt>
+              <dd>{getCleanLevelLabel(job.cleanLevel)}</dd>
+            </div>
+            <div>
+              <dt>Entry</dt>
+              <dd>{getEntryMethodLabel(job.entryMethod)}</dd>
+            </div>
+            <div>
+              <dt>Customer history</dt>
+              <dd>
+                {getCustomerHistorySummary({
+                  completedJobs: job.customerCompletedJobsSnapshot,
+                  customerCreatedAt: job.customerMemberSinceSnapshot ?? job.customer.createdAt,
+                })}
+              </dd>
+            </div>
+          </dl>
+          {job.notes ? (
+            <div className="cleaner-detail-note">
+              <strong>Job notes</strong>
+              <p>{job.notes}</p>
+            </div>
+          ) : null}
         </article>
 
         <BidForm

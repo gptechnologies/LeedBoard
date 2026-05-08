@@ -11,7 +11,8 @@ const customerNav = [
 
 const cleanerNav = [
   { href: "/cleaner", label: "Jobs", icon: "jobs" },
-  { href: "/cleaner/bids", label: "Bids", icon: "post" },
+  { href: "/cleaner/messages", label: "Messages", icon: "messages" },
+  { href: "/cleaner/account", label: "Account", icon: "account" },
 ];
 
 export function MobileNav({ role }: { role: "customer" | "cleaner" }) {
@@ -60,12 +61,11 @@ function NavIcon({ name }: { name: string }) {
     );
   }
 
-  if (name === "post") {
+  if (name === "account") {
     return (
       <svg aria-hidden="true" viewBox="0 0 24 24">
-        <path d="M12 5v14" />
-        <path d="M5 12h14" />
-        <path d="M4 4h16v16H4z" />
+        <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
+        <path d="M4 21a8 8 0 0 1 16 0" />
       </svg>
     );
   }

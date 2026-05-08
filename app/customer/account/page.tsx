@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { UserRole } from "@prisma/client";
 import { AccountUserButton } from "@/components/account-user-button";
+import { SignOutButton } from "@/components/sign-out-button";
 
 import { requireUser } from "@/lib/session";
 
@@ -34,6 +35,7 @@ export default async function CustomerAccountPage() {
             <Link href="/customer/my-home" className="button-link secondary">
               Manage Home Presets
             </Link>
+            <SignOutButton />
           </div>
         </section>
       </section>
