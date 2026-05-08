@@ -97,7 +97,7 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
   const [startHour, setStartHour] = useState("");
   const [startPeriod, setStartPeriod] = useState<"AM" | "PM">("AM");
   const [endHour, setEndHour] = useState("");
-  const [endPeriod, setEndPeriod] = useState<"AM" | "PM">("PM");
+  const [endPeriod, setEndPeriod] = useState<"AM" | "PM">("AM");
   const [notes, setNotes] = useState("");
   const [addressExpanded, setAddressExpanded] = useState(!defaultHomeProfile);
   const [validationMessage, setValidationMessage] = useState("");
@@ -252,11 +252,15 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
 
           <section className="market-question-block stack">
             <div className="market-question-copy">
-              <span>First</span>
               <h3>Where should cleaners go?</h3>
             </div>
             {defaultHomeProfile ? (
-              <div className="market-preset-card">
+              <button
+                type="button"
+                className="market-preset-card market-preset-card--button"
+                onClick={() => setAddressExpanded((v) => !v)}
+                aria-expanded={addressExpanded}
+              >
                 <div className="market-preset-card__row">
                   <span className="market-preset-card__icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -266,15 +270,11 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
                   <div className="stack small">
                     <strong>{addressLine1}, {city}, {state} {postalCode}</strong>
                   </div>
-                  <button
-                    type="button"
-                    className="market-text-link"
-                    onClick={() => setAddressExpanded((v) => !v)}
-                  >
-                    {addressExpanded ? "Hide" : "Edit"}
-                  </button>
+                  <span className="market-preset-card__chevron" aria-hidden="true">
+                    {addressExpanded ? "-" : "+"}
+                  </span>
                 </div>
-              </div>
+              </button>
             ) : (
               <div className="notice">
                 Save your address and entry details once in <Link href="/customer/my-home">My Home</Link> to post faster next time.
@@ -311,7 +311,6 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
           {hasAddress ? (
             <section className="market-question-block stack">
               <div className="market-question-copy">
-                <span>Next</span>
                 <h3>Which rooms need cleaning?</h3>
                 <p>Tap to add a room. Tap again to change the clean level.</p>
               </div>
@@ -364,13 +363,12 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
       {step === 1 ? (
         <section className="market-form-section market-question-flow">
           <div className="market-section-heading">
-            <h2>3. When do you need it?</h2>
+            <h2>2. When would you like to schedule?</h2>
           </div>
 
           <section className="market-question-block stack">
             <div className="market-question-copy">
               <span>Choose a day:</span>
-              <h3>When should cleaners plan around?</h3>
             </div>
             <div className="market-segmented">
               <label className={dayChoice === "today" ? "market-segmented__option active" : "market-segmented__option"}>
@@ -462,9 +460,7 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
                     </span>
                     <label className="market-time-slot__copy" htmlFor="startHour">
                       <span>Arrival time</span>
-                      <span className="market-time-slot__display">
-                        {startHour || "Choose"}
-                      </span>
+                      {startHour ? <span className="market-time-slot__display">{startHour}</span> : null}
                     </label>
                     <select
                       id="startHour"
@@ -507,9 +503,7 @@ export function JobRequestForm({ defaultHomeProfile }: { defaultHomeProfile: Wiz
                     </span>
                     <label className="market-time-slot__copy" htmlFor="endHour">
                       <span>Finish time</span>
-                      <span className="market-time-slot__display">
-                        {endHour || "Choose"}
-                      </span>
+                      {endHour ? <span className="market-time-slot__display">{endHour}</span> : null}
                     </label>
                     <select
                       id="endHour"

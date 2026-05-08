@@ -26,9 +26,8 @@ export default async function CustomerDashboard({ searchParams }: CustomerDashbo
         <header className="mobile-home-head">
           <div>
             <h1>Well Kept</h1>
-            <p>Find trusted cleaners for your home.</p>
+            <p>Bring trusted cleaners to you.</p>
           </div>
-          <span className="notification-dot" aria-label="Notifications" />
         </header>
 
         <Link href="/customer/jobs/new" className="market-hero-card market-hero-card--compact">
@@ -43,24 +42,17 @@ export default async function CustomerDashboard({ searchParams }: CustomerDashbo
           </span>
           <span className="stack small">
             <strong className="market-hero-card__title">Post a Cleaning Job</strong>
-            <span className="subtle">Tell us what you need and get bids.</span>
+            <span className="subtle">Start getting bids and choose the best cleaner.</span>
           </span>
           <span className="market-hero-arrow" aria-hidden="true">&gt;</span>
         </Link>
 
         <section className="stack">
           <div className="market-section-heading">
-            <h2>Your Open Jobs</h2>
+            <h2>Open Jobs ({jobs.length})</h2>
             {jobs.length > 0 ? <Link href="/customer/jobs">View all</Link> : null}
           </div>
-          {jobs.length === 0 ? (
-            <section className="market-empty">
-              <strong>No jobs posted yet</strong>
-              <p className="market-card__copy">
-                Post a cleaning job and vetted cleaners will send their own offers.
-              </p>
-            </section>
-          ) : (
+          {jobs.length > 0 ? (
             <div className="market-rail">
               {jobs.slice(0, 3).map((job) => (
                 <JobRequestCard
@@ -75,7 +67,7 @@ export default async function CustomerDashboard({ searchParams }: CustomerDashbo
                 />
               ))}
             </div>
-          )}
+          ) : null}
         </section>
 
         <section className="stack">

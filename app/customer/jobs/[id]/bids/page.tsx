@@ -73,7 +73,6 @@ export default async function CustomerJobBidsPage({
               {activeBids.length} {activeBids.length === 1 ? "bid" : "bids"} received
             </p>
           </div>
-          <span className="notification-dot" aria-label="Notifications" />
         </header>
 
         {query.error ? <div className="notice error">{query.error}</div> : null}

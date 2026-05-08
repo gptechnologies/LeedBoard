@@ -34,7 +34,11 @@ export async function SiteHeader() {
                 Cleaner access
               </Link>
             </>
-          ) : user?.role === UserRole.CUSTOMER ? null : user ? (
+          ) : user?.role === UserRole.CUSTOMER ? (
+            <Link href="/customer/account" className="site-header__account-link">
+              Account
+            </Link>
+          ) : user ? (
             <>
               {user.role === UserRole.CLEANER ? (
                 <Link href="/cleaner" className="primary">

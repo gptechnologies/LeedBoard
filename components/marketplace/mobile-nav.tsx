@@ -7,7 +7,6 @@ const customerNav = [
   { href: "/customer", label: "Home", icon: "home" },
   { href: "/customer/jobs", label: "Jobs", icon: "jobs" },
   { href: "/customer/messages", label: "Messages", icon: "messages" },
-  { href: "/customer/account", label: "Account", icon: "account" },
 ];
 
 const cleanerNav = [
@@ -67,15 +66,6 @@ function NavIcon({ name }: { name: string }) {
         <path d="M12 5v14" />
         <path d="M5 12h14" />
         <path d="M4 4h16v16H4z" />
-      </svg>
-    );
-  }
-
-  if (name === "account") {
-    return (
-      <svg aria-hidden="true" viewBox="0 0 24 24">
-        <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
-        <path d="M5 21a7 7 0 0 1 14 0" />
       </svg>
     );
   }

@@ -1418,6 +1418,48 @@ button[type="submit"]:disabled {
   padding: 14px;
 }
 
+.market-preset-card--button {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition:
+    border-color 170ms ease,
+    background 170ms ease,
+    transform 170ms ease,
+    box-shadow 170ms ease;
+}
+
+.market-preset-card--button:focus-visible {
+  outline: 3px solid oklch(61% 0.09 145 / 0.42);
+  outline-offset: 3px;
+}
+
+.market-preset-card__chevron {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 1.2rem;
+  font-weight: 820;
+  line-height: 1;
+}
+
+@media (hover: hover) {
+  .market-preset-card--button:hover {
+    border-color: oklch(70% 0.045 145);
+    background: oklch(98% 0.012 112);
+    box-shadow: 0 12px 26px oklch(45% 0.035 112 / 0.1);
+    transform: translateY(-1px);
+  }
+}
+
 .market-sticky-submit,
 .market-wizard-actions {
   position: sticky;
@@ -1869,6 +1911,14 @@ button[type="submit"],
   box-shadow: none;
 }
 
+.site-header__account-link {
+  min-width: 82px;
+  min-height: 40px;
+  border-radius: 999px;
+  padding-inline: 16px;
+  font-weight: 750;
+}
+
 button:focus,
 a:focus,
 input:focus,
@@ -1915,40 +1965,6 @@ button:active,
   color: var(--muted);
   font-size: 1.04rem;
   line-height: 1.4;
-}
-
-.notification-dot {
-  position: relative;
-  width: 42px;
-  height: 42px;
-  flex: 0 0 auto;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  background: var(--surface);
-  box-shadow: var(--shadow-soft);
-}
-
-.notification-dot::before {
-  content: "";
-  position: absolute;
-  left: 13px;
-  top: 11px;
-  width: 14px;
-  height: 16px;
-  border: 2px solid var(--muted);
-  border-radius: 8px 8px 5px 5px;
-}
-
-.notification-dot::after {
-  content: "";
-  position: absolute;
-  right: 9px;
-  top: 8px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--success);
-  box-shadow: 0 0 0 3px var(--surface);
 }
 
 .market-shell {
