@@ -306,6 +306,7 @@ export async function getCustomerHomeData(customerId: string) {
             estimatedSquareFeet: true,
             storyCount: true,
             hasPets: true,
+            propertyType: true,
           },
         },
       },
@@ -342,6 +343,11 @@ export async function getCleanerHomeData(cleanerId: string) {
   const openJobs = await prisma.jobRequest.findMany({
     where: {
       status: JobRequestStatus.OPEN,
+      bids: {
+        none: {
+          cleanerId,
+        },
+      },
       OR: [
         { postalCode: { in: profile.serviceAreaPostalCodes } },
         { bids: { none: {} } },
@@ -365,6 +371,7 @@ export async function getCleanerHomeData(cleanerId: string) {
           estimatedSquareFeet: true,
           storyCount: true,
           hasPets: true,
+          propertyType: true,
         },
       },
       bids: {
@@ -397,6 +404,16 @@ export async function getCleanerHomeData(cleanerId: string) {
       jobRequest: {
         include: {
           customer: true,
+          homeProfile: {
+            select: {
+              bedroomCount: true,
+              bathroomCount: true,
+              estimatedSquareFeet: true,
+              storyCount: true,
+              hasPets: true,
+              propertyType: true,
+            },
+          },
         },
       },
     },

@@ -54,6 +54,7 @@ export default async function CustomerJobDetailPage({
           estimatedSquareFeet: true,
           storyCount: true,
           hasPets: true,
+          propertyType: true,
         },
       },
     },

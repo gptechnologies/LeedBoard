@@ -1,6 +1,7 @@
 import { BidStatus, JobRequestStatus, UserRole } from "@prisma/client";
 import { BidCard } from "@/components/marketplace/cards";
 import { HomeownerOpenJobDetailCard } from "@/components/marketplace";
+import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import { rankVisibleBids } from "@/lib/marketplace";
 import { prisma } from "@/lib/prisma";
@@ -51,6 +52,7 @@ export default async function CustomerJobBidsPage({
           estimatedSquareFeet: true,
           storyCount: true,
           hasPets: true,
+          propertyType: true,
         },
       },
     },
@@ -103,10 +105,15 @@ export default async function CustomerJobBidsPage({
                 <BidCard
                   bid={bid}
                   action={
-                    <form action={`/customer/jobs/${job.id}/accept-bid`} method="post">
-                      <input type="hidden" name="bidId" value={bid.id} />
-                      <button type="submit">Accept Bid</button>
-                    </form>
+                    <div className="bid-card-actions">
+                      <Link className="button-link secondary" href={`/customer/messages/${bid.id}`}>
+                        Message
+                      </Link>
+                      <form action={`/customer/jobs/${job.id}/accept-bid`} method="post">
+                        <input type="hidden" name="bidId" value={bid.id} />
+                        <button type="submit">Accept Bid</button>
+                      </form>
+                    </div>
                   }
                 />
               </div>

@@ -13,7 +13,17 @@ export type CleanerFeedJob = NearbyJobSwipeItem;
 
 const refreshThreshold = 72;
 
-export function CleanerJobsFeed({ jobs }: { jobs: CleanerFeedJob[] }) {
+export function CleanerJobsFeed({
+  bidDefaults,
+  jobs,
+}: {
+  bidDefaults: {
+    standardHourlyRateCents: number | null;
+    standardFlatRateCents: number | null;
+    defaultEtaMinutes: number | null;
+  };
+  jobs: CleanerFeedJob[];
+}) {
   const router = useRouter();
   const startYRef = useRef<number | null>(null);
   const [pullDistance, setPullDistance] = useState(0);
@@ -74,7 +84,7 @@ export function CleanerJobsFeed({ jobs }: { jobs: CleanerFeedJob[] }) {
         {isRefreshing ? "Refreshing..." : refreshReady ? "Release to refresh" : "Pull down to refresh"}
       </div>
 
-      <NearbyJobSwipeCarousel jobs={jobs} />
+      <NearbyJobSwipeCarousel defaults={bidDefaults} jobs={jobs} />
     </section>
   );
 }

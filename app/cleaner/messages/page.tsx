@@ -1,7 +1,8 @@
 import { BidStatus, UserRole } from "@prisma/client";
 import Link from "next/link";
 
-import { getBidStatusLabel } from "@/lib/marketplace";
+import { getCleaningJobTitle } from "@/lib/job-title";
+import { formatBidAmount, getBidStatusLabel } from "@/lib/marketplace";
 import { requireUser } from "@/lib/session";
 import { StatusPill } from "@/components/marketplace/status-pill";
 import { prisma } from "@/lib/prisma";
@@ -17,6 +18,11 @@ export default async function CleanerMessagesPage() {
       jobRequest: {
         include: {
           customer: true,
+          homeProfile: {
+            select: {
+              propertyType: true,
+            },
+          },
         },
       },
     },
@@ -37,7 +43,8 @@ export default async function CleanerMessagesPage() {
       jobId: bid.jobRequestId,
       customerName: `${bid.jobRequest.customer.firstName} ${bid.jobRequest.customer.lastName}`,
       customerInitial: bid.jobRequest.customer.firstName.charAt(0),
-      jobTitle: bid.jobRequest.title,
+      jobTitle: getCleaningJobTitle(bid.jobRequest),
+      preview: `${formatBidAmount(bid)} bid: ${bid.message || "No note added."}`,
       statusLabel: getBidStatusLabel(bid.status),
       tone,
     };
@@ -64,7 +71,7 @@ export default async function CleanerMessagesPage() {
             {conversations.map((convo) => (
               <Link
                 key={convo.id}
-                href={`/cleaner/jobs/${convo.jobId}`}
+                href={`/cleaner/messages/${convo.id}`}
                 className="cleaner-convo-card"
               >
                 <span className="cleaner-convo-avatar" aria-hidden="true">
@@ -75,7 +82,9 @@ export default async function CleanerMessagesPage() {
                     <strong>{convo.customerName}</strong>
                     <StatusPill label={convo.statusLabel} tone={convo.tone} />
                   </div>
-                  <span className="cleaner-convo-preview">{convo.jobTitle}</span>
+                  <span className="cleaner-convo-preview">
+                    {convo.jobTitle} · {convo.preview}
+                  </span>
                 </div>
               </Link>
             ))}

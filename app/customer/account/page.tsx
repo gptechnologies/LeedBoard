@@ -26,7 +26,12 @@ export default async function CustomerAccountPage() {
               <strong>{user.firstName} {user.lastName}</strong>
               <span className="market-card__meta">{user.email}</span>
             </div>
-            <AccountUserButton />
+            <AccountUserButton
+              email={user.email}
+              firstName={user.firstName}
+              lastName={user.lastName}
+              role={user.role}
+            />
           </div>
           <p className="market-card__copy">
             Update your profile, sign-in methods, and account access through the account menu.

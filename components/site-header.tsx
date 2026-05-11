@@ -34,13 +34,19 @@ export async function SiteHeader() {
               </Link>
             </>
           ) : user?.role === UserRole.CUSTOMER ? (
-            <Link href="/customer/account" className="site-header__account-link">
-              Account
-            </Link>
+            <AccountUserButton
+              email={user.email}
+              firstName={user.firstName}
+              lastName={user.lastName}
+              role={user.role}
+            />
           ) : user ? (
-            <>
-              <AccountUserButton />
-            </>
+            <AccountUserButton
+              email={user.email}
+              firstName={user.firstName}
+              lastName={user.lastName}
+              role={user.role}
+            />
           ) : (
             <>
               <Link href="/welcome" className="primary">

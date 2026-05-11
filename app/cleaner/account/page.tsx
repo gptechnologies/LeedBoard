@@ -38,7 +38,12 @@ export default async function CleanerAccountPage({ searchParams }: CleanerAccoun
               </strong>
               <span className="market-card__meta">{user.email}</span>
             </div>
-            <AccountUserButton />
+            <AccountUserButton
+              email={user.email}
+              firstName={user.firstName}
+              lastName={user.lastName}
+              role={user.role}
+            />
           </div>
           <p className="market-card__copy">
             Keep your account access, availability, and bidding defaults current.

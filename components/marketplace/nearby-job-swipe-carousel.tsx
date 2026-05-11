@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
+
 import {
-  CleanerUpNextJobCard,
+  CleanerUpNextJobCardBody,
   type CleanerUpNextJob,
 } from "@/components/marketplace/cleaner-up-next-job-card";
 import { EmptyState } from "@/components/marketplace/empty-state";
+import { FastBidDrawer } from "@/components/marketplace/fast-bid-drawer";
 import { JobStackScroll } from "@/components/marketplace/job-stack-scroll";
 
 export type NearbyJobSwipeItem = {
@@ -13,7 +16,6 @@ export type NearbyJobSwipeItem = {
   bedroomCount: number | null;
   bidCount: number;
   estimatedSquareFeet: number | null;
-  hasPets: boolean;
   id: string;
   job: CleanerUpNextJob;
   postedLabel: string;
@@ -22,8 +24,14 @@ export type NearbyJobSwipeItem = {
 };
 
 export function NearbyJobSwipeCarousel({
+  defaults,
   jobs,
 }: {
+  defaults: {
+    standardHourlyRateCents: number | null;
+    standardFlatRateCents: number | null;
+    defaultEtaMinutes: number | null;
+  };
   jobs: NearbyJobSwipeItem[];
 }) {
   if (jobs.length === 0) {
@@ -38,13 +46,21 @@ export function NearbyJobSwipeCarousel({
   return (
     <JobStackScroll className="cleaner-nearby-stack">
       {jobs.map(({ job, timingLabel }) => (
-        <CleanerUpNextJobCard
-          className="cleaner-upnext-card--nearby"
-          job={job}
-          key={job.id}
-          timingLabel={timingLabel}
-          statusLabel="Accepting bids"
-        />
+        <div key={job.id} className="cleaner-upnext-card cleaner-upnext-card--nearby">
+          <Link href={`/cleaner/jobs/${job.id}`} className="cleaner-upnext-card__body cleaner-upnext-card__body-link">
+            <CleanerUpNextJobCardBody job={job} timingLabel={timingLabel} />
+          </Link>
+          <FastBidDrawer
+            defaults={defaults}
+            job={job}
+            timingLabel={timingLabel}
+            trigger={
+              <button type="button" className="cleaner-upnext-card__bid-cta cleaner-upnext-card__bid-button">
+                Bid
+              </button>
+            }
+          />
+        </div>
       ))}
     </JobStackScroll>
   );

@@ -1,4 +1,4 @@
-import { JobRequestStatus, UserRole } from "@prisma/client";
+import { JobRequestStatus, PropertyType, UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { parseJobRequestForm } from "@/lib/marketplace-form";
 import { prisma } from "@/lib/prisma";
@@ -8,6 +8,10 @@ function redirectWithError(request: Request, message: string) {
   return NextResponse.redirect(
     new URL(`/customer/jobs/new?error=${encodeURIComponent(message)}`, request.url),
   );
+}
+
+function getCleaningTitle(propertyType?: PropertyType | null) {
+  return propertyType === PropertyType.APARTMENT ? "Apartment Cleaning" : "Home Cleaning";
 }
 
 export async function POST(request: Request) {
@@ -44,6 +48,7 @@ export async function POST(request: Request) {
     const job = await prisma.jobRequest.create({
       data: {
         ...input,
+        title: getCleaningTitle(homeProfile?.propertyType),
         status: JobRequestStatus.OPEN,
         customerId: user.id,
         homeProfileId: homeProfile?.id ?? null,

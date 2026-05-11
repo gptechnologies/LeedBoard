@@ -285,34 +285,9 @@ export function parseBidForm(formData: FormData, isAsap: boolean) {
 }
 
 function buildJobTitle(serviceNeeds: ServiceNeed[], roomTypes: RoomType[]) {
-  const [firstNeed] = serviceNeeds;
-  const [firstRoom] = roomTypes;
-
-  if (firstNeed === ServiceNeed.DEEP_CLEAN) {
-    return "Deep cleaning request";
-  }
-
-  if (firstRoom === RoomType.KITCHEN && serviceNeeds.includes(ServiceNeed.BATHROOMS)) {
-    return "Kitchen and bathroom refresh";
-  }
-
-  if (firstRoom) {
-    return `${humanizeValue(firstRoom)} cleaning request`;
-  }
-
-  if (firstNeed) {
-    return `${humanizeValue(firstNeed)} request`;
-  }
-
-  return "Cleaning request";
-}
-
-function humanizeValue(value: string) {
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
+  void serviceNeeds;
+  void roomTypes;
+  return "Home Cleaning";
 }
 
 function parseRoomCleanLevels(raw: FormDataEntryValue | null): Record<string, string> {

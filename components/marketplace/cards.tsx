@@ -4,6 +4,7 @@ import {
   CleanLevel,
   EntryMethod,
   JobRequestStatus,
+  PropertyType,
   RoomType,
   ServiceNeed,
   TimingPreference,
@@ -22,6 +23,7 @@ import {
   getRoomTypeIcon,
   getRoomTypeLabel,
 } from "@/lib/marketplace";
+import { getCleaningJobTitle } from "@/lib/job-title";
 import { StatusPill } from "@/components/marketplace/status-pill";
 import { Card, CardContent } from "@/components/ui/card";
 import { BidCard as AppBidCard } from "@/components/marketplace/bid-card";
@@ -54,6 +56,9 @@ export function JobRequestCard({
         lastName: string;
       };
     } | null;
+    homeProfile?: {
+      propertyType?: PropertyType | null;
+    } | null;
   };
   href: string;
   showAcceptedCleaner?: boolean;
@@ -61,7 +66,7 @@ export function JobRequestCard({
   return (
     <AppJobCard
       href={href}
-      title={job.title}
+      title={getCleaningJobTitle(job)}
       location={`${job.city}, ${job.state} ${job.postalCode}`}
       timing={formatTimingSummary(job)}
       bidCount={job.bids.length}
@@ -159,6 +164,9 @@ export function BidCard({
       title: string;
       city: string;
       state: string;
+      homeProfile?: {
+        propertyType?: PropertyType | null;
+      } | null;
     };
   };
   action?: React.ReactNode;
@@ -173,7 +181,7 @@ export function BidCard({
       cleanerName={`${bid.cleaner.firstName} ${bid.cleaner.lastName}`}
       headline={
         bid.jobRequest
-          ? `${bid.jobRequest.title} · ${bid.jobRequest.city}, ${bid.jobRequest.state}`
+          ? `${getCleaningJobTitle(bid.jobRequest)} · ${bid.jobRequest.city}, ${bid.jobRequest.state}`
           : bid.cleaner.cleanerProfile?.headline ?? "Available cleaner"
       }
       rating={rating ? `Rating ${rating.toFixed(1)}` : "New"}
@@ -211,6 +219,9 @@ export function AvailableJobCard({
     customer: {
       createdAt: Date;
     };
+    homeProfile?: {
+      propertyType?: PropertyType | null;
+    } | null;
   };
 }) {
   const historySummary = getCustomerHistorySummary({
@@ -221,7 +232,7 @@ export function AvailableJobCard({
   return (
     <AppJobCard
       href={`/cleaner/jobs/${job.id}`}
-      title={job.title}
+      title={getCleaningJobTitle(job)}
       location={`${job.city}, ${job.state}`}
       timing={formatTimingSummary(job)}
       bidCount={job.bids.length}
@@ -252,13 +263,16 @@ export function CleanerNearbyJobCard({
     requestedDate: Date | null;
     requestedWindowStart: string | null;
     requestedWindowEnd: string | null;
+    homeProfile?: {
+      propertyType?: PropertyType | null;
+    } | null;
   };
   estimateCents: number | null;
   distanceLabel: string;
 }) {
   return (
     <AppJobCard
-      title={job.title}
+      title={getCleaningJobTitle(job)}
       location={distanceLabel}
       timing={formatTimingSummary(job)}
       priceLabel={estimateCents ? formatWholeCurrency(estimateCents) : undefined}

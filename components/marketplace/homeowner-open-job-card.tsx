@@ -13,8 +13,18 @@ import {
   Ruler,
   type LucideIcon,
 } from "lucide-react";
-import { CleanLevel, JobRequestStatus, RoomType, TimingPreference } from "@prisma/client";
-import { formatTimingSummary, getJobRequestStatusLabel } from "@/lib/marketplace";
+import {
+  CleanLevel,
+  JobRequestStatus,
+  type PropertyType,
+  RoomType,
+  TimingPreference,
+} from "@prisma/client";
+import {
+  formatTimingSummary,
+  getJobRequestStatusLabel,
+} from "@/lib/marketplace";
+import { getCleaningJobTitle } from "@/lib/job-title";
 import { Card } from "@/components/ui/card";
 
 type HomeProfileSnapshot = {
@@ -23,6 +33,7 @@ type HomeProfileSnapshot = {
   estimatedSquareFeet: number | null;
   storyCount: number | null;
   hasPets: boolean;
+  propertyType?: PropertyType | null;
 } | null;
 
 type OpenJobCardJob = {
@@ -56,6 +67,7 @@ export function HomeownerOpenJobCard({ href, job }: { href: string; job: OpenJob
             <ChevronRight />
           </span>
         }
+        includePetsInChips={false}
         job={job}
       />
     </Link>
@@ -69,17 +81,19 @@ export function HomeownerOpenJobDetailCard({
   action?: ReactNode;
   job: OpenJobCardJob;
 }) {
-  return <HomeownerOpenJobCardContent action={action} job={job} />;
+  return <HomeownerOpenJobCardContent action={action} includePetsInChips job={job} />;
 }
 
 function HomeownerOpenJobCardContent({
   action,
+  includePetsInChips = true,
   job,
 }: {
   action?: ReactNode;
+  includePetsInChips?: boolean;
   job: OpenJobCardJob;
 }) {
-  const homeDetails = getHomeDetailChips(job.homeProfile);
+  const homeDetails = getHomeDetailChips(job.homeProfile, includePetsInChips);
   const extraDetails = [
     job.notes
       ? {
@@ -104,7 +118,7 @@ function HomeownerOpenJobCardContent({
       </div>
 
       <div className="customer-open-job-title-row">
-        <h3>{job.title}</h3>
+        <h3>{getCleaningJobTitle(job)}</h3>
         {action}
       </div>
 
@@ -119,7 +133,10 @@ function HomeownerOpenJobCardContent({
         </span>
       </div>
 
-      <div className="customer-open-job-chips" aria-label="Home details">
+      <div
+        className={`customer-open-job-chips${includePetsInChips ? "" : " customer-open-job-chips--summary"}`}
+        aria-label="Home details"
+      >
         {homeDetails.map((detail) => (
           <span key={detail.label}>
             <detail.Icon aria-hidden="true" />
@@ -168,8 +185,8 @@ function StatItem({
   );
 }
 
-function getHomeDetailChips(homeProfile: HomeProfileSnapshot) {
-  return [
+function getHomeDetailChips(homeProfile: HomeProfileSnapshot, includePets: boolean) {
+  const chips: Array<{ Icon: LucideIcon; label: string }> = [
     {
       Icon: BedDouble,
       label:
@@ -191,12 +208,15 @@ function getHomeDetailChips(homeProfile: HomeProfileSnapshot) {
           ? `${homeProfile.estimatedSquareFeet} Sq Ft`
           : "- Sq Ft",
     },
-    {
+  ];
+  if (includePets) {
+    chips.push({
       Icon: PawPrint,
       label:
         homeProfile?.hasPets === undefined ? "- Pets" : homeProfile.hasPets ? "Pets" : "No Pets",
-    },
-  ];
+    });
+  }
+  return chips;
 }
 
 function formatNumber(value: number) {

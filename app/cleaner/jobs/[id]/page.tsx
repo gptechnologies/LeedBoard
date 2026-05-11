@@ -1,5 +1,5 @@
 import { JobRequestStatus, UserRole } from "@prisma/client";
-import { BidForm } from "@/components/marketplace/bid-form";
+import { FastBidDrawer } from "@/components/marketplace/fast-bid-drawer";
 import {
   formatRoomTypes,
   formatTimingSummary,
@@ -7,10 +7,11 @@ import {
   getCustomerHistorySummary,
   getEntryMethodLabel,
 } from "@/lib/marketplace";
+import { getCleaningJobTitle } from "@/lib/job-title";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,6 @@ export default async function CleanerJobDetailPage({
   const job = await prisma.jobRequest.findFirst({
     where: {
       id,
-      status: JobRequestStatus.OPEN,
     },
     include: {
       customer: {
@@ -57,8 +57,13 @@ export default async function CleanerJobDetailPage({
     },
   });
 
-  if (!job) {
+  if (!job || (job.status !== JobRequestStatus.OPEN && job.bids.length === 0)) {
     notFound();
+  }
+
+  const existingBid = job.bids[0] ?? null;
+  if (existingBid) {
+    redirect(`/cleaner/messages/${existingBid.id}`);
   }
 
   const bedroomCount = job.homeProfile?.bedroomCount;
@@ -70,7 +75,12 @@ export default async function CleanerJobDetailPage({
     bedroomCount ? `${bedroomCount} bed` : null,
     bathroomLabel,
   ].filter(Boolean);
-  const hasExistingBid = job.bids.length > 0;
+  const petsChip =
+    job.homeProfile == null
+      ? null
+      : job.homeProfile.hasPets
+        ? "Pets"
+        : "No pets";
 
   return (
     <div className="market-shell market-shell--detail bid-screen">
@@ -79,7 +89,7 @@ export default async function CleanerJobDetailPage({
           <Link href="/cleaner" className="bid-screen__back" aria-label="Back to cleaner jobs">
             <span aria-hidden="true">&larr;</span>
           </Link>
-          <h1>{hasExistingBid ? "Update Your Bid" : "Place Your Bid"}</h1>
+          <h1>Job Details</h1>
           <span className="bid-screen__header-spacer" aria-hidden="true" />
         </header>
 
@@ -92,7 +102,7 @@ export default async function CleanerJobDetailPage({
           <div className="bid-job-card__body">
             <div className="bid-job-card__title-row">
               <div>
-                <h2>{job.title}</h2>
+                <h2>{getCleaningJobTitle(job)}</h2>
                 <p>{homeDetails.length > 0 ? homeDetails.join(" · ") : formatRoomTypes(job.roomTypes)}</p>
               </div>
               <span className="bid-job-card__badge">{getCleanLevelLabel(job.cleanLevel)}</span>
@@ -110,6 +120,7 @@ export default async function CleanerJobDetailPage({
                   customerCreatedAt: job.customerMemberSinceSnapshot ?? job.customer.createdAt,
                 })}
               </span>
+              {petsChip ? <span>{petsChip}</span> : null}
             </div>
           </div>
           {job.notes ? (
@@ -120,22 +131,18 @@ export default async function CleanerJobDetailPage({
           ) : null}
         </article>
 
-        <BidForm
-          jobId={job.id}
-          timingPreference={job.timingPreference}
-          requestedDate={job.requestedDate}
-          requestedWindowStart={job.requestedWindowStart}
-          requestedWindowEnd={job.requestedWindowEnd}
-          serviceNeeds={job.serviceNeeds}
-          hasExistingBid={hasExistingBid}
-          defaults={{
-            standardHourlyRateCents: user.cleanerProfile?.standardHourlyRateCents ?? null,
-            standardFlatRateCents: user.cleanerProfile?.standardFlatRateCents ?? null,
-            standardDeepCleanFlatRateCents:
-              user.cleanerProfile?.standardDeepCleanFlatRateCents ?? null,
-            defaultEtaMinutes: user.cleanerProfile?.defaultEtaMinutes ?? null,
-          }}
-        />
+        <div className="cleaner-detail-bid-action">
+          <FastBidDrawer
+            defaults={{
+              standardHourlyRateCents: user.cleanerProfile?.standardHourlyRateCents ?? null,
+              standardFlatRateCents: user.cleanerProfile?.standardFlatRateCents ?? null,
+              defaultEtaMinutes: user.cleanerProfile?.defaultEtaMinutes ?? null,
+            }}
+            job={job}
+            timingLabel={formatTimingSummary(job)}
+            triggerMode="button"
+          />
+        </div>
       </section>
     </div>
   );

@@ -2,26 +2,26 @@ import Link from "next/link";
 import {
   Bath,
   BedDouble,
-  ChevronRight,
   Clock,
   MapPin,
-  PawPrint,
   Ruler,
-  type LucideIcon,
 } from "lucide-react";
 import type {
   CleanLevel,
+  PropertyType,
   RoomType,
   TimingPreference,
 } from "@prisma/client";
 
 import { Card } from "@/components/ui/card";
+import { getCleaningJobTitle } from "@/lib/job-title";
 
 type HomeProfileSnapshot = {
   bathroomCount: number | null;
   bedroomCount: number | null;
   estimatedSquareFeet: number | null;
   hasPets: boolean;
+  propertyType?: PropertyType | null;
   storyCount: number | null;
 } | null;
 
@@ -42,56 +42,121 @@ export type CleanerUpNextJob = {
 
 export function CleanerUpNextJobCard({
   className = "",
+  href,
   job,
+  showBidCta = false,
   timingLabel,
-  statusLabel = "Confirmed",
+  statusLabel,
 }: {
   className?: string;
+  href: string;
   job: CleanerUpNextJob;
+  showBidCta?: boolean;
   timingLabel: string;
   statusLabel?: string;
 }) {
   const homeDetails = getHomeDetailChips(job.homeProfile);
 
   return (
-    <Link className="cleaner-upnext-link" href={`/cleaner/jobs/${job.id}`}>
-      <Card className={`cleaner-upnext-card ${className}`}>
-        <div className="cleaner-upnext-card__topline">
-          <span>{formatPostedLabel(job.createdAt)}</span>
+    <Link className="cleaner-upnext-link" href={href}>
+      <CleanerUpNextJobCardContent
+        className={className}
+        homeDetails={homeDetails}
+        job={job}
+        showBidCta={showBidCta}
+        statusLabel={statusLabel}
+        timingLabel={timingLabel}
+      />
+    </Link>
+  );
+}
+
+export function CleanerUpNextJobCardContent({
+  className = "",
+  homeDetails,
+  job,
+  showBidCta = false,
+  statusLabel,
+  timingLabel,
+}: {
+  className?: string;
+  homeDetails?: ReturnType<typeof getHomeDetailChips>;
+  job: CleanerUpNextJob;
+  showBidCta?: boolean;
+  statusLabel?: string;
+  timingLabel: string;
+}) {
+  const details = homeDetails ?? getHomeDetailChips(job.homeProfile);
+
+  return (
+    <Card
+      className={`cleaner-upnext-card ${showBidCta ? "" : "cleaner-upnext-card--thread"} ${className}`}
+    >
+      <div className="cleaner-upnext-card__body">
+        <CleanerUpNextJobCardBody
+          homeDetails={details}
+          job={job}
+          statusLabel={statusLabel}
+          timingLabel={timingLabel}
+        />
+      </div>
+
+      {showBidCta ? (
+        <span className="cleaner-upnext-card__bid-cta" aria-hidden="true">Bid</span>
+      ) : null}
+    </Card>
+  );
+}
+
+export function CleanerUpNextJobCardBody({
+  homeDetails,
+  job,
+  statusLabel,
+  timingLabel,
+}: {
+  homeDetails?: ReturnType<typeof getHomeDetailChips>;
+  job: CleanerUpNextJob;
+  statusLabel?: string;
+  timingLabel: string;
+}) {
+  const details = homeDetails ?? getHomeDetailChips(job.homeProfile);
+
+  return (
+    <>
+      <div className="cleaner-upnext-card__topline">
+        <span>{formatPostedLabel(job.createdAt)}</span>
+        {statusLabel ? (
           <span className="cleaner-upnext-card__status">
             <span aria-hidden="true" />
             {statusLabel}
           </span>
-        </div>
+        ) : null}
+      </div>
 
-        <div className="cleaner-upnext-card__title-row">
-          <h3>{job.title}</h3>
-          <span className="cleaner-upnext-card__chevron" aria-hidden="true">
-            <ChevronRight />
-          </span>
-        </div>
+      <div className="cleaner-upnext-card__title-row">
+        <h3>{getCleaningJobTitle(job)}</h3>
+      </div>
 
-        <div className="cleaner-upnext-card__meta">
-          <span>
-            <MapPin aria-hidden="true" />
-            {job.city}, {job.state}
-          </span>
-          <span>
-            <Clock aria-hidden="true" />
-            {timingLabel}
-          </span>
-        </div>
+      <div className="cleaner-upnext-card__meta">
+        <span>
+          <MapPin aria-hidden="true" />
+          {job.city}, {job.state}
+        </span>
+        <span>
+          <Clock aria-hidden="true" />
+          {timingLabel}
+        </span>
+      </div>
 
-        <div className="cleaner-upnext-card__chips" aria-label="Home details">
-          {homeDetails.map((detail) => (
-            <span key={detail.label}>
-              <detail.Icon aria-hidden="true" />
-              {detail.label}
-            </span>
-          ))}
-        </div>
-      </Card>
-    </Link>
+      <div className="cleaner-upnext-card__chips" aria-label="Home details">
+        {details.map((detail) => (
+          <span key={detail.label}>
+            <detail.Icon aria-hidden="true" />
+            {detail.label}
+          </span>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -117,11 +182,6 @@ function getHomeDetailChips(homeProfile: HomeProfileSnapshot) {
         homeProfile?.estimatedSquareFeet !== null && homeProfile?.estimatedSquareFeet !== undefined
           ? `${homeProfile.estimatedSquareFeet} Sq Ft`
           : "- Sq Ft",
-    },
-    {
-      Icon: PawPrint,
-      label:
-        homeProfile?.hasPets === undefined ? "- Pets" : homeProfile.hasPets ? "Pets" : "No Pets",
     },
   ];
 }

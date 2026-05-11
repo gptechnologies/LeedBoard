@@ -41,7 +41,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
 
     const input = parseBidForm(formData, job.timingPreference === "ASAP");
 
-    await prisma.jobBid.upsert({
+    const bid = await prisma.jobBid.upsert({
       where: {
         jobRequestId_cleanerId: {
           jobRequestId: job.id,
@@ -60,7 +60,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
       },
     });
 
-    return NextResponse.redirect(new URL("/cleaner?success=1", request.url));
+    return NextResponse.redirect(new URL(`/cleaner/messages/${bid.id}`, request.url));
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unable to submit your bid right now.";
