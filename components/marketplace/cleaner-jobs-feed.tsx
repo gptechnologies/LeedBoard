@@ -4,17 +4,12 @@ import { useRouter } from "next/navigation";
 import { Filter } from "lucide-react";
 import { useRef, useState, type CSSProperties, type TouchEvent } from "react";
 import { Button } from "@/components/ui/button";
-import { NearbyJobSwipeCarousel } from "@/components/marketplace/nearby-job-swipe-carousel";
+import {
+  NearbyJobSwipeCarousel,
+  type NearbyJobSwipeItem,
+} from "@/components/marketplace/nearby-job-swipe-carousel";
 
-export type CleanerFeedJob = {
-  id: string;
-  title: string;
-  areaLabel: string;
-  postedLabel: string;
-  bedroomCount: number | null;
-  bathroomCount: number | null;
-  hasPets: boolean;
-};
+export type CleanerFeedJob = NearbyJobSwipeItem;
 
 const refreshThreshold = 72;
 

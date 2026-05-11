@@ -1,6 +1,7 @@
 export { BidCard } from "@/components/marketplace/bid-card";
 export { BottomNav, type BottomNavItem } from "@/components/marketplace/bottom-nav";
 export { CardSwipeCarousel } from "@/components/marketplace/card-swipe-carousel";
+export { CleanerUpNextJobCard } from "@/components/marketplace/cleaner-up-next-job-card";
 export {
   HomeownerOpenJobCard,
   HomeownerOpenJobDetailCard,

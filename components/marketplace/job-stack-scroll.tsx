@@ -91,9 +91,9 @@ function StackedCard({
   progress: MotionValue<number>;
 }) {
   const start = Math.max(0, index / count - 0.08);
-  const targetScale = Math.max(0.86, 1 - (count - index - 1) * 0.045);
+  const targetScale = Math.max(0.82, 1 - (count - index - 1) * 0.065);
   const scale = useTransform(progress, [start, 1], [1, targetScale]);
-  const y = useTransform(progress, [start, 1], [0, -index * 7]);
+  const y = useTransform(progress, [start, 1], [0, -index * 10]);
 
   return (
     <div className="sticky top-20">

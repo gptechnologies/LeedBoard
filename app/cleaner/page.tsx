@@ -1,10 +1,10 @@
 import { UserRole } from "@prisma/client";
-import { EmptyState, JobStackScroll } from "@/components/marketplace";
-import { AvailableJobCard } from "@/components/marketplace/cards";
+import { CleanerUpNextJobCard, EmptyState, HomeownerOpenJobsCarousel } from "@/components/marketplace";
 import { CleanerJobsFeed } from "@/components/marketplace/cleaner-jobs-feed";
 import { formatTimeAgo } from "@/lib/format";
 
 import {
+  formatTimingSummary,
   getCleanerHomeData,
 } from "@/lib/marketplace";
 import { requireUser } from "@/lib/session";
@@ -23,41 +23,38 @@ export default async function CleanerDashboard({ searchParams }: CleanerDashboar
   const { openJobs } = await getCleanerHomeData(user.id);
 
   const feedJobs = openJobs.slice(0, 8).map((job) => ({
-    id: job.id,
-    title: job.title,
     areaLabel: `${job.city}, ${job.state}`,
-    postedLabel: formatTimeAgo(job.createdAt),
-    bedroomCount: job.homeProfile?.bedroomCount ?? null,
     bathroomCount: job.homeProfile?.bathroomCount ?? null,
+    bedroomCount: job.homeProfile?.bedroomCount ?? null,
+    bidCount: job.bids.length,
+    estimatedSquareFeet: job.homeProfile?.estimatedSquareFeet ?? null,
     hasPets: job.homeProfile?.hasPets ?? false,
+    id: job.id,
+    job,
+    postedLabel: formatTimeAgo(job.createdAt),
+    timingLabel: formatTimingSummary(job),
+    title: job.title,
   }));
 
   return (
     <div className="market-shell cleaner-home-shell">
       <section className="market-surface">
-        <header className="cleaner-home-head">
-          <div>
-            <h1>Well Kept</h1>
-          </div>
-          <div className="cleaner-home-user">
-            <span className="cleaner-home-avatar" aria-hidden="true">
-              {user.firstName.charAt(0)}
-            </span>
-          </div>
-        </header>
-
         {params.error ? <div className="notice error">{params.error}</div> : null}
 
-        <section className="stack">
+        <section className="stack cleaner-upcoming-section">
           <div className="market-section-heading">
-            <h2>Up Next Jobs</h2>
+            <h2>Upcoming Jobs</h2>
           </div>
           {openJobs.length > 0 ? (
-            <JobStackScroll>
+            <HomeownerOpenJobsCarousel>
               {openJobs.slice(0, 3).map((job) => (
-                <AvailableJobCard job={job} key={job.id} />
+                <CleanerUpNextJobCard
+                  job={job}
+                  key={job.id}
+                  timingLabel={formatTimingSummary(job)}
+                />
               ))}
-            </JobStackScroll>
+            </HomeownerOpenJobsCarousel>
           ) : (
             <EmptyState
               body="Open jobs in your area will show here."
@@ -65,9 +62,9 @@ export default async function CleanerDashboard({ searchParams }: CleanerDashboar
             />
           )}
         </section>
-
-        <CleanerJobsFeed jobs={feedJobs} />
       </section>
+
+      <CleanerJobsFeed jobs={feedJobs} />
     </div>
   );
 }
