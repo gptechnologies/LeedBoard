@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { UserRole } from "@prisma/client";
-import { JobRequestCard } from "@/components/marketplace/cards";
+import {
+  HomeownerOpenJobCard,
+  HomeownerOpenJobsCarousel,
+  PulsatingPrimaryLink,
+} from "@/components/marketplace";
 
 import { getCustomerHomeData } from "@/lib/marketplace";
 import { requireUser } from "@/lib/session";
@@ -17,21 +21,15 @@ export default async function CustomerDashboard({ searchParams }: CustomerDashbo
   const user = await requireUser(UserRole.CUSTOMER);
   const params = await searchParams;
   const { jobs } = await getCustomerHomeData(user.id);
+  const openJobs = jobs.slice(0, 3);
 
   return (
     <div className="market-shell">
       <section className="market-surface">
         {params.error ? <div className="notice error">{params.error}</div> : null}
 
-        <header className="mobile-home-head">
-          <div>
-            <h1>Well Kept</h1>
-            <p>Bring trusted cleaners to you.</p>
-          </div>
-        </header>
-
-        <Link href="/customer/jobs/new" className="market-hero-card market-hero-card--compact">
-          <span className="market-hero-icon" aria-hidden="true">
+        <PulsatingPrimaryLink href="/customer/jobs/new" className="customer-post-job-cta">
+          <span className="market-hero-icon customer-post-job-cta__icon" aria-hidden="true">
             <svg viewBox="0 0 24 24">
               <path d="m4 11 8-7 8 7" />
               <path d="M6.5 10.5V20h11v-9.5" />
@@ -40,22 +38,21 @@ export default async function CustomerDashboard({ searchParams }: CustomerDashbo
               <path d="M15 6h4" />
             </svg>
           </span>
-          <span className="stack small">
-            <strong className="market-hero-card__title">Post a Cleaning Job</strong>
-            <span className="subtle">Start getting bids and choose the best cleaner.</span>
+          <span className="customer-post-job-cta__copy">
+            <strong>Post a Cleaning Job</strong>
+            <span>Get bids and choose your cleaner.</span>
           </span>
-          <span className="market-hero-arrow" aria-hidden="true">&gt;</span>
-        </Link>
+        </PulsatingPrimaryLink>
 
         <section className="stack">
           <div className="market-section-heading">
             <h2>Open Jobs ({jobs.length})</h2>
-            {jobs.length > 0 ? <Link href="/customer/jobs">View all</Link> : null}
+            {jobs.length > 0 ? <Link href="/customer/jobs">View all &gt;</Link> : null}
           </div>
-          {jobs.length > 0 ? (
-            <div className="market-rail">
-              {jobs.slice(0, 3).map((job) => (
-                <JobRequestCard
+          {openJobs.length > 1 ? (
+            <HomeownerOpenJobsCarousel>
+              {openJobs.map((job) => (
+                <HomeownerOpenJobCard
                   key={job.id}
                   job={job}
                   href={
@@ -63,10 +60,18 @@ export default async function CustomerDashboard({ searchParams }: CustomerDashbo
                       ? `/customer/jobs/${job.id}/bids`
                       : `/customer/jobs/${job.id}`
                   }
-                  showAcceptedCleaner
                 />
               ))}
-            </div>
+            </HomeownerOpenJobsCarousel>
+          ) : openJobs.length === 1 ? (
+            <HomeownerOpenJobCard
+              job={openJobs[0]}
+              href={
+                openJobs[0].status === "OPEN"
+                  ? `/customer/jobs/${openJobs[0].id}/bids`
+                  : `/customer/jobs/${openJobs[0].id}`
+              }
+            />
           ) : null}
         </section>
 

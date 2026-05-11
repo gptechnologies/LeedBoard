@@ -3,10 +3,7 @@
 import { useState } from "react";
 import { CleanLevel, EntryMethod, RoomType } from "@prisma/client";
 import { HomeProfileForm } from "@/components/marketplace/home-profile-form";
-import {
-  entryMethodOptions,
-  roomTypeOptions,
-} from "@/lib/marketplace-constants";
+import { entryMethodOptions } from "@/lib/marketplace-constants";
 
 type HomePreset = {
   id: string;
@@ -16,6 +13,11 @@ type HomePreset = {
   city: string;
   state: string;
   postalCode: string;
+  bedroomCount: number | null;
+  bathroomCount: number | null;
+  estimatedSquareFeet: number | null;
+  storyCount: number | null;
+  hasPets: boolean;
   entryMethod: EntryMethod;
   entryNotes: string | null;
   defaultRoomTypes: RoomType[];
@@ -55,9 +57,7 @@ export function HomePresetsManager({ homeProfiles }: { homeProfiles: HomePreset[
                         {home.addressLine1}, {home.city}, {home.state} {home.postalCode}
                       </span>
                       <span className="market-card__meta">
-                        {home.defaultRoomTypes.length > 0
-                          ? formatRoomTypes(home.defaultRoomTypes)
-                          : "No typical rooms saved"} · {getEntryMethodLabel(home.entryMethod)}
+                        {formatHomeDetails(home)} · {getEntryMethodLabel(home.entryMethod)}
                       </span>
                     </span>
                     <span className="market-preset-card__chevron" aria-hidden="true">
@@ -87,7 +87,7 @@ export function HomePresetsManager({ homeProfiles }: { homeProfiles: HomePreset[
           <section className="market-empty">
             <strong>No home presets saved yet.</strong>
             <p className="market-card__copy">
-              Add a nickname, address, and typical rooms so they appear when you post a job.
+              Add a nickname, address, bedrooms, bathrooms, and pet details so they appear when you post a job.
             </p>
           </section>
         )}
@@ -122,21 +122,35 @@ function buildHomeProfileFormDefaults(homeProfile: HomePreset | null) {
     addressLine1: homeProfile?.addressLine1 ?? "",
     addressLine2: homeProfile?.addressLine2 ?? "",
     city: homeProfile?.city ?? "",
-    state: homeProfile?.state ?? "CA",
+    state: homeProfile?.state ?? "New York",
     postalCode: homeProfile?.postalCode ?? "",
+    bedroomCount: homeProfile?.bedroomCount ?? null,
+    bathroomCount: homeProfile?.bathroomCount ?? null,
+    estimatedSquareFeet: homeProfile?.estimatedSquareFeet ?? null,
+    storyCount: homeProfile?.storyCount ?? null,
+    hasPets: homeProfile?.hasPets ?? false,
     entryMethod: homeProfile?.entryMethod ?? EntryMethod.I_WILL_BE_HOME,
     entryNotes: homeProfile?.entryNotes ?? "",
-    defaultRoomTypes: homeProfile?.defaultRoomTypes ?? [],
-    defaultCleanLevel: homeProfile?.defaultCleanLevel ?? CleanLevel.MEDIUM,
-    roomCleanLevels: homeProfile?.roomCleanLevels ?? {},
     notes: homeProfile?.notes ?? "",
   };
 }
 
-function formatRoomTypes(roomTypes: RoomType[]) {
-  return roomTypes
-    .map((roomType) => roomTypeOptions.find((option) => option.value === roomType)?.label ?? roomType)
-    .join(", ");
+function formatHomeDetails(home: HomePreset) {
+  const bedrooms = home.bedroomCount === null
+    ? null
+    : home.bedroomCount === 0
+      ? "Studio"
+      : `${home.bedroomCount} bed`;
+  const bathrooms = home.bathroomCount === null ? null : `${home.bathroomCount} bath`;
+  const squareFeet =
+    home.estimatedSquareFeet === null ? null : `${home.estimatedSquareFeet.toLocaleString()} sq ft`;
+  const stories =
+    home.storyCount === null
+      ? null
+      : `${home.storyCount} ${home.storyCount === 1 ? "story" : "stories"}`;
+  const pets = home.hasPets ? "Pets" : "No pets";
+
+  return [bedrooms, bathrooms, squareFeet, stories, pets].filter(Boolean).join(" · ");
 }
 
 function getEntryMethodLabel(entryMethod: EntryMethod) {

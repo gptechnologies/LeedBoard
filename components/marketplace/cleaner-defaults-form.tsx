@@ -1,3 +1,8 @@
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { PriceInput } from "@/components/marketplace/price-input";
+
 type CleanerDefaultsFormProps = {
   defaults: {
     standardHourlyRateCents: number | null;
@@ -9,17 +14,18 @@ type CleanerDefaultsFormProps = {
 
 export function CleanerDefaultsForm({ defaults }: CleanerDefaultsFormProps) {
   return (
-    <form action="/cleaner/settings/save" method="post" className="market-card">
-      <div className="market-section-heading">
-        <h2>Standard bid defaults</h2>
-      </div>
-      <div className="grid two">
+    <Card>
+      <form action="/cleaner/settings/save" method="post">
+        <CardHeader>
+          <CardTitle>Standard bid defaults</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+      <div className="grid gap-4 sm:grid-cols-2">
         <div className="field">
           <label htmlFor="standardHourlyRate">Hourly rate</label>
-          <input
+          <PriceInput
             id="standardHourlyRate"
             name="standardHourlyRate"
-            inputMode="decimal"
             defaultValue={
               defaults.standardHourlyRateCents
                 ? (defaults.standardHourlyRateCents / 100).toFixed(0)
@@ -29,10 +35,9 @@ export function CleanerDefaultsForm({ defaults }: CleanerDefaultsFormProps) {
         </div>
         <div className="field">
           <label htmlFor="standardFlatRate">Standard flat fee</label>
-          <input
+          <PriceInput
             id="standardFlatRate"
             name="standardFlatRate"
-            inputMode="decimal"
             defaultValue={
               defaults.standardFlatRateCents
                 ? (defaults.standardFlatRateCents / 100).toFixed(0)
@@ -41,13 +46,12 @@ export function CleanerDefaultsForm({ defaults }: CleanerDefaultsFormProps) {
           />
         </div>
       </div>
-      <div className="grid two">
+      <div className="grid gap-4 sm:grid-cols-2">
         <div className="field">
           <label htmlFor="standardDeepCleanFlatRate">Deep clean flat fee</label>
-          <input
+          <PriceInput
             id="standardDeepCleanFlatRate"
             name="standardDeepCleanFlatRate"
-            inputMode="decimal"
             defaultValue={
               defaults.standardDeepCleanFlatRateCents
                 ? (defaults.standardDeepCleanFlatRateCents / 100).toFixed(0)
@@ -57,7 +61,7 @@ export function CleanerDefaultsForm({ defaults }: CleanerDefaultsFormProps) {
         </div>
         <div className="field">
           <label htmlFor="defaultEtaMinutes">Default ASAP ETA</label>
-          <input
+          <Input
             id="defaultEtaMinutes"
             name="defaultEtaMinutes"
             inputMode="numeric"
@@ -66,8 +70,10 @@ export function CleanerDefaultsForm({ defaults }: CleanerDefaultsFormProps) {
         </div>
       </div>
       <div className="market-card__actions">
-        <button type="submit">Save Defaults</button>
+        <Button type="submit">Save defaults</Button>
       </div>
-    </form>
+        </CardContent>
+      </form>
+    </Card>
   );
 }

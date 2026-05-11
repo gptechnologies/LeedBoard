@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 
 type AddressState = {
   addressLine1: string;
@@ -10,40 +11,59 @@ type AddressState = {
   postalCode: string;
 };
 
+type PropertyType = "HOUSE" | "APARTMENT";
+
 type HomeownerOnboardingFlowProps = {
   error?: string;
   firstName: string;
-  initialHeardAboutUs: string;
-  initialPushEnabled: boolean;
 };
 
-const heardAboutUsOptions = [
-  "Friend or neighbor",
-  "Google search",
-  "Social media",
-  "Local ad or flyer",
-  "Cleaner referral",
-  "Other",
+const bedroomOptions = [
+  { label: "Studio", value: 0 },
+  { label: "1", value: 1 },
+  { label: "2", value: 2 },
+  { label: "3", value: 3 },
+  { label: "4", value: 4 },
+  { label: "5+", value: 5 },
 ];
-const homeownerFlowVideoSrc = process.env.NEXT_PUBLIC_HOMEOWNER_ONBOARDING_VIDEO_SRC;
 
-function getInitialReferral(value: string) {
-  if (!value) return "";
-  return heardAboutUsOptions.includes(value) ? value : "Other";
+const bathroomOptions = [
+  { label: "1", value: 1 },
+  { label: "1.5", value: 1.5 },
+  { label: "2", value: 2 },
+  { label: "2.5", value: 2.5 },
+  { label: "3+", value: 3 },
+];
+
+function getPropertyLabel(value: PropertyType) {
+  return value === "HOUSE" ? "House" : "Apartment";
 }
 
-function getInitialReferralOther(value: string) {
-  if (!value || heardAboutUsOptions.includes(value)) return "";
-  return value;
+function getBedroomLabel(value: number | null) {
+  return bedroomOptions.find((option) => option.value === value)?.label ?? "";
+}
+
+function getBathroomLabel(value: number | null) {
+  return bathroomOptions.find((option) => option.value === value)?.label ?? "";
+}
+
+function parsePositiveIntegerInput(value: string) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 1) return null;
+  return Math.round(parsed);
 }
 
 export function HomeownerOnboardingFlow({
   error,
   firstName,
-  initialHeardAboutUs,
-  initialPushEnabled,
 }: HomeownerOnboardingFlowProps) {
   const [step, setStep] = useState(0);
+  const [propertyType, setPropertyType] = useState<PropertyType | "">("");
+  const [bedroomCount, setBedroomCount] = useState<number | null>(null);
+  const [bathroomCount, setBathroomCount] = useState<number | null>(null);
+  const [estimatedSquareFeet, setEstimatedSquareFeet] = useState<number | null>(null);
+  const [storyCount, setStoryCount] = useState<number | null>(null);
+  const [hasPets, setHasPets] = useState<boolean | null>(null);
   const [address, setAddress] = useState<AddressState>({
     addressLine1: "",
     addressLine2: "",
@@ -52,19 +72,173 @@ export function HomeownerOnboardingFlow({
     postalCode: "",
   });
   const [addressError, setAddressError] = useState("");
-  const [pushChoice, setPushChoice] = useState(initialPushEnabled ? "enabled" : "");
-  const [notificationPermission, setNotificationPermission] = useState(
-    initialPushEnabled ? "granted" : "",
-  );
-  const [heardAboutUs, setHeardAboutUs] = useState(() => getInitialReferral(initialHeardAboutUs));
-  const [heardAboutUsOther, setHeardAboutUsOther] = useState(() =>
-    getInitialReferralOther(initialHeardAboutUs),
-  );
 
-  const progress = useMemo(() => Math.round(((step + 1) / 4) * 100), [step]);
-  const firstNameCopy = firstName
-    ? `${firstName}, your first clean starts here.`
-    : "Your first clean starts here.";
+  const progress = useMemo(() => Math.round(((step + 1) / 6) * 100), [step]);
+  const firstNameCopy = firstName ? `${firstName}, ` : "";
+
+  const steps = [
+    {
+      key: "property",
+      eyebrow: "Home profile",
+      title: `${firstNameCopy}what type of place is this?`,
+      helper: "This helps cleaners understand the home before they bid.",
+      summary: propertyType ? getPropertyLabel(propertyType) : "",
+      isComplete: Boolean(propertyType),
+      content: (
+        <ChoiceGrid label="Property type">
+          <ChoiceButton
+            label="House"
+            detail="Single-family, townhome, or larger place"
+            active={propertyType === "HOUSE"}
+            onClick={() => setPropertyType("HOUSE")}
+          />
+          <ChoiceButton
+            label="Apartment"
+            detail="Apartment, condo, loft, or smaller unit"
+            active={propertyType === "APARTMENT"}
+            onClick={() => setPropertyType("APARTMENT")}
+          />
+        </ChoiceGrid>
+      ),
+    },
+    {
+      key: "bedrooms",
+      eyebrow: "Bedrooms",
+      title: "How many bedrooms should cleaners plan for?",
+      helper: "Use the closest match. You can update room details later.",
+      summary: bedroomCount === null ? "" : `${getBedroomLabel(bedroomCount)} bedrooms`,
+      isComplete: bedroomCount !== null,
+      content: (
+        <SegmentedNumberGrid label="Bedrooms">
+          {bedroomOptions.map((option) => (
+            <button
+              key={option.label}
+              type="button"
+              className={bedroomCount === option.value ? "onboarding-number active" : "onboarding-number"}
+              onClick={() => setBedroomCount(option.value)}
+              aria-pressed={bedroomCount === option.value}
+            >
+              {option.label}
+            </button>
+          ))}
+        </SegmentedNumberGrid>
+      ),
+    },
+    {
+      key: "bathrooms",
+      eyebrow: "Bathrooms",
+      title: "How many bathrooms are in the home?",
+      helper: "Half bathrooms count too.",
+      summary: bathroomCount === null ? "" : `${getBathroomLabel(bathroomCount)} bathrooms`,
+      isComplete: bathroomCount !== null,
+      content: (
+        <SegmentedNumberGrid label="Bathrooms">
+          {bathroomOptions.map((option) => (
+            <button
+              key={option.label}
+              type="button"
+              className={bathroomCount === option.value ? "onboarding-number active" : "onboarding-number"}
+              onClick={() => setBathroomCount(option.value)}
+              aria-pressed={bathroomCount === option.value}
+            >
+              {option.label}
+            </button>
+          ))}
+        </SegmentedNumberGrid>
+      ),
+    },
+    {
+      key: "size",
+      eyebrow: "Home size",
+      title: "What is the estimated size of the home?",
+      helper: "A close estimate is enough. Cleaners use this with beds and baths to price the job.",
+      summary:
+        estimatedSquareFeet && storyCount
+          ? `${estimatedSquareFeet} sq ft, ${storyCount} ${storyCount === 1 ? "story" : "stories"}`
+          : "",
+      isComplete: estimatedSquareFeet !== null && storyCount !== null,
+      content: (
+        <div className="onboarding-fields stack">
+          <div className="field">
+            <label htmlFor="estimatedSquareFeet">Estimated square footage</label>
+            <input
+              id="estimatedSquareFeet"
+              value={estimatedSquareFeet ?? ""}
+              onChange={(event) =>
+                setEstimatedSquareFeet(
+                  event.target.value === "" ? null : parsePositiveIntegerInput(event.target.value),
+                )
+              }
+              inputMode="numeric"
+              type="number"
+              min="1"
+              step="50"
+              placeholder="1100"
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="storyCount">Stories or levels</label>
+            <input
+              id="storyCount"
+              value={storyCount ?? ""}
+              onChange={(event) =>
+                setStoryCount(
+                  event.target.value === "" ? null : parsePositiveIntegerInput(event.target.value),
+                )
+              }
+              inputMode="numeric"
+              type="number"
+              min="1"
+              step="1"
+              placeholder="1"
+            />
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "pets",
+      eyebrow: "Pets",
+      title: "Are there pets at this home?",
+      helper: "Cleaners use this to prepare supplies and arrival notes.",
+      summary: hasPets === null ? "" : hasPets ? "Pets at home" : "No pets",
+      isComplete: hasPets !== null,
+      content: (
+        <ChoiceGrid label="Pets">
+          <ChoiceButton
+            label="Yes"
+            detail="A dog, cat, or other pet may be home"
+            active={hasPets === true}
+            onClick={() => setHasPets(true)}
+          />
+          <ChoiceButton
+            label="No"
+            detail="No pets cleaners need to know about"
+            active={hasPets === false}
+            onClick={() => setHasPets(false)}
+          />
+        </ChoiceGrid>
+      ),
+    },
+    {
+      key: "address",
+      eyebrow: "Address",
+      title: "Where should cleaners arrive?",
+      helper: "This creates your first home preset for faster requests.",
+      summary: address.addressLine1,
+      isComplete: !validateAddress(),
+      content: (
+        <AddressFields
+          address={address}
+          addressError={addressError}
+          updateAddress={updateAddress}
+        />
+      ),
+    },
+  ];
+
+  const currentStep = steps[step];
+  const canContinue = currentStep.isComplete;
 
   function updateAddress(field: keyof AddressState, value: string) {
     setAddress((current) => ({ ...current, [field]: value }));
@@ -80,64 +254,35 @@ export function HomeownerOnboardingFlow({
   }
 
   function goNext() {
-    if (step === 1) {
+    if (step === steps.length - 1) {
       const message = validateAddress();
-      if (message) {
-        setAddressError(message);
-        return;
-      }
-    }
-
-    setStep((current) => Math.min(current + 1, 3));
-  }
-
-  async function enableNotifications() {
-    setPushChoice("enabled");
-
-    if (!("Notification" in window)) {
-      setNotificationPermission("unsupported");
-      setStep(3);
+      setAddressError(message);
       return;
     }
 
-    try {
-      const permission = await Notification.requestPermission();
-      setNotificationPermission(permission);
-    } catch {
-      setNotificationPermission("denied");
-    }
-
-    setStep(3);
-  }
-
-  function skipNotifications() {
-    setPushChoice("skipped");
-    setNotificationPermission("skipped");
-    setStep(3);
+    if (!canContinue) return;
+    setStep((current) => Math.min(current + 1, steps.length - 1));
   }
 
   return (
     <section className="onboarding-shell" aria-label="Homeowner onboarding">
-      <form action="/onboarding/homeowner/complete" method="post" className="onboarding-panel">
+      <form action="/onboarding/homeowner/complete" method="post" className="onboarding-panel onboarding-panel--progressive">
+        <input type="hidden" name="propertyType" value={propertyType} readOnly />
+        <input type="hidden" name="bedroomCount" value={bedroomCount ?? ""} readOnly />
+        <input type="hidden" name="bathroomCount" value={bathroomCount ?? ""} readOnly />
+        <input type="hidden" name="estimatedSquareFeet" value={estimatedSquareFeet ?? ""} readOnly />
+        <input type="hidden" name="storyCount" value={storyCount ?? ""} readOnly />
+        <input type="hidden" name="hasPets" value={hasPets === null ? "" : String(hasPets)} readOnly />
         <input type="hidden" name="addressLine1" value={address.addressLine1} readOnly />
         <input type="hidden" name="addressLine2" value={address.addressLine2} readOnly />
         <input type="hidden" name="city" value={address.city} readOnly />
         <input type="hidden" name="state" value={address.state} readOnly />
         <input type="hidden" name="postalCode" value={address.postalCode} readOnly />
-        <input type="hidden" name="pushChoice" value={pushChoice} readOnly />
-        <input
-          type="hidden"
-          name="notificationPermission"
-          value={notificationPermission}
-          readOnly
-        />
-        <input type="hidden" name="heardAboutUs" value={heardAboutUs} readOnly />
-        <input type="hidden" name="heardAboutUsOther" value={heardAboutUsOther} readOnly />
 
-        <div className="onboarding-progress" aria-label={`Step ${step + 1} of 4`}>
+        <div className="onboarding-progress" aria-label={`Step ${step + 1} of ${steps.length}`}>
           <div className="onboarding-progress__text">
             <span>Homeowner setup</span>
-            <span>{step + 1} of 4</span>
+            <span>{step + 1} of {steps.length}</span>
           </div>
           <div className="onboarding-progress__track">
             <span style={{ width: `${progress}%` }} />
@@ -146,63 +291,57 @@ export function HomeownerOnboardingFlow({
 
         {error ? <div className="notice error">{error}</div> : null}
 
-        <div className="onboarding-step">
-          {step === 0 ? (
-            <IntroStep firstNameCopy={firstNameCopy} />
-          ) : step === 1 ? (
-            <AddressStep
-              address={address}
-              addressError={addressError}
-              updateAddress={updateAddress}
-            />
-          ) : step === 2 ? (
-            <NotificationsStep />
-          ) : (
-            <ReferralStep
-              heardAboutUs={heardAboutUs}
-              heardAboutUsOther={heardAboutUsOther}
-              setHeardAboutUs={setHeardAboutUs}
-              setHeardAboutUsOther={setHeardAboutUsOther}
-            />
-          )}
+        <div className="onboarding-question-list">
+          {steps.map((item, index) => {
+            const status = index === step ? "active" : index < step ? "complete" : "upcoming";
+            return (
+              <section
+                key={item.key}
+                className={`onboarding-question onboarding-question--${status}`}
+                aria-current={index === step ? "step" : undefined}
+              >
+                <button
+                  type="button"
+                  className="onboarding-question__summary"
+                  onClick={() => index < step && setStep(index)}
+                  disabled={index >= step}
+                >
+                  <span>{index + 1}</span>
+                  <strong>{item.summary || item.eyebrow}</strong>
+                </button>
+
+                {index === step ? (
+                  <div className="onboarding-question__body">
+                    <div>
+                      <div className="eyebrow">{item.eyebrow}</div>
+                      <h1>{item.title}</h1>
+                      <p className="subtle">{item.helper}</p>
+                    </div>
+                    {item.content}
+                  </div>
+                ) : null}
+              </section>
+            );
+          })}
         </div>
 
-        <div className="onboarding-actions">
-          <div
-            className={
-              step === 0
-                ? "onboarding-actions__row onboarding-actions__row--first"
-                : step === 2
-                  ? "onboarding-actions__row onboarding-actions__row--three"
-                  : "onboarding-actions__row"
-            }
-          >
-            {step > 0 ? (
-              <button
-                type="button"
-                className="button secondary"
-                onClick={() => setStep((current) => Math.max(current - 1, 0))}
-              >
-                Back
-              </button>
-            ) : null}
-
-            {step === 2 ? (
-              <>
-              <button type="button" className="button secondary" onClick={skipNotifications}>
-                Not now
-              </button>
-              <button type="button" className="button" onClick={enableNotifications}>
-                Enable notifications
-              </button>
-              </>
-            ) : step === 3 ? (
-              <button type="submit" className="button">
+        <div className="onboarding-actions onboarding-actions--floating">
+          <div className="onboarding-actions__row">
+            <button
+              type="button"
+              className="button secondary"
+              onClick={() => setStep((current) => Math.max(current - 1, 0))}
+              disabled={step === 0}
+            >
+              Back
+            </button>
+            {step === steps.length - 1 ? (
+              <button type="submit" className="button" disabled={!canContinue}>
                 Finish setup
               </button>
             ) : (
-              <button type="button" className="button" onClick={goNext}>
-                {step === 0 ? "Start" : "Continue"}
+              <button type="button" className="button" onClick={goNext} disabled={!canContinue}>
+                Next
               </button>
             )}
           </div>
@@ -212,47 +351,47 @@ export function HomeownerOnboardingFlow({
   );
 }
 
-function IntroStep({ firstNameCopy }: { firstNameCopy: string }) {
-  const [videoReady, setVideoReady] = useState(false);
-
+function ChoiceGrid({ children, label }: { children: ReactNode; label: string }) {
   return (
-    <div className="onboarding-intro">
-      <div className="onboarding-video" aria-label="Preview of booking a clean">
-        {homeownerFlowVideoSrc ? (
-          <video
-            className={videoReady ? "ready" : ""}
-            muted
-            loop
-            playsInline
-            autoPlay
-            preload="metadata"
-            aria-hidden="true"
-            onCanPlay={() => setVideoReady(true)}
-            onError={() => setVideoReady(false)}
-          >
-            <source src={homeownerFlowVideoSrc} type="video/mp4" />
-          </video>
-        ) : null}
-        <div className="onboarding-video__fallback">
-          <div className="onboarding-video__phone">
-            <span />
-            <span />
-            <span />
-          </div>
-          <div className="onboarding-video__caption">Book, compare bids, relax.</div>
-        </div>
-      </div>
-
-      <div className="onboarding-copy">
-        <div className="eyebrow">Well Kept for homeowners</div>
-        <h1>Ready to book a clean home?</h1>
-        <p>{firstNameCopy} Save your home once, then request trusted cleaners in a few taps.</p>
-      </div>
+    <div className="onboarding-choice-grid" role="group" aria-label={label}>
+      {children}
     </div>
   );
 }
 
-function AddressStep({
+function ChoiceButton({
+  active,
+  detail,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  detail: string;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={active ? "onboarding-choice active" : "onboarding-choice"}
+      onClick={onClick}
+      aria-pressed={active}
+    >
+      <strong>{label}</strong>
+      <span>{detail}</span>
+    </button>
+  );
+}
+
+function SegmentedNumberGrid({ children, label }: { children: ReactNode; label: string }) {
+  return (
+    <div className="onboarding-number-grid" role="group" aria-label={label}>
+      {children}
+    </div>
+  );
+}
+
+function AddressFields({
   address,
   addressError,
   updateAddress,
@@ -262,133 +401,57 @@ function AddressStep({
   updateAddress: (field: keyof AddressState, value: string) => void;
 }) {
   return (
-    <div className="onboarding-content stack">
-      <div>
-        <div className="eyebrow">Your home</div>
-        <h1>Where should cleaners arrive?</h1>
-        <p className="subtle">We use this to create your first home preset for faster requests.</p>
-      </div>
-
+    <div className="onboarding-fields stack">
       {addressError ? <div className="notice error">{addressError}</div> : null}
 
-      <div className="onboarding-fields stack">
+      <div className="field">
+        <label htmlFor="onboardingAddressLine1">Street address</label>
+        <input
+          id="onboardingAddressLine1"
+          value={address.addressLine1}
+          onChange={(event) => updateAddress("addressLine1", event.target.value)}
+          autoComplete="street-address"
+        />
+      </div>
+      <div className="field">
+        <label htmlFor="onboardingAddressLine2">Apartment or suite</label>
+        <input
+          id="onboardingAddressLine2"
+          value={address.addressLine2}
+          onChange={(event) => updateAddress("addressLine2", event.target.value)}
+          autoComplete="address-line2"
+        />
+      </div>
+      <div className="grid two">
         <div className="field">
-          <label htmlFor="onboardingAddressLine1">Street address</label>
+          <label htmlFor="onboardingCity">City</label>
           <input
-            id="onboardingAddressLine1"
-            value={address.addressLine1}
-            onChange={(event) => updateAddress("addressLine1", event.target.value)}
-            autoComplete="street-address"
+            id="onboardingCity"
+            value={address.city}
+            onChange={(event) => updateAddress("city", event.target.value)}
+            autoComplete="address-level2"
           />
         </div>
         <div className="field">
-          <label htmlFor="onboardingAddressLine2">Apartment or suite</label>
+          <label htmlFor="onboardingState">State</label>
           <input
-            id="onboardingAddressLine2"
-            value={address.addressLine2}
-            onChange={(event) => updateAddress("addressLine2", event.target.value)}
-            autoComplete="address-line2"
-          />
-        </div>
-        <div className="grid two">
-          <div className="field">
-            <label htmlFor="onboardingCity">City</label>
-            <input
-              id="onboardingCity"
-              value={address.city}
-              onChange={(event) => updateAddress("city", event.target.value)}
-              autoComplete="address-level2"
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="onboardingState">State</label>
-            <input
-              id="onboardingState"
-              value={address.state}
-              onChange={(event) => updateAddress("state", event.target.value)}
-              autoComplete="address-level1"
-            />
-          </div>
-        </div>
-        <div className="field">
-          <label htmlFor="onboardingPostalCode">ZIP code</label>
-          <input
-            id="onboardingPostalCode"
-            value={address.postalCode}
-            onChange={(event) => updateAddress("postalCode", event.target.value)}
-            autoComplete="postal-code"
-            inputMode="numeric"
+            id="onboardingState"
+            value={address.state}
+            onChange={(event) => updateAddress("state", event.target.value)}
+            autoComplete="address-level1"
           />
         </div>
       </div>
-    </div>
-  );
-}
-
-function NotificationsStep() {
-  return (
-    <div className="onboarding-content onboarding-content--center">
-      <div className="onboarding-bell" aria-hidden="true">
-        <span />
+      <div className="field">
+        <label htmlFor="onboardingPostalCode">ZIP code</label>
+        <input
+          id="onboardingPostalCode"
+          value={address.postalCode}
+          onChange={(event) => updateAddress("postalCode", event.target.value)}
+          autoComplete="postal-code"
+          inputMode="numeric"
+        />
       </div>
-      <div>
-        <div className="eyebrow">Helpful updates</div>
-        <h1>Get updates as cleaners respond.</h1>
-        <p className="subtle">
-          We can notify you when a cleaner bids, accepts, or updates their arrival.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function ReferralStep({
-  heardAboutUs,
-  heardAboutUsOther,
-  setHeardAboutUs,
-  setHeardAboutUsOther,
-}: {
-  heardAboutUs: string;
-  heardAboutUsOther: string;
-  setHeardAboutUs: (value: string) => void;
-  setHeardAboutUsOther: (value: string) => void;
-}) {
-  return (
-    <div className="onboarding-content stack">
-      <div>
-        <div className="eyebrow">One last thing</div>
-        <h1>How did you hear about us?</h1>
-        <p className="subtle">This helps us understand where Well Kept is reaching neighbors.</p>
-      </div>
-
-      <div className="onboarding-option-grid" role="radiogroup" aria-label="How you heard about us">
-        {heardAboutUsOptions.map((option) => (
-          <button
-            key={option}
-            type="button"
-            className={
-              heardAboutUs === option ? "onboarding-option active" : "onboarding-option"
-            }
-            onClick={() => setHeardAboutUs(option)}
-            role="radio"
-            aria-checked={heardAboutUs === option}
-          >
-            {option}
-          </button>
-        ))}
-      </div>
-
-      {heardAboutUs === "Other" ? (
-        <div className="field">
-          <label htmlFor="heardAboutUsOther">Tell us where</label>
-          <input
-            id="heardAboutUsOther"
-            value={heardAboutUsOther}
-            onChange={(event) => setHeardAboutUsOther(event.target.value)}
-            placeholder="Optional"
-          />
-        </div>
-      ) : null}
     </div>
   );
 }

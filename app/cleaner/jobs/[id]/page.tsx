@@ -9,6 +9,7 @@ import {
 } from "@/lib/marketplace";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -47,6 +48,7 @@ export default async function CleanerJobDetailPage({
           },
         },
       },
+      homeProfile: true,
       bids: {
         where: {
           cleanerId: user.id,
@@ -59,54 +61,57 @@ export default async function CleanerJobDetailPage({
     notFound();
   }
 
+  const bedroomCount = job.homeProfile?.bedroomCount;
+  const bathroomCount = job.homeProfile?.bathroomCount;
+  const bathroomLabel = bathroomCount
+    ? `${Number.isInteger(bathroomCount) ? bathroomCount.toFixed(0) : bathroomCount} bath`
+    : null;
+  const homeDetails = [
+    bedroomCount ? `${bedroomCount} bed` : null,
+    bathroomLabel,
+  ].filter(Boolean);
+  const hasExistingBid = job.bids.length > 0;
+
   return (
-    <div className="market-shell market-shell--detail">
+    <div className="market-shell market-shell--detail bid-screen">
       <section className="market-surface">
-        <header className="market-topbar market-topbar--detail">
-          <div>
-            <div className="market-kicker">Submit a bid</div>
-            <h1>{job.title}</h1>
-          </div>
+        <header className="bid-screen__header">
+          <Link href="/cleaner" className="bid-screen__back" aria-label="Back to cleaner jobs">
+            <span aria-hidden="true">&larr;</span>
+          </Link>
+          <h1>{hasExistingBid ? "Update Your Bid" : "Place Your Bid"}</h1>
+          <span className="bid-screen__header-spacer" aria-hidden="true" />
         </header>
 
         {query.error ? <div className="notice error">{query.error}</div> : null}
 
-        <article className="market-card cleaner-detail-summary">
-          <dl className="cleaner-job-summary cleaner-job-summary--detail">
-            <div>
-              <dt>Requested time</dt>
-              <dd>{formatTimingSummary(job)}</dd>
+        <article className="market-card bid-job-card">
+          <div className="bid-job-card__media" aria-hidden="true">
+            <span>Wk</span>
+          </div>
+          <div className="bid-job-card__body">
+            <div className="bid-job-card__title-row">
+              <div>
+                <h2>{job.title}</h2>
+                <p>{homeDetails.length > 0 ? homeDetails.join(" · ") : formatRoomTypes(job.roomTypes)}</p>
+              </div>
+              <span className="bid-job-card__badge">{getCleanLevelLabel(job.cleanLevel)}</span>
             </div>
-            <div>
-              <dt>Area</dt>
-              <dd>{job.city}, {job.state}</dd>
+            <div className="bid-job-card__meta">
+              <span>{formatTimingSummary(job)}</span>
+              <span>{job.city}, {job.state}</span>
+              <span>{getEntryMethodLabel(job.entryMethod)}</span>
             </div>
-            <div>
-              <dt>Request</dt>
-              <dd>{job.title}</dd>
-            </div>
-            <div>
-              <dt>Rooms</dt>
-              <dd>{formatRoomTypes(job.roomTypes)}</dd>
-            </div>
-            <div>
-              <dt>Clean level</dt>
-              <dd>{getCleanLevelLabel(job.cleanLevel)}</dd>
-            </div>
-            <div>
-              <dt>Entry</dt>
-              <dd>{getEntryMethodLabel(job.entryMethod)}</dd>
-            </div>
-            <div>
-              <dt>Customer history</dt>
-              <dd>
+            <div className="bid-job-card__chips">
+              <span>{formatRoomTypes(job.roomTypes)}</span>
+              <span>
                 {getCustomerHistorySummary({
                   completedJobs: job.customerCompletedJobsSnapshot,
                   customerCreatedAt: job.customerMemberSinceSnapshot ?? job.customer.createdAt,
                 })}
-              </dd>
+              </span>
             </div>
-          </dl>
+          </div>
           {job.notes ? (
             <div className="cleaner-detail-note">
               <strong>Job notes</strong>
@@ -122,6 +127,7 @@ export default async function CleanerJobDetailPage({
           requestedWindowStart={job.requestedWindowStart}
           requestedWindowEnd={job.requestedWindowEnd}
           serviceNeeds={job.serviceNeeds}
+          hasExistingBid={hasExistingBid}
           defaults={{
             standardHourlyRateCents: user.cleanerProfile?.standardHourlyRateCents ?? null,
             standardFlatRateCents: user.cleanerProfile?.standardFlatRateCents ?? null,

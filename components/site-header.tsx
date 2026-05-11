@@ -12,16 +12,15 @@ export async function SiteHeader() {
       ? "/customer"
       : user.role === UserRole.CLEANER
         ? "/cleaner"
-        : user.role === UserRole.ADMIN
-          ? "/admin"
-          : "/"
+        : "/"
     : "/";
 
   return (
     <header className="site-header">
       <div className="site-header__inner">
         <Link href={brandHref} className="brand">
-          Well Kept
+          <span>Well Kept</span>
+          <small>Bring trusted cleaners to you.</small>
         </Link>
         <nav className="nav-links">
           {!userId ? (
@@ -40,11 +39,6 @@ export async function SiteHeader() {
             </Link>
           ) : user ? (
             <>
-              {user.role === UserRole.ADMIN ? (
-                <Link href="/admin" className="primary">
-                  Operations
-                </Link>
-              ) : null}
               <AccountUserButton />
             </>
           ) : (

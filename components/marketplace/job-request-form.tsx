@@ -10,12 +10,9 @@ import {
 } from "@prisma/client";
 import { FormEvent, useRef, useState } from "react";
 import {
-  cleanLevelCycle,
-  cleanLevelOptions,
   entryMethodOptions,
-  roomTypeOptions,
 } from "@/lib/marketplace-constants";
-import { RoomIcon } from "@/components/marketplace/room-icons";
+import { PulsatingPrimaryButton } from "@/components/marketplace/motion-buttons";
 
 type RoomCleanLevels = Partial<Record<RoomType, CleanLevel>>;
 type DayChoice = "" | "today" | "another";
@@ -29,6 +26,11 @@ type WizardHomeProfile = {
   city: string;
   state: string;
   postalCode: string;
+  bedroomCount: number | null;
+  bathroomCount: number | null;
+  estimatedSquareFeet: number | null;
+  storyCount: number | null;
+  hasPets: boolean;
   entryMethod: EntryMethod;
   entryNotes: string | null;
   defaultRoomTypes: RoomType[];
@@ -37,9 +39,32 @@ type WizardHomeProfile = {
   notes: string | null;
 };
 
+type LocationEditorMode = "closed" | "edit" | "new";
+
+type LocationDraft = {
+  label: string;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  bedroomCount: number | null;
+  bathroomCount: number | null;
+  estimatedSquareFeet: number | null;
+  storyCount: number | null;
+  hasPets: boolean;
+};
+
 const steps = ["Details", "Schedule", "Review"] as const;
 const dateHints = ["Fastest", "Popular", "Flexible", "Good fit", "Open", "Open", "Open", "Open"];
-
+const defaultWholeHomeRooms = [
+  RoomType.KITCHEN,
+  RoomType.BATHROOM,
+  RoomType.BEDROOM,
+  RoomType.LIVING_AREA,
+  RoomType.DINING_ROOM,
+  RoomType.ENTRYWAY,
+];
 function parseRawRoomCleanLevels(raw: unknown): RoomCleanLevels {
   if (!raw || typeof raw !== "object") return {};
   const result: RoomCleanLevels = {};
@@ -54,18 +79,19 @@ function parseRawRoomCleanLevels(raw: unknown): RoomCleanLevels {
 }
 
 function initRoomCleanLevels(profile: WizardHomeProfile | null): RoomCleanLevels {
-  if (!profile) return {};
+  if (!profile) return getDefaultWholeHomeCleanLevels();
   const parsed = parseRawRoomCleanLevels(profile.roomCleanLevels);
   if (Object.keys(parsed).length > 0) return parsed;
   const map: RoomCleanLevels = {};
-  for (const room of profile.defaultRoomTypes) {
+  const roomTypes = profile.defaultRoomTypes.length > 0 ? profile.defaultRoomTypes : defaultWholeHomeRooms;
+  for (const room of roomTypes) {
     map[room] = profile.defaultCleanLevel;
   }
   return map;
 }
 
-function getCleanLevelLabel(level: CleanLevel): string {
-  return cleanLevelOptions.find((o) => o.value === level)?.label ?? level;
+function getDefaultWholeHomeCleanLevels(): RoomCleanLevels {
+  return Object.fromEntries(defaultWholeHomeRooms.map((room) => [room, CleanLevel.MEDIUM]));
 }
 
 function getDominantCleanLevel(levels: RoomCleanLevels): CleanLevel {
@@ -78,12 +104,13 @@ function getDominantCleanLevel(levels: RoomCleanLevels): CleanLevel {
 
 export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfile[] }) {
   const initialHomeProfile = homeProfiles[0] ?? null;
+  const [savedHomeProfiles, setSavedHomeProfiles] = useState(homeProfiles);
   const [selectedHomeProfileId, setSelectedHomeProfileId] = useState(initialHomeProfile?.id ?? "");
   const [step, setStep] = useState(0);
   const [addressLine1, setAddressLine1] = useState(initialHomeProfile?.addressLine1 ?? "");
   const [addressLine2, setAddressLine2] = useState(initialHomeProfile?.addressLine2 ?? "");
   const [city, setCity] = useState(initialHomeProfile?.city ?? "");
-  const [state, setState] = useState(initialHomeProfile?.state ?? "CA");
+  const [state, setState] = useState(initialHomeProfile?.state ?? "New York");
   const [postalCode, setPostalCode] = useState(initialHomeProfile?.postalCode ?? "");
   const [roomCleanLevels, setRoomCleanLevels] = useState<RoomCleanLevels>(
     () => initRoomCleanLevels(initialHomeProfile),
@@ -101,7 +128,14 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
   const [endHour, setEndHour] = useState("");
   const [endPeriod, setEndPeriod] = useState<"AM" | "PM">("AM");
   const [notes, setNotes] = useState("");
-  const [addressExpanded, setAddressExpanded] = useState(!initialHomeProfile);
+  const [locationEditorMode, setLocationEditorMode] = useState<LocationEditorMode>(
+    initialHomeProfile ? "closed" : "new",
+  );
+  const [locationDraft, setLocationDraft] = useState<LocationDraft>(() =>
+    getLocationDraft(initialHomeProfile),
+  );
+  const [locationSaveMessage, setLocationSaveMessage] = useState("");
+  const [isSavingLocation, setIsSavingLocation] = useState(false);
   const [validationMessage, setValidationMessage] = useState("");
   const wizardTopRef = useRef<HTMLDivElement>(null);
   const submitIntentRef = useRef(false);
@@ -116,7 +150,6 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
   const windowEndTime = endHour ? to24h(endHour, endPeriod) : "";
   const selectedWindow = getWindowLabel(windowStartTime, windowEndTime);
   const hasAddress = Boolean(addressLine1.trim() && city.trim() && state.trim() && postalCode.trim());
-  const hasRooms = roomTypes.length > 0;
   const hasScheduleDay = dayChoice === "today" || (dayChoice === "another" && Boolean(requestedDate));
   const hasScheduleArrival =
     arrivalChoice === "asap" ||
@@ -124,7 +157,7 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
   const canContinueFromSchedule = hasScheduleDay && hasScheduleArrival;
 
   const selectedHomeProfile =
-    homeProfiles.find((homeProfile) => homeProfile.id === selectedHomeProfileId) ?? null;
+    savedHomeProfiles.find((homeProfile) => homeProfile.id === selectedHomeProfileId) ?? null;
   const isUsingPreset =
     !!selectedHomeProfile &&
     addressLine1 === selectedHomeProfile.addressLine1 &&
@@ -135,7 +168,7 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
     entryMethod === selectedHomeProfile.entryMethod &&
     entryNotes === (selectedHomeProfile.entryNotes ?? "");
 
-  function chooseHomeProfile(profile: WizardHomeProfile) {
+  function applyHomeProfile(profile: WizardHomeProfile) {
     setSelectedHomeProfileId(profile.id);
     setAddressLine1(profile.addressLine1);
     setAddressLine2(profile.addressLine2 ?? "");
@@ -145,33 +178,106 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
     setRoomCleanLevels(initRoomCleanLevels(profile));
     setEntryMethod(profile.entryMethod);
     setEntryNotes(profile.entryNotes ?? "");
-    setAddressExpanded(false);
+    setLocationDraft(getLocationDraft(profile));
+    setLocationEditorMode("closed");
+    setLocationSaveMessage("");
     setValidationMessage("");
   }
 
-  function cycleRoomCleanLevel(room: RoomType) {
-    setRoomCleanLevels((current) => {
-      const currentLevel = current[room];
-      if (!currentLevel) {
-        return { ...current, [room]: cleanLevelCycle[0] };
+  function choosePresetForEdit(profile: WizardHomeProfile) {
+    setSelectedHomeProfileId(profile.id);
+    setAddressLine1(profile.addressLine1);
+    setAddressLine2(profile.addressLine2 ?? "");
+    setCity(profile.city);
+    setState(profile.state);
+    setPostalCode(profile.postalCode);
+    setRoomCleanLevels(initRoomCleanLevels(profile));
+    setEntryMethod(profile.entryMethod);
+    setEntryNotes(profile.entryNotes ?? "");
+    setLocationDraft(getLocationDraft(profile));
+    setLocationEditorMode("edit");
+    setLocationSaveMessage("");
+    setValidationMessage("");
+  }
+
+  function updateLocationDraft<K extends keyof LocationDraft>(field: K, value: LocationDraft[K]) {
+    setLocationDraft((current) => ({ ...current, [field]: value }));
+    setLocationSaveMessage("");
+  }
+
+  function openEditLocation() {
+    setLocationDraft(getLocationDraft(selectedHomeProfile));
+    setLocationEditorMode("edit");
+    setLocationSaveMessage("");
+  }
+
+  function openNewLocation() {
+    setLocationDraft(getLocationDraft(null));
+    setLocationEditorMode("new");
+    setLocationSaveMessage("");
+  }
+
+  function cancelLocationEdit() {
+    setLocationDraft(getLocationDraft(selectedHomeProfile));
+    setLocationEditorMode("closed");
+    setLocationSaveMessage("");
+  }
+
+  async function saveLocation() {
+    const message = validateLocationDraft(locationDraft);
+    if (message) {
+      setLocationSaveMessage(message);
+      return;
+    }
+
+    setIsSavingLocation(true);
+    setLocationSaveMessage("");
+
+    try {
+      const response = await fetch("/customer/jobs/home-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          homeProfileId: locationEditorMode === "edit" ? selectedHomeProfile?.id : undefined,
+          ...locationDraft,
+          entryMethod,
+          entryNotes,
+        }),
+      });
+      const payload = (await response.json()) as {
+        homeProfile?: WizardHomeProfile;
+        error?: string;
+      };
+
+      if (!response.ok || !payload.homeProfile) {
+        throw new Error(payload.error || "Unable to save this location.");
       }
-      const idx = cleanLevelCycle.indexOf(currentLevel);
-      if (idx < cleanLevelCycle.length - 1) {
-        return { ...current, [room]: cleanLevelCycle[idx + 1] };
-      }
-      const next = { ...current };
-      delete next[room];
-      return next;
-    });
+
+      setSavedHomeProfiles((current) => {
+        const existingIndex = current.findIndex((profile) => profile.id === payload.homeProfile?.id);
+        if (existingIndex < 0) return [payload.homeProfile!, ...current];
+        return current.map((profile) =>
+          profile.id === payload.homeProfile?.id ? payload.homeProfile! : profile,
+        );
+      });
+      applyHomeProfile(payload.homeProfile);
+    } catch (error) {
+      setLocationSaveMessage(
+        error instanceof Error ? error.message : "Unable to save this location.",
+      );
+    } finally {
+      setIsSavingLocation(false);
+    }
   }
 
   function goNext() {
-    if (step === 0 && (!hasAddress || !hasRooms)) {
-      setValidationMessage(
-        !hasRooms
-          ? "Choose at least one room to clean."
-          : "Add the address before continuing.",
-      );
+    if (step === 0 && !hasAddress) {
+      setValidationMessage("Choose or add a location before continuing.");
+      return;
+    }
+
+    if (step === 0 && locationEditorMode !== "closed") {
+      setValidationMessage("Save or cancel the location edit before continuing.");
       return;
     }
 
@@ -272,38 +378,9 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
             <div className="market-question-copy">
               <h3>Where should cleaners go?</h3>
             </div>
-            {homeProfiles.length > 0 ? (
-              <div className="market-home-preset-list" aria-label="Saved home presets">
-                {homeProfiles.map((profile) => {
-                  const isSelected = profile.id === selectedHomeProfileId;
-                  return (
-                    <button
-                      key={profile.id}
-                      type="button"
-                      className={
-                        isSelected
-                          ? "market-home-preset-choice active"
-                          : "market-home-preset-choice"
-                      }
-                      onClick={() => chooseHomeProfile(profile)}
-                      aria-pressed={isSelected}
-                    >
-                      <strong>{profile.label}</strong>
-                      <span>
-                        {profile.addressLine1}, {profile.city}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : null}
+
             {selectedHomeProfile ? (
-              <button
-                type="button"
-                className="market-preset-card market-preset-card--button"
-                onClick={() => setAddressExpanded((v) => !v)}
-                aria-expanded={addressExpanded}
-              >
+              <div className="market-preset-card market-location-card">
                 <div className="market-preset-card__row">
                   <span className="market-preset-card__icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -314,89 +391,46 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
                     <span className="market-card__meta">{selectedHomeProfile.label}</span>
                     <strong>{addressLine1}, {city}, {state} {postalCode}</strong>
                   </div>
-                  <span className="market-preset-card__chevron" aria-hidden="true">
-                    {addressExpanded ? "-" : "+"}
-                  </span>
+                  <button type="button" className="market-inline-edit" onClick={openEditLocation}>
+                    Edit
+                  </button>
                 </div>
-              </button>
+              </div>
             ) : (
               <div className="notice">
-                Save homes as presets in <Link href="/customer/my-home">Account</Link> to post faster next time.
+                Add a home preset here, then keep posting this job.
               </div>
             )}
-            {addressExpanded ? (
-              <>
-                <div className="field">
-                  <label htmlFor="addressLine1">Street address</label>
-                  <input id="addressLine1" value={addressLine1} onChange={(event) => setAddressLine1(event.target.value)} required />
-                </div>
-                <div className="field">
-                  <label htmlFor="addressLine2">Apartment or suite</label>
-                  <input id="addressLine2" value={addressLine2} onChange={(event) => setAddressLine2(event.target.value)} />
-                </div>
-                <div className="grid two">
-                  <div className="field">
-                    <label htmlFor="city">City</label>
-                    <input id="city" value={city} onChange={(event) => setCity(event.target.value)} required />
-                  </div>
-                  <div className="field">
-                    <label htmlFor="state">State</label>
-                    <input id="state" value={state} onChange={(event) => setState(event.target.value)} required />
-                  </div>
-                </div>
-                <div className="field">
-                  <label htmlFor="postalCode">ZIP code</label>
-                  <input id="postalCode" value={postalCode} onChange={(event) => setPostalCode(event.target.value)} required />
-                </div>
-              </>
+
+            {locationEditorMode !== "closed" ? (
+              <LocationEditor
+                draft={locationDraft}
+                mode={locationEditorMode}
+                presets={savedHomeProfiles}
+                isSaving={isSavingLocation}
+                message={locationSaveMessage}
+                onCancel={selectedHomeProfile ? cancelLocationEdit : undefined}
+                onChange={updateLocationDraft}
+                onPresetSelect={choosePresetForEdit}
+                onSave={saveLocation}
+              />
             ) : null}
+
+            <button type="button" className="market-new-location-button" onClick={openNewLocation}>
+              <span aria-hidden="true">+</span>
+              New Location
+            </button>
           </section>
 
           {hasAddress ? (
             <section className="market-question-block stack">
-              <div className="market-question-copy">
-                <h3>Which rooms need cleaning?</h3>
-                <p>Tap to add a room. Tap again to change the clean level.</p>
-              </div>
-              <div className="market-room-grid">
-                {roomTypeOptions.map((option) => {
-                  const level = roomCleanLevels[option.value];
-                  const isActive = !!level;
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      className={isActive ? "market-room-card active" : "market-room-card"}
-                      onClick={() => cycleRoomCleanLevel(option.value)}
-                      aria-pressed={isActive}
-                    >
-                      <span className="market-room-card__icon">
-                        <RoomIcon room={option.value} />
-                      </span>
-                      <strong>{option.label}</strong>
-                      {level ? (
-                        <span className="market-room-card__level">{getCleanLevelLabel(level)}</span>
-                      ) : null}
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-          ) : null}
-
-          {hasRooms ? (
-            <section className="market-question-block stack">
-              <div className="market-question-copy">
-                <span>Optional</span>
-                <h3>Anything cleaners should know?</h3>
-              </div>
               <div className="field">
-                <label htmlFor="notes">Notes</label>
+                <label htmlFor="notes">Notes for cleaners</label>
                 <textarea
                   id="notes"
                   value={notes}
                   onChange={(event) => setNotes(event.target.value)}
-                  placeholder="Pets, parking, or specific areas to focus on."
+                  placeholder="Any notes, areas to focus on, or specific clean up items?"
                 />
               </div>
             </section>
@@ -639,7 +673,7 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
           <article className="market-card">
             <div className="stack small">
               <strong>{addressLine1}, {city}, {state} {postalCode}</strong>
-              <span className="market-card__meta">{formatRoomSummary(roomCleanLevels)}</span>
+              <span className="market-card__meta">Whole-home clean</span>
               <span className="market-card__meta">{entryMethodOptions.find((option) => option.value === entryMethod)?.label ?? entryMethod}</span>
               <span className="market-card__meta">
                 {timingPreference === TimingPreference.ASAP
@@ -649,15 +683,7 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
             </div>
           </article>
 
-          <div className="field">
-            <label htmlFor="notes">Anything specific?</label>
-            <textarea
-              id="notes"
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              placeholder="Pets, parking, or specific areas to focus on."
-            />
-          </div>
+          {notes ? <div className="notice">{notes}</div> : null}
 
           <div className="notice">
             Cleaners will submit their own prices. You choose which bid to accept.
@@ -701,13 +727,13 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
             </button>
           ) : null}
           {step < steps.length - 1 ? (
-            <button type="button" className="button" onClick={goNext}>
+            <PulsatingPrimaryButton type="button" className="flex-1" onClick={goNext}>
               Continue
-            </button>
+            </PulsatingPrimaryButton>
           ) : (
-            <button
+            <PulsatingPrimaryButton
               type="submit"
-              className="button"
+              className="flex-1"
               onClick={() => {
                 submitIntentRef.current = true;
               }}
@@ -717,7 +743,7 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
               }
             >
               Post Job for Bids
-            </button>
+            </PulsatingPrimaryButton>
           )}
         </div>
         <Link href="/customer" className="market-cancel-link">
@@ -755,6 +781,256 @@ function deriveServiceNeeds(roomTypes: RoomType[], cleanLevel: CleanLevel) {
   }
 
   return Array.from(needs);
+}
+
+function getLocationDraft(profile: WizardHomeProfile | null): LocationDraft {
+  return {
+    label: profile?.label ?? "Home",
+    addressLine1: profile?.addressLine1 ?? "",
+    addressLine2: profile?.addressLine2 ?? "",
+    city: profile?.city ?? "",
+    state: profile?.state ?? "New York",
+    postalCode: profile?.postalCode ?? "",
+    bedroomCount: profile?.bedroomCount ?? null,
+    bathroomCount: profile?.bathroomCount ?? null,
+    estimatedSquareFeet: profile?.estimatedSquareFeet ?? null,
+    storyCount: profile?.storyCount ?? null,
+    hasPets: profile?.hasPets ?? false,
+  };
+}
+
+function validateLocationDraft(draft: LocationDraft) {
+  if (!draft.addressLine1.trim()) return "Enter the street address.";
+  if (!draft.city.trim()) return "Enter the city.";
+  if (!draft.state.trim()) return "Enter the state.";
+  if (!draft.postalCode.trim()) return "Enter the ZIP code.";
+  return "";
+}
+
+function LocationEditor({
+  draft,
+  isSaving,
+  message,
+  mode,
+  onCancel,
+  onChange,
+  onPresetSelect,
+  onSave,
+  presets,
+}: {
+  draft: LocationDraft;
+  isSaving: boolean;
+  message: string;
+  mode: LocationEditorMode;
+  onCancel?: () => void;
+  onChange: <K extends keyof LocationDraft>(field: K, value: LocationDraft[K]) => void;
+  onPresetSelect: (profile: WizardHomeProfile) => void;
+  onSave: () => void;
+  presets: WizardHomeProfile[];
+}) {
+  const idPrefix = mode === "new" ? "newLocation" : "editLocation";
+  const [isPresetMenuOpen, setIsPresetMenuOpen] = useState(false);
+
+  return (
+    <div className="market-location-editor stack">
+      <div className="field">
+        <label htmlFor={`${idPrefix}Label`}>Preset name</label>
+        {mode === "edit" && presets.length > 0 ? (
+          <div className="market-preset-combobox">
+            <button
+              id={`${idPrefix}Label`}
+              type="button"
+              className="market-preset-combobox__trigger"
+              onClick={() => setIsPresetMenuOpen((current) => !current)}
+              aria-expanded={isPresetMenuOpen}
+              aria-haspopup="listbox"
+            >
+              <span>{draft.label || "Choose a preset"}</span>
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <path d="m5 7 5 5 5-5" />
+              </svg>
+            </button>
+            {isPresetMenuOpen ? (
+              <div className="market-preset-combobox__menu" role="listbox">
+                {presets.map((profile) => (
+                  <button
+                    key={profile.id}
+                    type="button"
+                    className={profile.label === draft.label ? "active" : ""}
+                    onClick={() => {
+                      onPresetSelect(profile);
+                      setIsPresetMenuOpen(false);
+                    }}
+                    role="option"
+                    aria-selected={profile.label === draft.label}
+                  >
+                    <strong>{profile.label}</strong>
+                    <span>
+                      {profile.addressLine1}, {profile.city}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <input
+            id={`${idPrefix}Label`}
+            value={draft.label}
+            onChange={(event) => onChange("label", event.target.value)}
+            placeholder="Home"
+          />
+        )}
+      </div>
+      <div className="field">
+        <label htmlFor={`${idPrefix}AddressLine1`}>Street address</label>
+        <input
+          id={`${idPrefix}AddressLine1`}
+          value={draft.addressLine1}
+          onChange={(event) => onChange("addressLine1", event.target.value)}
+        />
+      </div>
+      <div className="field">
+        <label htmlFor={`${idPrefix}AddressLine2`}>Apartment or suite</label>
+        <input
+          id={`${idPrefix}AddressLine2`}
+          value={draft.addressLine2}
+          onChange={(event) => onChange("addressLine2", event.target.value)}
+        />
+      </div>
+      <div className="grid two">
+        <div className="field">
+          <label htmlFor={`${idPrefix}City`}>City</label>
+          <input
+            id={`${idPrefix}City`}
+            value={draft.city}
+            onChange={(event) => onChange("city", event.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor={`${idPrefix}State`}>State</label>
+          <input
+            id={`${idPrefix}State`}
+            value={draft.state}
+            onChange={(event) => onChange("state", event.target.value)}
+          />
+        </div>
+      </div>
+      <div className="field">
+        <label htmlFor={`${idPrefix}PostalCode`}>ZIP code</label>
+        <input
+          id={`${idPrefix}PostalCode`}
+          value={draft.postalCode}
+          onChange={(event) => onChange("postalCode", event.target.value)}
+          inputMode="numeric"
+        />
+      </div>
+      <div className="market-home-details-grid">
+        <div className="field">
+          <label htmlFor={`${idPrefix}BedroomCount`}>Bedrooms</label>
+          <input
+            id={`${idPrefix}BedroomCount`}
+            type="number"
+            min="0"
+            step="1"
+            inputMode="numeric"
+            value={draft.bedroomCount ?? ""}
+            onChange={(event) =>
+              onChange(
+                "bedroomCount",
+                event.target.value === "" ? null : Number(event.target.value),
+              )
+            }
+            placeholder="0"
+          />
+        </div>
+        <div className="field">
+          <label htmlFor={`${idPrefix}BathroomCount`}>Bathrooms</label>
+          <input
+            id={`${idPrefix}BathroomCount`}
+            type="number"
+            min="0"
+            step="0.5"
+            inputMode="decimal"
+            value={draft.bathroomCount ?? ""}
+            onChange={(event) =>
+              onChange(
+                "bathroomCount",
+                event.target.value === "" ? null : Number(event.target.value),
+              )
+            }
+            placeholder="1"
+          />
+        </div>
+        <div className="field">
+          <label htmlFor={`${idPrefix}EstimatedSquareFeet`}>Square feet</label>
+          <input
+            id={`${idPrefix}EstimatedSquareFeet`}
+            type="number"
+            min="1"
+            step="50"
+            inputMode="numeric"
+            value={draft.estimatedSquareFeet ?? ""}
+            onChange={(event) =>
+              onChange(
+                "estimatedSquareFeet",
+                event.target.value === "" ? null : Number(event.target.value),
+              )
+            }
+            placeholder="1100"
+          />
+        </div>
+        <div className="field">
+          <label htmlFor={`${idPrefix}StoryCount`}>Stories</label>
+          <input
+            id={`${idPrefix}StoryCount`}
+            type="number"
+            min="1"
+            step="1"
+            inputMode="numeric"
+            value={draft.storyCount ?? ""}
+            onChange={(event) =>
+              onChange(
+                "storyCount",
+                event.target.value === "" ? null : Number(event.target.value),
+              )
+            }
+            placeholder="1"
+          />
+        </div>
+      </div>
+      <div className="field">
+        <span className="field-label">Pets</span>
+        <div className="market-pet-toggle">
+          <button
+            type="button"
+            className={!draft.hasPets ? "active" : ""}
+            onClick={() => onChange("hasPets", false)}
+          >
+            No
+          </button>
+          <button
+            type="button"
+            className={draft.hasPets ? "active" : ""}
+            onClick={() => onChange("hasPets", true)}
+          >
+            Yes
+          </button>
+        </div>
+      </div>
+      {message ? <p className="market-form-error">{message}</p> : null}
+      <div className="market-location-editor__actions">
+        {onCancel ? (
+          <button type="button" className="button secondary" onClick={onCancel}>
+            Cancel
+          </button>
+        ) : null}
+        <button type="button" className="button" onClick={onSave} disabled={isSaving}>
+          {isSaving ? "Saving..." : mode === "new" ? "Use this location" : "Save location"}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function formatTime(time: string) {
@@ -832,14 +1108,4 @@ function getWindowLabel(start: string, end: string) {
   if (!start || !end) return null;
   if (start === "08:00" && end === "20:00") return "Anytime, 8 AM - 8 PM";
   return `${formatTime(start)} - ${formatTime(end)}`;
-}
-
-function formatRoomSummary(levels: RoomCleanLevels) {
-  return Object.entries(levels)
-    .map(([room, level]) => {
-      const label = roomTypeOptions.find((o) => o.value === room)?.label ?? room;
-      const lvl = cleanLevelOptions.find((o) => o.value === level)?.label ?? level;
-      return `${label} (${lvl})`;
-    })
-    .join(", ");
 }

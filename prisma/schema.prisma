@@ -166,6 +166,12 @@ model CleanerProfile {
 model HomeProfile {
   id                   String         @id @default(cuid())
   label                String         @default("My Home")
+  propertyType         PropertyType   @default(HOUSE)
+  bedroomCount         Int?
+  bathroomCount        Float?
+  estimatedSquareFeet  Int?
+  storyCount           Int?
+  hasPets              Boolean        @default(false)
   addressLine1         String
   addressLine2         String?
   city                 String
@@ -185,6 +191,11 @@ model HomeProfile {
   customerId           String
   customer             User           @relation(fields: [customerId], references: [id], onDelete: Cascade)
   jobRequests          JobRequest[]
+}
+
+enum PropertyType {
+  HOUSE
+  APARTMENT
 }
 
 model JobRequest {
@@ -210,6 +221,8 @@ model JobRequest {
   notes                         String?
   customerCompletedJobsSnapshot Int              @default(0)
   customerMemberSinceSnapshot   DateTime?
+  cleanersNotifiedCount         Int              @default(0)
+  viewCount                     Int              @default(0)
   status                        JobRequestStatus @default(OPEN)
   createdAt                     DateTime         @default(now())
   updatedAt                     DateTime         @updatedAt

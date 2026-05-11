@@ -1,14 +1,8 @@
 import Link from "next/link";
 import { BidStatus, JobRequestStatus, UserRole } from "@prisma/client";
 import { BidCard } from "@/components/marketplace/cards";
-import { StatusPill } from "@/components/marketplace/status-pill";
-import {
-  formatRoomTypes,
-  formatTimingSummary,
-  getCleanLevelLabel,
-  getEntryMethodLabel,
-  getJobRequestStatusLabel,
-} from "@/lib/marketplace";
+import { HomeownerOpenJobDetailCard } from "@/components/marketplace";
+import { Trash2 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { notFound } from "next/navigation";
@@ -53,6 +47,15 @@ export default async function CustomerJobDetailPage({
           status: BidStatus.SUBMITTED,
         },
       },
+      homeProfile: {
+        select: {
+          bedroomCount: true,
+          bathroomCount: true,
+          estimatedSquareFeet: true,
+          storyCount: true,
+          hasPets: true,
+        },
+      },
     },
   });
 
@@ -60,65 +63,27 @@ export default async function CustomerJobDetailPage({
     notFound();
   }
 
-  const statusTone =
-    job.status === JobRequestStatus.OPEN
-      ? "active"
-      : job.status === JobRequestStatus.AWARDED
-        ? "success"
-        : job.status === JobRequestStatus.CANCELLED
-          ? "danger"
-          : "warning";
-
   return (
     <div className="market-shell market-shell--detail">
       <section className="market-surface">
-        <header className="market-topbar market-topbar--detail">
-          <div>
-            <div className="market-kicker">Job detail</div>
-            <h1>{job.title}</h1>
-            <p className="market-title-subcopy">
-              {job.bids.length} active {job.bids.length === 1 ? "bid" : "bids"}
-            </p>
-          </div>
-          <StatusPill
-            label={getJobRequestStatusLabel(job.status)}
-            tone={statusTone}
-          />
-        </header>
-
         {query.error ? <div className="notice error">{query.error}</div> : null}
 
-        <article className="market-card market-card--summary">
-          <div className="stack small">
-            <strong>Rooms</strong>
-            <span className="market-card__meta">{formatRoomTypes(job.roomTypes)}</span>
-            <strong>Level of clean</strong>
-            <span className="market-card__meta">{getCleanLevelLabel(job.cleanLevel)}</span>
-            <strong>Address</strong>
-            <span className="market-card__meta">
-              {job.addressLine1}, {job.city}, {job.state} {job.postalCode}
-            </span>
-            <strong>Access</strong>
-            <span className="market-card__meta">{getEntryMethodLabel(job.entryMethod)}</span>
-            {job.entryNotes ? <p className="market-card__copy">{job.entryNotes}</p> : null}
-            <strong>Timing</strong>
-            <span className="market-card__meta">{formatTimingSummary(job)}</span>
-            {job.notes ? (
-              <>
-                <strong>Notes</strong>
-                <p className="market-card__copy">{job.notes}</p>
-              </>
-            ) : null}
-          </div>
-        </article>
-
-        {job.status === JobRequestStatus.OPEN ? (
-          <form action={`/customer/jobs/${job.id}/delete`} method="post" className="market-card__actions">
-            <button type="submit" className="button secondary">
-              Delete Job
-            </button>
-          </form>
-        ) : null}
+        <HomeownerOpenJobDetailCard
+          action={
+            job.status === JobRequestStatus.OPEN ? (
+              <form action={`/customer/jobs/${job.id}/delete`} method="post">
+                <button
+                  type="submit"
+                  className="customer-open-job-delete"
+                  aria-label="Delete job"
+                >
+                  <Trash2 aria-hidden="true" />
+                </button>
+              </form>
+            ) : null
+          }
+          job={job}
+        />
 
         {job.acceptedBid ? (
           <section className="stack">
@@ -128,14 +93,13 @@ export default async function CustomerJobDetailPage({
             <BidCard bid={job.acceptedBid} />
           </section>
         ) : (
-          <section className="market-empty">
-            <strong>{job.bids.length} active bids</strong>
-            <p className="market-card__copy">
-              Review the submitted quotes and accept the one that fits best.
-            </p>
-            <Link href={`/customer/jobs/${job.id}/bids`} className="button-link">
-              Review Bids
-            </Link>
+          <section className="stack">
+            <div className="market-section-heading">
+              <h2>Bids ({job.bids.length})</h2>
+              {job.bids.length > 0 ? (
+                <Link href={`/customer/jobs/${job.id}/bids`}>Review Bids</Link>
+              ) : null}
+            </div>
           </section>
         )}
 

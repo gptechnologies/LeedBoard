@@ -25,10 +25,6 @@ export function getRoleHome(role: UserRole) {
     return "/cleaner";
   }
 
-  if (role === UserRole.ADMIN) {
-    return "/admin";
-  }
-
   return "/customer";
 }
 

@@ -30,28 +30,25 @@ export default async function WelcomePage({ searchParams }: WelcomePageProps) {
 
   const selectedRole =
     params.role === UserRole.CLEANER ? UserRole.CLEANER : UserRole.CUSTOMER;
+  const isCleaner = selectedRole === UserRole.CLEANER;
+  const roleLabel = isCleaner ? "Cleaner" : "Homeowner";
 
   return (
     <section className="auth-shell stack">
       <div>
         <div className="eyebrow">Finish account setup</div>
-        <h1>Tell us how you’ll use WellKept.</h1>
+        <h1>{roleLabel} account setup.</h1>
         <p className="subtle">
-          Choose the account type that fits your work with us. Homeowners can post and
-          manage requests. Cleaners can bid on jobs, track work, and get paid.
+          {isCleaner
+            ? "Create your cleaner profile so you can review local jobs and submit bids."
+            : "Create your homeowner account so you can save your home and post cleaning jobs."}
         </p>
       </div>
 
       {params.error ? <div className="notice error">{params.error}</div> : null}
 
       <form action="/auth/onboarding" method="post" className="stack">
-        <div className="field">
-          <label htmlFor="role">Account type</label>
-          <select id="role" name="role" defaultValue={selectedRole}>
-            <option value={UserRole.CUSTOMER}>Homeowner</option>
-            <option value={UserRole.CLEANER}>Cleaner</option>
-          </select>
-        </div>
+        <input type="hidden" name="role" value={selectedRole} />
 
         <div className="field-grid">
           <div className="field">
@@ -74,16 +71,20 @@ export default async function WelcomePage({ searchParams }: WelcomePageProps) {
           <input id="phone" name="phone" placeholder="Optional contact number" />
         </div>
 
-        <div className="field">
-          <label htmlFor="bio">Cleaner introduction</label>
-          <textarea
-            id="bio"
-            name="bio"
-            placeholder="Optional. Share a short professional introduction if you're joining as a cleaner."
-          />
-        </div>
+        {isCleaner ? (
+          <div className="field">
+            <label htmlFor="bio">Cleaner introduction</label>
+            <textarea
+              id="bio"
+              name="bio"
+              placeholder="Optional. Share a short professional introduction."
+            />
+          </div>
+        ) : null}
 
-        <button type="submit">Continue to my account</button>
+        <button type="submit">
+          {isCleaner ? "Continue to cleaner account" : "Continue to homeowner setup"}
+        </button>
       </form>
     </section>
   );

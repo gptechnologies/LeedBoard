@@ -1,15 +1,10 @@
-import { BidStatus, RoomType, ServiceNeed, UserRole } from "@prisma/client";
-import { CleanerUpNextCard } from "@/components/marketplace/cards";
+import { UserRole } from "@prisma/client";
+import { EmptyState, JobStackScroll } from "@/components/marketplace";
+import { AvailableJobCard } from "@/components/marketplace/cards";
 import { CleanerJobsFeed } from "@/components/marketplace/cleaner-jobs-feed";
+import { formatTimeAgo } from "@/lib/format";
 
 import {
-  formatBidAmount,
-  formatBidTiming,
-  formatRoomTypes,
-  formatTimingSummary,
-  getCleanLevelLabel,
-  getCustomerHistorySummary,
-  getEntryMethodLabel,
   getCleanerHomeData,
 } from "@/lib/marketplace";
 import { requireUser } from "@/lib/session";
@@ -25,31 +20,17 @@ type CleanerDashboardProps = {
 export default async function CleanerDashboard({ searchParams }: CleanerDashboardProps) {
   const user = await requireUser(UserRole.CLEANER);
   const params = await searchParams;
-  const { nextBooking, openJobs, bids } = await getCleanerHomeData(user.id);
+  const { openJobs } = await getCleanerHomeData(user.id);
+
   const feedJobs = openJobs.slice(0, 8).map((job) => ({
     id: job.id,
     title: job.title,
-    timeLabel: formatTimingSummary(job),
     areaLabel: `${job.city}, ${job.state}`,
-    roomsLabel: formatRoomTypes(job.roomTypes),
-    cleanLevelLabel: getCleanLevelLabel(job.cleanLevel),
-    entryLabel: getEntryMethodLabel(job.entryMethod),
-    historyLabel: getCustomerHistorySummary({
-      completedJobs: job.customerCompletedJobsSnapshot,
-      customerCreatedAt: job.customerMemberSinceSnapshot ?? job.customer.createdAt,
-    }),
-    iconKind: getCleanerJobIconKind(job),
+    postedLabel: formatTimeAgo(job.createdAt),
+    bedroomCount: job.homeProfile?.bedroomCount ?? null,
+    bathroomCount: job.homeProfile?.bathroomCount ?? null,
+    hasPets: job.homeProfile?.hasPets ?? false,
   }));
-  const openBidPreviews = bids
-    .filter((bid) => bid.status === BidStatus.SUBMITTED)
-    .map((bid) => ({
-      id: bid.id,
-      jobId: bid.jobRequest.id,
-      title: bid.jobRequest.title,
-      timeLabel: formatBidTiming(bid),
-      areaLabel: `${bid.jobRequest.city}, ${bid.jobRequest.state}`,
-      priceLabel: formatBidAmount(bid),
-    }));
 
   return (
     <div className="market-shell cleaner-home-shell">
@@ -59,7 +40,6 @@ export default async function CleanerDashboard({ searchParams }: CleanerDashboar
             <h1>Well Kept</h1>
           </div>
           <div className="cleaner-home-user">
-            <span>Hi, {user.firstName}</span>
             <span className="cleaner-home-avatar" aria-hidden="true">
               {user.firstName.charAt(0)}
             </span>
@@ -68,38 +48,26 @@ export default async function CleanerDashboard({ searchParams }: CleanerDashboar
 
         {params.error ? <div className="notice error">{params.error}</div> : null}
 
-        {nextBooking ? (
-          <CleanerUpNextCard booking={nextBooking} />
-        ) : (
-          <section className="cleaner-feature-card cleaner-feature-card--empty">
-            <div className="cleaner-feature-card__heading">
-              <h2>Up next (0)</h2>
-            </div>
-            <p>No booked visits are scheduled right now.</p>
-          </section>
-        )}
+        <section className="stack">
+          <div className="market-section-heading">
+            <h2>Up Next Jobs</h2>
+          </div>
+          {openJobs.length > 0 ? (
+            <JobStackScroll>
+              {openJobs.slice(0, 3).map((job) => (
+                <AvailableJobCard job={job} key={job.id} />
+              ))}
+            </JobStackScroll>
+          ) : (
+            <EmptyState
+              body="Open jobs in your area will show here."
+              title="No jobs yet"
+            />
+          )}
+        </section>
 
-        <CleanerJobsFeed jobs={feedJobs} bids={openBidPreviews} />
+        <CleanerJobsFeed jobs={feedJobs} />
       </section>
     </div>
   );
-}
-
-function getCleanerJobIconKind(job: {
-  serviceNeeds: ServiceNeed[];
-  roomTypes: RoomType[];
-}): "home" | "kitchen" | "apartment" | "box" {
-  if (job.serviceNeeds.includes(ServiceNeed.MOVE_OUT)) {
-    return "box";
-  }
-
-  if (job.serviceNeeds.includes(ServiceNeed.KITCHEN) || job.roomTypes.includes(RoomType.KITCHEN)) {
-    return "kitchen";
-  }
-
-  if (job.roomTypes.length > 2) {
-    return "home";
-  }
-
-  return "apartment";
 }

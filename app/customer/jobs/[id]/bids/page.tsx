@@ -1,11 +1,8 @@
 import { BidStatus, JobRequestStatus, UserRole } from "@prisma/client";
 import { BidCard } from "@/components/marketplace/cards";
-import {
-  formatRoomTypes,
-  formatTimingSummary,
-  getCleanLevelLabel,
-  rankVisibleBids,
-} from "@/lib/marketplace";
+import { HomeownerOpenJobDetailCard } from "@/components/marketplace";
+import { Trash2 } from "lucide-react";
+import { rankVisibleBids } from "@/lib/marketplace";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { notFound, redirect } from "next/navigation";
@@ -47,6 +44,15 @@ export default async function CustomerJobBidsPage({
         orderBy: { createdAt: "asc" },
       },
       acceptedBid: true,
+      homeProfile: {
+        select: {
+          bedroomCount: true,
+          bathroomCount: true,
+          estimatedSquareFeet: true,
+          storyCount: true,
+          hasPets: true,
+        },
+      },
     },
   });
 
@@ -66,42 +72,30 @@ export default async function CustomerJobBidsPage({
   return (
     <div className="market-shell market-shell--detail">
       <section className="market-surface">
-        <header className="market-topbar market-topbar--detail">
-          <div>
-            <h1>{job.title}</h1>
-            <p className="market-title-subcopy">
-              {activeBids.length} {activeBids.length === 1 ? "bid" : "bids"} received
-            </p>
-          </div>
-        </header>
-
         {query.error ? <div className="notice error">{query.error}</div> : null}
 
-        <article className="market-card market-card--summary">
-          <div className="stack small">
-            <strong>{formatRoomTypes(job.roomTypes)}</strong>
-            <span className="market-card__meta">{getCleanLevelLabel(job.cleanLevel)}</span>
-            <span className="market-card__meta">
-              {job.addressLine1}, {job.city}, {job.state} {job.postalCode}
-            </span>
-            <span className="market-card__meta">{formatTimingSummary(job)}</span>
+        <HomeownerOpenJobDetailCard
+          action={
+            <form action={`/customer/jobs/${job.id}/delete`} method="post">
+              <button
+                type="submit"
+                className="customer-open-job-delete"
+                aria-label="Delete job"
+              >
+                <Trash2 aria-hidden="true" />
+              </button>
+            </form>
+          }
+          job={job}
+        />
+
+        <section className="stack">
+          <div className="market-section-heading">
+            <h2>Bids ({activeBids.length})</h2>
           </div>
-        </article>
+        </section>
 
-        <form action={`/customer/jobs/${job.id}/delete`} method="post" className="market-card__actions market-danger-action">
-          <button type="submit" className="secondary-submit">
-            Delete Job
-          </button>
-        </form>
-
-        {activeBids.length === 0 ? (
-          <section className="market-empty">
-            <strong>No bids yet.</strong>
-            <p className="market-card__copy">
-              Your job is live. Check back as cleaners submit quotes.
-            </p>
-          </section>
-        ) : (
+        {activeBids.length > 0 ? (
           <div className="stack">
             {visibleBids.map((bid, index) => (
               <div key={bid.id} className={index === 0 ? "market-featured-bid" : undefined}>
@@ -123,7 +117,7 @@ export default async function CustomerJobBidsPage({
               </div>
             ) : null}
           </div>
-        )}
+        ) : null}
 
         {activeBids.length > 0 ? (
           <aside className="market-bottom-action">

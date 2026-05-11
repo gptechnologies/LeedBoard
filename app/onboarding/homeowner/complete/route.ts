@@ -1,4 +1,4 @@
-import { UserRole } from "@prisma/client";
+import { PropertyType, UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { getRequiredString } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -29,6 +29,46 @@ function normalizeHeardAboutUs(
   return selected || null;
 }
 
+function parsePropertyType(value: FormDataEntryValue | null) {
+  const propertyType = getRequiredString(value, "Property type");
+
+  if (!Object.values(PropertyType).includes(propertyType as PropertyType)) {
+    throw new Error("Choose house or apartment.");
+  }
+
+  return propertyType as PropertyType;
+}
+
+function parseNumber(value: FormDataEntryValue | null, label: string) {
+  const raw = getRequiredString(value, label);
+  const parsed = Number(raw);
+
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error(`${label} must be a valid number.`);
+  }
+
+  return parsed;
+}
+
+function parsePositiveInteger(value: FormDataEntryValue | null, label: string) {
+  const parsed = parseNumber(value, label);
+
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error(`${label} must be a whole number greater than 0.`);
+  }
+
+  return parsed;
+}
+
+function parseBoolean(value: FormDataEntryValue | null, label: string) {
+  const raw = getRequiredString(value, label);
+
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+
+  throw new Error(`${label} must be yes or no.`);
+}
+
 export async function POST(request: Request) {
   const user = await requireApiUser(request, UserRole.CUSTOMER);
   if (user instanceof NextResponse) {
@@ -40,6 +80,12 @@ export async function POST(request: Request) {
   try {
     const addressInput = {
       label: "Home",
+      propertyType: parsePropertyType(formData.get("propertyType")),
+      bedroomCount: parseNumber(formData.get("bedroomCount"), "Bedrooms"),
+      bathroomCount: parseNumber(formData.get("bathroomCount"), "Bathrooms"),
+      estimatedSquareFeet: parsePositiveInteger(formData.get("estimatedSquareFeet"), "Square footage"),
+      storyCount: parsePositiveInteger(formData.get("storyCount"), "Stories"),
+      hasPets: parseBoolean(formData.get("hasPets"), "Pets"),
       addressLine1: getRequiredString(formData.get("addressLine1"), "Street address"),
       addressLine2: optionalString(formData.get("addressLine2")),
       city: getRequiredString(formData.get("city"), "City"),

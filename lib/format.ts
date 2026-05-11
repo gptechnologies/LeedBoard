@@ -46,3 +46,19 @@ export function formatRelativeDate(date: Date) {
 
   return formatDateLabel(date);
 }
+
+export function formatTimeAgo(date: Date) {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60_000);
+
+  if (diffMin < 1) return "Posted just now";
+  if (diffMin < 60) return `Posted ${diffMin}m ago`;
+
+  const diffHrs = Math.floor(diffMin / 60);
+  if (diffHrs < 24) return `Posted ${diffHrs}h ago`;
+
+  const diffDays = Math.floor(diffHrs / 24);
+  if (diffDays === 1) return "Posted 1d ago";
+  return `Posted ${diffDays}d ago`;
+}

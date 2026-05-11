@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import { getCurrentUser, getRoleHome } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -21,16 +22,14 @@ export const metadata: Metadata = {
 
 export default async function HomePage() {
   const [{ userId }, user] = await Promise.all([auth(), getCurrentUser()]);
-  const homeownerHref = user
-    ? getRoleHome(user.role)
-    : userId
-      ? "/welcome"
-      : "/signup?role=CUSTOMER";
-  const cleanerHref = user
-    ? getRoleHome(user.role)
-    : userId
-      ? "/welcome"
-      : "/signup?role=CLEANER";
+
+  if (user) {
+    redirect(getRoleHome(user.role));
+  }
+
+  if (userId) {
+    redirect("/welcome");
+  }
 
   return (
     <div className="landing-page stack">
@@ -44,11 +43,11 @@ export default async function HomePage() {
             compare real offers, and confirm the cleaner that fits your schedule.
           </p>
           <div className="hero-actions landing-audience-actions">
-            <Link href={homeownerHref} className="button-link">
-              Log in as Homeowner
+            <Link href="/signup?role=CUSTOMER" className="button-link">
+              Sign up as Homeowner
             </Link>
-            <Link href={cleanerHref} className="button-link secondary">
-              Log in as Cleaner
+            <Link href="/signup?role=CLEANER" className="button-link secondary">
+              Sign up as Cleaner
             </Link>
           </div>
           <div className="landing-proof-row" aria-label="Well Kept marketplace benefits">

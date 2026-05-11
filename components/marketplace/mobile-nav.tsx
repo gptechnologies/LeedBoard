@@ -1,80 +1,26 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { BriefcaseBusiness, Home, MessageCircle, UserRound } from "lucide-react";
 
-const customerNav = [
-  { href: "/customer", label: "Home", icon: "home" },
-  { href: "/customer/jobs", label: "Jobs", icon: "jobs" },
-  { href: "/customer/messages", label: "Messages", icon: "messages" },
+import { BottomNav, type BottomNavItem } from "@/components/marketplace/bottom-nav";
+
+const customerNav: BottomNavItem[] = [
+  { href: "/customer", label: "Home", icon: <Home className="size-5" /> },
+  { href: "/customer/jobs", label: "Jobs", icon: <BriefcaseBusiness className="size-5" /> },
+  { href: "/customer/messages", label: "Messages", icon: <MessageCircle className="size-5" /> },
 ];
 
-const cleanerNav = [
-  { href: "/cleaner", label: "Jobs", icon: "jobs" },
-  { href: "/cleaner/messages", label: "Messages", icon: "messages" },
-  { href: "/cleaner/account", label: "Account", icon: "account" },
+const cleanerNav: BottomNavItem[] = [
+  { href: "/cleaner", label: "Jobs", icon: <BriefcaseBusiness className="size-5" /> },
+  { href: "/cleaner/messages", label: "Messages", icon: <MessageCircle className="size-5" /> },
+  { href: "/cleaner/account", label: "Account", icon: <UserRound className="size-5" /> },
 ];
 
 export function MobileNav({ role }: { role: "customer" | "cleaner" }) {
-  const pathname = usePathname();
-  const items = role === "customer" ? customerNav : cleanerNav;
-
   return (
-    <nav className="market-mobile-nav">
-      {items.map((item) => {
-        const active =
-          item.href === "/customer" || item.href === "/cleaner"
-            ? pathname === item.href
-            : pathname === item.href || pathname.startsWith(`${item.href}/`);
-
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={active ? "market-mobile-nav__link active" : "market-mobile-nav__link"}
-          >
-            <NavIcon name={item.icon} />
-            {item.label}
-          </Link>
-        );
-      })}
-    </nav>
-  );
-}
-
-function NavIcon({ name }: { name: string }) {
-  if (name === "jobs") {
-    return (
-      <svg aria-hidden="true" viewBox="0 0 24 24">
-        <path d="M8 7V5.5A2.5 2.5 0 0 1 10.5 3h3A2.5 2.5 0 0 1 16 5.5V7" />
-        <path d="M5 7h14v12H5z" />
-        <path d="M9 12h6" />
-      </svg>
-    );
-  }
-
-  if (name === "messages") {
-    return (
-      <svg aria-hidden="true" viewBox="0 0 24 24">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-      </svg>
-    );
-  }
-
-  if (name === "account") {
-    return (
-      <svg aria-hidden="true" viewBox="0 0 24 24">
-        <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
-        <path d="M4 21a8 8 0 0 1 16 0" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24">
-      <path d="m4 11 8-7 8 7" />
-      <path d="M6.5 10.5V20h11v-9.5" />
-      <path d="M10 20v-5h4v5" />
-    </svg>
+    <BottomNav
+      ariaLabel={role === "customer" ? "Customer navigation" : "Cleaner navigation"}
+      items={role === "customer" ? customerNav : cleanerNav}
+    />
   );
 }

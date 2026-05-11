@@ -46,6 +46,60 @@ function parseRoomTypes(values: FormDataEntryValue[]) {
   return roomTypes;
 }
 
+function getDefaultWholeHomeRoomTypes() {
+  return [
+    RoomType.KITCHEN,
+    RoomType.BATHROOM,
+    RoomType.BEDROOM,
+    RoomType.LIVING_AREA,
+    RoomType.DINING_ROOM,
+    RoomType.ENTRYWAY,
+  ];
+}
+
+function getDefaultServiceNeeds() {
+  return [
+    ServiceNeed.GENERAL_CLEANING,
+    ServiceNeed.KITCHEN,
+    ServiceNeed.BATHROOMS,
+    ServiceNeed.FLOORS,
+    ServiceNeed.DUSTING,
+  ];
+}
+
+function getDefaultWholeHomeCleanLevels() {
+  return Object.fromEntries(
+    getDefaultWholeHomeRoomTypes().map((roomType) => [roomType, CleanLevel.MEDIUM]),
+  );
+}
+
+function parseOptionalNumber(value: FormDataEntryValue | null, label: string) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  const parsed = Number(raw);
+
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error(`${label} must be a valid number.`);
+  }
+
+  return parsed;
+}
+
+function parseOptionalPositiveInteger(value: FormDataEntryValue | null, label: string) {
+  const parsed = parseOptionalNumber(value, label);
+
+  if (parsed === null) return null;
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error(`${label} must be a whole number greater than 0.`);
+  }
+
+  return parsed;
+}
+
+function parseBoolean(value: FormDataEntryValue | null) {
+  return String(value || "").trim() === "true";
+}
+
 function parseEntryMethod(value: FormDataEntryValue | null) {
   const entryMethod = getRequiredString(value, "Entry method");
 
@@ -67,14 +121,20 @@ function parseCleanLevel(value: FormDataEntryValue | null) {
 }
 
 export function parseHomeProfileForm(formData: FormData) {
-  const roomCleanLevels = parseRoomCleanLevels(formData.get("roomCleanLevels"));
-  const defaultRoomTypes = Object.keys(roomCleanLevels).length > 0
-    ? (Object.keys(roomCleanLevels) as RoomType[])
-    : parseEnumList(formData.getAll("defaultRoomTypes"), Object.values(RoomType));
-  const defaultCleanLevel = getDominantLevel(roomCleanLevels);
+  const roomCleanLevels = getDefaultWholeHomeCleanLevels();
+  const defaultRoomTypes = getDefaultWholeHomeRoomTypes();
+  const defaultCleanLevel = CleanLevel.MEDIUM;
 
   return {
     label: String(formData.get("label") || "").trim() || "My Home",
+    bedroomCount: parseOptionalNumber(formData.get("bedroomCount"), "Bedrooms"),
+    bathroomCount: parseOptionalNumber(formData.get("bathroomCount"), "Bathrooms"),
+    estimatedSquareFeet: parseOptionalPositiveInteger(
+      formData.get("estimatedSquareFeet"),
+      "Square footage",
+    ),
+    storyCount: parseOptionalPositiveInteger(formData.get("storyCount"), "Stories"),
+    hasPets: parseBoolean(formData.get("hasPets")),
     addressLine1: getRequiredString(formData.get("addressLine1"), "Street address"),
     addressLine2: String(formData.get("addressLine2") || "").trim() || null,
     city: getRequiredString(formData.get("city"), "City"),
@@ -97,11 +157,20 @@ export function parseJobRequestForm(formData: FormData) {
     formData.get("timingPreference") === TimingPreference.TIME_SLOT
       ? TimingPreference.TIME_SLOT
       : TimingPreference.ASAP;
-  const serviceNeeds = parseServiceNeeds(formData.getAll("serviceNeeds"));
   const roomCleanLevels = parseRoomCleanLevels(formData.get("roomCleanLevels"));
+  const parsedRoomTypes = parseEnumList(formData.getAll("roomTypes"), Object.values(RoomType));
   const roomTypes = Object.keys(roomCleanLevels).length > 0
     ? (Object.keys(roomCleanLevels) as RoomType[])
-    : parseRoomTypes(formData.getAll("roomTypes"));
+    : parsedRoomTypes.length > 0
+      ? parsedRoomTypes
+      : getDefaultWholeHomeRoomTypes();
+  const parsedServiceNeeds = parseEnumList(
+    formData.getAll("serviceNeeds"),
+    Object.values(ServiceNeed),
+  );
+  const serviceNeeds = parsedServiceNeeds.length > 0
+    ? parsedServiceNeeds
+    : getDefaultServiceNeeds();
   const cleanLevel = Object.keys(roomCleanLevels).length > 0
     ? getDominantLevel(roomCleanLevels)
     : parseCleanLevel(formData.get("cleanLevel"));

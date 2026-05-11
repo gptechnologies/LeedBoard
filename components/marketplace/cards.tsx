@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   BidPricingType,
   BidStatus,
@@ -24,6 +23,11 @@ import {
   getRoomTypeLabel,
 } from "@/lib/marketplace";
 import { StatusPill } from "@/components/marketplace/status-pill";
+import { Card, CardContent } from "@/components/ui/card";
+import { BidCard as AppBidCard } from "@/components/marketplace/bid-card";
+import { JobCard as AppJobCard } from "@/components/marketplace/job-card";
+import { RippleActionLink } from "@/components/marketplace/motion-buttons";
+import type { JobStatus } from "@/components/marketplace/job-status-badge";
 
 export function JobRequestCard({
   job,
@@ -54,52 +58,23 @@ export function JobRequestCard({
   href: string;
   showAcceptedCleaner?: boolean;
 }) {
-  const tone =
-    job.status === JobRequestStatus.OPEN
-      ? "active"
-      : job.status === JobRequestStatus.AWARDED
-      ? "success"
-      : job.status === JobRequestStatus.CANCELLED
-        ? "danger"
-        : job.status === JobRequestStatus.EXPIRED
-          ? "warning"
-          : "default";
-
   return (
-    <Link href={href} className="market-card market-card--job">
-      <div className="market-card__header">
-        <div className="market-card__title-group">
-          <strong>{job.title}</strong>
-          <div className="market-card__meta">
-            {job.city}, {job.state} {job.postalCode}
-          </div>
-        </div>
-        <StatusPill label={getJobRequestStatusLabel(job.status)} tone={tone} />
-      </div>
-      <div className="market-room-symbol-row" aria-label={`Rooms: ${formatRoomTypes(job.roomTypes)}`}>
-        {job.roomTypes.map((roomType) => (
-          <span
-            key={roomType}
-            className="market-room-symbol"
-            title={getRoomTypeLabel(roomType)}
-          >
-            {getRoomTypeIcon(roomType)}
-          </span>
-        ))}
-      </div>
-      <div className="market-card__meta">{getCleanLevelLabel(job.cleanLevel)}</div>
-      <div className="market-card__meta">{formatTimingSummary(job)}</div>
-      <div className="market-progress">
-        <strong>{job.bids.length} {job.bids.length === 1 ? "bid" : "bids"}</strong>
-        {showAcceptedCleaner && job.acceptedBid ? (
-          <span>
-            Accepted: {job.acceptedBid.cleaner.firstName} {job.acceptedBid.cleaner.lastName}
-          </span>
-        ) : (
-          <span>Tap to review</span>
-        )}
-      </div>
-    </Link>
+    <AppJobCard
+      href={href}
+      title={job.title}
+      location={`${job.city}, ${job.state} ${job.postalCode}`}
+      timing={formatTimingSummary(job)}
+      bidCount={job.bids.length}
+      status={mapJobStatus(job.status)}
+      statusLabel={getJobRequestStatusLabel(job.status)}
+      details={[
+        formatRoomTypes(job.roomTypes),
+        getCleanLevelLabel(job.cleanLevel),
+        showAcceptedCleaner && job.acceptedBid
+          ? `Accepted: ${job.acceptedBid.cleaner.firstName} ${job.acceptedBid.cleaner.lastName}`
+          : "Tap to review",
+      ].filter(Boolean)}
+    />
   );
 }
 
@@ -122,7 +97,8 @@ export function RecommendedCleanerCard({
   };
 }) {
   return (
-    <article className="market-card market-card--cleaner">
+    <Card className="market-card--cleaner">
+      <CardContent className="flex gap-4 pt-0">
       <div className="market-avatar" aria-hidden="true">{cleaner.firstName.charAt(0)}</div>
       <div className="stack small">
         <div>
@@ -148,7 +124,8 @@ export function RecommendedCleanerCard({
           Cleaners submit bids after you post a job.
         </div>
       </div>
-    </article>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -187,58 +164,28 @@ export function BidCard({
   action?: React.ReactNode;
   compact?: boolean;
 }) {
-  const tone =
-    bid.status === BidStatus.ACCEPTED
-      ? "success"
-      : bid.status === BidStatus.DECLINED || bid.status === BidStatus.WITHDRAWN
-        ? "danger"
-        : "default";
   const rating = bid.cleaner.cleanerProfile?.googleRating;
   const reviewCount = bid.cleaner.cleanerProfile?.googleReviewCount;
 
   return (
-    <article className={compact ? "market-card market-card--bid compact" : "market-card market-card--bid"}>
-      <div className="market-card__header">
-        <div className="market-bid-identity">
-          <div className="market-avatar market-avatar--small" aria-hidden="true">
-            {bid.cleaner.firstName.charAt(0)}
-          </div>
-          <div>
-            <strong>
-              {bid.cleaner.firstName} {bid.cleaner.lastName}
-            </strong>
-            <div className="market-card__meta">
-              {bid.cleaner.cleanerProfile?.headline ?? "Available cleaner"}
-            </div>
-          </div>
-        </div>
-        <StatusPill label={getBidStatusLabel(bid.status)} tone={tone} />
-      </div>
-      <div className="market-trust-row">
-        <span>
-          {rating
-            ? `Rating ${rating.toFixed(1)}`
-            : "New"}
-        </span>
-        <span>
-          {reviewCount
-            ? `${reviewCount}+ reviews`
-            : "No reviews yet"}
-        </span>
-        {bid.cleaner.cleanerProfile?.licensedAndInsured ? <span>Licensed & insured</span> : null}
-      </div>
-      {bid.message ? <p className="market-card__copy">{bid.message}</p> : null}
-      {bid.jobRequest ? (
-        <div className="market-card__meta">
-          {bid.jobRequest.title} · {bid.jobRequest.city}, {bid.jobRequest.state}
-        </div>
-      ) : null}
-      <div className="market-price-row">
-        <span>{formatBidTiming(bid)}</span>
-        <strong><span>Bid</span>{formatBidAmount(bid)}</strong>
-      </div>
-      {action ? <div className="market-card__actions">{action}</div> : null}
-    </article>
+    <AppBidCard
+      className={compact ? "compact" : undefined}
+      cleanerName={`${bid.cleaner.firstName} ${bid.cleaner.lastName}`}
+      headline={
+        bid.jobRequest
+          ? `${bid.jobRequest.title} · ${bid.jobRequest.city}, ${bid.jobRequest.state}`
+          : bid.cleaner.cleanerProfile?.headline ?? "Available cleaner"
+      }
+      rating={rating ? `Rating ${rating.toFixed(1)}` : "New"}
+      reviewCount={reviewCount ? `${reviewCount}+ reviews` : "No reviews yet"}
+      insured={bid.cleaner.cleanerProfile?.licensedAndInsured ?? false}
+      message={bid.message ?? undefined}
+      timing={formatBidTiming(bid)}
+      amount={formatBidAmount(bid)}
+      status={mapBidStatus(bid.status)}
+      selected={bid.status === BidStatus.ACCEPTED}
+      action={action}
+    />
   );
 }
 
@@ -272,71 +219,22 @@ export function AvailableJobCard({
   });
 
   return (
-    <Link href={`/cleaner/jobs/${job.id}`} className="market-card market-card--job">
-      <div className="market-card__header">
-        <div>
-          <strong>{job.title}</strong>
-          <div className="market-card__meta">
-            {job.city}, {job.state}
-          </div>
-        </div>
-        <span className="market-timestamp">{formatDateLabel(job.createdAt)}</span>
-      </div>
-      <div className="market-card__meta">{formatRoomTypes(job.roomTypes)}</div>
-      <div className="market-card__meta">{getCleanLevelLabel(job.cleanLevel)}</div>
-      <div className="market-card__meta">{getEntryMethodLabel(job.entryMethod)}</div>
-      <div className="market-card__meta">{formatTimingSummary(job)}</div>
-      <div className="market-progress">
-        <strong>{historySummary}</strong>
-        <span>{job.bids.length} bids</span>
-      </div>
-    </Link>
-  );
-}
-
-export function CleanerUpNextCard({
-  booking,
-}: {
-  booking: {
-    id: string;
-    city: string;
-    state: string;
-    service: {
-      name: string;
-    };
-    slot: {
-      startsAt: Date;
-    };
-  };
-}) {
-  return (
-    <article className="cleaner-feature-card">
-      <div className="cleaner-feature-card__heading">
-        <h2>Up next (1)</h2>
-        <span aria-hidden="true">
-          <svg viewBox="0 0 24 24">
-            <path d="m6 9 6 6 6-6" />
-          </svg>
-        </span>
-      </div>
-      <div className="cleaner-feature-card__body">
-        <ServiceSymbol kind="home" prominent />
-        <div className="cleaner-job-card__content">
-          <strong>{booking.service.name}</strong>
-          <span className="cleaner-job-card__meta">
-            <MetaIcon name="pin" />
-            {booking.city}, {booking.state}
-          </span>
-          <span className="cleaner-job-card__meta">
-            <MetaIcon name="clock" />
-            {formatVisitTime(booking.slot.startsAt)}
-          </span>
-        </div>
-        <Link href={`/cleaner/bookings/${booking.id}`} className="cleaner-action-button">
-          Open
-        </Link>
-      </div>
-    </article>
+    <AppJobCard
+      href={`/cleaner/jobs/${job.id}`}
+      title={job.title}
+      location={`${job.city}, ${job.state}`}
+      timing={formatTimingSummary(job)}
+      bidCount={job.bids.length}
+      status="open"
+      statusLabel={formatDateLabel(job.createdAt)}
+      details={[
+        formatRoomTypes(job.roomTypes),
+        getCleanLevelLabel(job.cleanLevel),
+        getEntryMethodLabel(job.entryMethod),
+        historySummary,
+      ]}
+      variant="cleaner"
+    />
   );
 }
 
@@ -359,27 +257,36 @@ export function CleanerNearbyJobCard({
   distanceLabel: string;
 }) {
   return (
-    <article className="cleaner-job-card">
-      <ServiceSymbol kind={getCleanerJobIconKind(job)} />
-      <div className="cleaner-job-card__content">
-        <strong>{job.title}</strong>
-        <span className="cleaner-job-card__meta">
-          <MetaIcon name="pin" />
-          {distanceLabel}
-        </span>
-        <span className="cleaner-job-card__meta">
-          <MetaIcon name="clock" />
-          {formatTimingSummary(job)}
-        </span>
-      </div>
-      <div className="cleaner-job-card__bid">
-        {estimateCents ? <strong>{formatWholeCurrency(estimateCents)}</strong> : null}
-        <Link href={`/cleaner/jobs/${job.id}`} className="cleaner-action-button">
+    <AppJobCard
+      title={job.title}
+      location={distanceLabel}
+      timing={formatTimingSummary(job)}
+      priceLabel={estimateCents ? formatWholeCurrency(estimateCents) : undefined}
+      status="open"
+      details={[formatRoomTypes(job.roomTypes)]}
+      variant="cleaner"
+      action={
+        <RippleActionLink href={`/cleaner/jobs/${job.id}`}>
           Bid
-        </Link>
-      </div>
-    </article>
+        </RippleActionLink>
+      }
+    />
   );
+}
+
+function mapJobStatus(status: JobRequestStatus): JobStatus {
+  if (status === JobRequestStatus.OPEN) return "open";
+  if (status === JobRequestStatus.AWARDED) return "awarded";
+  if (status === JobRequestStatus.CANCELLED) return "cancelled";
+  if (status === JobRequestStatus.EXPIRED) return "expired";
+  return "draft";
+}
+
+function mapBidStatus(status: BidStatus) {
+  if (status === BidStatus.ACCEPTED) return "accepted";
+  if (status === BidStatus.DECLINED) return "declined";
+  if (status === BidStatus.WITHDRAWN) return "withdrawn";
+  return "submitted";
 }
 
 function formatVisitTime(date: Date) {

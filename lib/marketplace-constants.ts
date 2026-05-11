@@ -68,7 +68,7 @@ export const roomPriorityMap: Record<RoomType, PriorityType[]> = {
 export const entryMethodOptions: Array<{ value: EntryMethod; label: string }> = [
   { value: EntryMethod.HIDDEN_KEY, label: "Hidden key" },
   { value: EntryMethod.DOOR_CODE, label: "Door code" },
-  { value: EntryMethod.BUZZ_IN, label: "Buzz me in" },
+  { value: EntryMethod.BUZZ_IN, label: "Buzz in" },
   { value: EntryMethod.I_WILL_BE_HOME, label: "I will be home" },
   { value: EntryMethod.FRONT_DESK, label: "Front desk" },
   { value: EntryMethod.OTHER, label: "Other" },

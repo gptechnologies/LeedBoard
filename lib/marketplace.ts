@@ -1,7 +1,6 @@
 import {
   BidPricingType,
   BidStatus,
-  BookingStatus,
   CleanLevel,
   EntryMethod,
   HomeProfile,
@@ -300,6 +299,15 @@ export async function getCustomerHomeData(customerId: string) {
             },
           },
         },
+        homeProfile: {
+          select: {
+            bedroomCount: true,
+            bathroomCount: true,
+            estimatedSquareFeet: true,
+            storyCount: true,
+            hasPets: true,
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
       take: 8,
@@ -314,47 +322,16 @@ export async function getCustomerHomeData(customerId: string) {
 }
 
 export async function getCleanerHomeData(cleanerId: string) {
-  const [cleaner, nextBooking] = await Promise.all([
-    prisma.user.findUnique({
-      where: { id: cleanerId },
-      include: {
-        cleanerProfile: true,
-      },
-    }),
-    prisma.booking.findFirst({
-      where: {
-        cleanerId,
-        status: {
-          in: [
-            BookingStatus.BOOKED,
-            BookingStatus.EN_ROUTE,
-            BookingStatus.ARRIVED,
-            BookingStatus.IN_PROGRESS,
-          ],
-        },
-        slot: {
-          startsAt: {
-            gte: new Date(),
-          },
-        },
-      },
-      include: {
-        customer: true,
-        service: true,
-        slot: true,
-      },
-      orderBy: {
-        slot: {
-          startsAt: "asc",
-        },
-      },
-    }),
-  ]);
+  const cleaner = await prisma.user.findUnique({
+    where: { id: cleanerId },
+    include: {
+      cleanerProfile: true,
+    },
+  });
 
   if (!cleaner?.cleanerProfile) {
     return {
       cleaner: null,
-      nextBooking,
       openJobs: [],
       bids: [],
     };
@@ -379,6 +356,15 @@ export async function getCleanerHomeData(cleanerId: string) {
             },
             select: { id: true },
           },
+        },
+      },
+      homeProfile: {
+        select: {
+          bedroomCount: true,
+          bathroomCount: true,
+          estimatedSquareFeet: true,
+          storyCount: true,
+          hasPets: true,
         },
       },
       bids: {
@@ -420,7 +406,6 @@ export async function getCleanerHomeData(cleanerId: string) {
 
   return {
     cleaner,
-    nextBooking,
     openJobs: matchingOpenJobs,
     bids,
   };
@@ -434,6 +419,11 @@ export function buildHomeProfileFormDefaults(homeProfile: HomeProfile | null) {
     city: homeProfile?.city ?? "",
     state: homeProfile?.state ?? "CA",
     postalCode: homeProfile?.postalCode ?? "",
+    bedroomCount: homeProfile?.bedroomCount ?? null,
+    bathroomCount: homeProfile?.bathroomCount ?? null,
+    estimatedSquareFeet: homeProfile?.estimatedSquareFeet ?? null,
+    storyCount: homeProfile?.storyCount ?? null,
+    hasPets: homeProfile?.hasPets ?? false,
     entryMethod: homeProfile?.entryMethod ?? EntryMethod.I_WILL_BE_HOME,
     entryNotes: homeProfile?.entryNotes ?? "",
     defaultRoomTypes: homeProfile?.defaultRoomTypes ?? [],

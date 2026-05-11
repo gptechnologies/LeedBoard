@@ -38,8 +38,6 @@ export default async function HomeownerOnboardingPage({
     <HomeownerOnboardingFlow
       error={params.error}
       firstName={user.firstName}
-      initialHeardAboutUs={user.heardAboutUs ?? ""}
-      initialPushEnabled={user.pushNotificationsEnabled}
     />
   );
 }
