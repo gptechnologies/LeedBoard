@@ -43,6 +43,7 @@ export function BidForm({
   const [flatRate, setFlatRate] = useState(
     defaults.standardFlatRateCents ? (defaults.standardFlatRateCents / 100).toFixed(0) : "",
   );
+  const [estimatedHours, setEstimatedHours] = useState("3");
   const [etaMinutes, setEtaMinutes] = useState(String(defaults.defaultEtaMinutes ?? 60));
   const [arrivalDate, setArrivalDate] = useState(
     requestedDate ? requestedDate.toISOString().slice(0, 10) : "",
@@ -52,6 +53,12 @@ export function BidForm({
   );
   const [message, setMessage] = useState("");
   const selectedWindow = timeWindowOptions.find((option) => option.start === windowStart);
+  const estimatedTotal =
+    pricingType === BidPricingType.HOURLY && hourlyRate && estimatedHours
+      ? Number(hourlyRate) * Number(estimatedHours)
+      : pricingType === BidPricingType.FLAT && flatRate
+        ? Number(flatRate)
+        : null;
   const quickTemplates = useMemo(() => {
     const templates: Array<{
       label: string;
@@ -194,6 +201,26 @@ export function BidForm({
               />
             </div>
           )}
+          <div className="field">
+            <label htmlFor="estimatedHours">Estimated hours</label>
+            <input
+              id="estimatedHours"
+              name="estimatedHours"
+              type="number"
+              min="0.5"
+              max="24"
+              step="0.5"
+              inputMode="decimal"
+              value={estimatedHours}
+              onChange={(event) => setEstimatedHours(event.target.value)}
+              required
+            />
+            <span className="field-hint">
+              {estimatedTotal && Number.isFinite(estimatedTotal)
+                ? `Homeowner sees an estimated total of $${Math.round(estimatedTotal).toLocaleString("en-US")}.`
+                : "This helps homeowners compare bids."}
+            </span>
+          </div>
         </section>
 
         <section className="market-form-section stack">

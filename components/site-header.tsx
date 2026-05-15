@@ -1,11 +1,10 @@
 import Link from "next/link";
-import { auth } from "@clerk/nextjs/server";
 import { UserRole } from "@prisma/client";
 import { AccountUserButton } from "@/components/account-user-button";
-import { getCurrentUser } from "@/lib/session";
+import { getCurrentUser, needsAccountSetup } from "@/lib/session";
 
 export async function SiteHeader() {
-  const [{ userId }, user] = await Promise.all([auth(), getCurrentUser()]);
+  const user = await getCurrentUser();
 
   const brandHref = user
     ? user.role === UserRole.CUSTOMER
@@ -23,7 +22,7 @@ export async function SiteHeader() {
           <small>Bring trusted cleaners to you.</small>
         </Link>
         <nav className="nav-links">
-          {!userId ? (
+          {!user ? (
             <>
               <Link href="/signup?role=CUSTOMER" className="primary">
                 Find a Cleaner
@@ -33,27 +32,18 @@ export async function SiteHeader() {
                 Cleaner access
               </Link>
             </>
-          ) : user?.role === UserRole.CUSTOMER ? (
-            <AccountUserButton
-              email={user.email}
-              firstName={user.firstName}
-              lastName={user.lastName}
-              role={user.role}
-            />
-          ) : user ? (
-            <AccountUserButton
-              email={user.email}
-              firstName={user.firstName}
-              lastName={user.lastName}
-              role={user.role}
-            />
+          ) : needsAccountSetup(user) ? (
+            <Link href={`/welcome?role=${user.role}`} className="primary">
+              Finish setup
+            </Link>
           ) : (
-            <>
-              <Link href="/welcome" className="primary">
-                Finish setup
-              </Link>
-              <AccountUserButton />
-            </>
+            <AccountUserButton
+              email={user.email}
+              firstName={user.firstName}
+              phone={user.phone}
+              lastName={user.lastName}
+              role={user.role}
+            />
           )}
         </nav>
       </div>

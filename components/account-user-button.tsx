@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useClerk } from "@clerk/nextjs";
 import type { UserRole } from "@prisma/client";
 import { BriefcaseBusiness, Home, LogOut, MessageSquare, Settings, UserRound } from "lucide-react";
 
@@ -19,6 +18,7 @@ type AccountRole = `${UserRole}`;
 
 type AccountUserButtonProps = {
   email?: string | null;
+  phone?: string | null;
   firstName?: string | null;
   lastName?: string | null;
   role?: AccountRole | null;
@@ -26,13 +26,13 @@ type AccountUserButtonProps = {
 
 export function AccountUserButton({
   email,
+  phone,
   firstName,
   lastName,
   role,
 }: AccountUserButtonProps) {
-  const { openUserProfile, signOut } = useClerk();
   const displayName = [firstName, lastName].filter(Boolean).join(" ").trim() || "Account";
-  const initials = getInitials(firstName, lastName, email);
+  const initials = getInitials(firstName, lastName, email, phone);
   const links = getRoleLinks(role);
 
   return (
@@ -57,7 +57,7 @@ export function AccountUserButton({
           </Avatar>
           <div>
             <strong>{displayName}</strong>
-            {email ? <span>{email}</span> : null}
+            <span>{email || phone}</span>
           </div>
         </div>
 
@@ -74,23 +74,13 @@ export function AccountUserButton({
 
         <DropdownMenuSeparator />
 
-        <DropdownMenuItem
-          className="account-menu-item"
-          onSelect={() => {
-            openUserProfile();
-          }}
-        >
-          <Settings aria-hidden="true" />
-          Manage account
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          className="account-menu-item account-menu-item--quiet"
-          onSelect={() => {
-            void signOut({ redirectUrl: "/" });
-          }}
-        >
-          <LogOut aria-hidden="true" />
-          Sign out
+        <DropdownMenuItem asChild className="account-menu-item account-menu-item--quiet">
+          <form action="/auth/logout" method="post">
+            <button type="submit">
+              <LogOut aria-hidden="true" />
+              Sign out
+            </button>
+          </form>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -123,8 +113,9 @@ function getInitials(
   firstName?: string | null,
   lastName?: string | null,
   email?: string | null,
+  phone?: string | null,
 ) {
   const initials = `${firstName?.charAt(0) ?? ""}${lastName?.charAt(0) ?? ""}`.trim();
   if (initials) return initials.toUpperCase();
-  return email?.charAt(0).toUpperCase() ?? "A";
+  return email?.charAt(0).toUpperCase() ?? phone?.replace(/\D/g, "").slice(-2) ?? "A";
 }

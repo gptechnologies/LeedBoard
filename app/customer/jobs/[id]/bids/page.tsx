@@ -3,7 +3,11 @@ import { BidCard } from "@/components/marketplace/cards";
 import { HomeownerOpenJobDetailCard } from "@/components/marketplace";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
-import { rankVisibleBids } from "@/lib/marketplace";
+import {
+  getBidSelectionPriorityLabel,
+  getPrimaryBidHighlight,
+  rankVisibleBids,
+} from "@/lib/marketplace";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { notFound, redirect } from "next/navigation";
@@ -68,8 +72,10 @@ export default async function CustomerJobBidsPage({
 
   const activeBids = rankVisibleBids(
     job.bids.filter((bid) => bid.status === BidStatus.SUBMITTED),
+    job.selectionPriority,
   );
   const visibleBids = activeBids.slice(0, 3);
+  const primaryHighlight = getPrimaryBidHighlight(job.selectionPriority);
 
   return (
     <div className="market-shell market-shell--detail">
@@ -94,6 +100,9 @@ export default async function CustomerJobBidsPage({
         <section className="stack">
           <div className="market-section-heading">
             <h2>Bids ({activeBids.length})</h2>
+            <span className="market-card__meta">
+              Ranked for {getBidSelectionPriorityLabel(job.selectionPriority).toLowerCase()}
+            </span>
           </div>
         </section>
 
@@ -101,13 +110,13 @@ export default async function CustomerJobBidsPage({
           <div className="stack">
             {visibleBids.map((bid, index) => (
               <div key={bid.id} className={index === 0 ? "market-featured-bid" : undefined}>
-                {index === 0 ? <span className="best-value-flag">Best match</span> : null}
+                {index === 0 ? <span className="best-value-flag">{primaryHighlight}</span> : null}
                 <BidCard
                   bid={bid}
                   action={
                     <div className="bid-card-actions">
                       <Link className="button-link secondary" href={`/customer/messages/${bid.id}`}>
-                        Message
+                        Coordinate
                       </Link>
                       <form action={`/customer/jobs/${job.id}/accept-bid`} method="post">
                         <input type="hidden" name="bidId" value={bid.id} />
@@ -120,7 +129,7 @@ export default async function CustomerJobBidsPage({
             ))}
             {activeBids.length > visibleBids.length ? (
               <div className="notice">
-                Showing the top {visibleBids.length} bids ranked by reputation, timing fit, and price.
+                Showing the top {visibleBids.length} bids ranked for {getBidSelectionPriorityLabel(job.selectionPriority).toLowerCase()}.
               </div>
             ) : null}
           </div>

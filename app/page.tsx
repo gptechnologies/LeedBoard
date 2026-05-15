@@ -1,6 +1,5 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getCurrentUser, getRoleHome } from "@/lib/session";
 
@@ -21,14 +20,10 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const [{ userId }, user] = await Promise.all([auth(), getCurrentUser()]);
+  const user = await getCurrentUser();
 
   if (user) {
     redirect(getRoleHome(user.role));
-  }
-
-  if (userId) {
-    redirect("/welcome");
   }
 
   return (

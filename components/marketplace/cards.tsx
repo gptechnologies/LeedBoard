@@ -12,6 +12,7 @@ import {
 import { formatCurrency, formatDateLabel, formatRelativeDate } from "@/lib/format";
 import {
   formatBidAmount,
+  formatEstimatedHours,
   formatBidTiming,
   formatRoomTypes,
   formatTimingSummary,
@@ -144,6 +145,7 @@ export function BidCard({
     pricingType: BidPricingType;
     hourlyRateCents: number | null;
     flatRateCents: number | null;
+    estimatedHours: number | null;
     etaMinutes: number | null;
     arrivalDate: Date | null;
     arrivalWindowStart: string | null;
@@ -188,7 +190,7 @@ export function BidCard({
       reviewCount={reviewCount ? `${reviewCount}+ reviews` : "No reviews yet"}
       insured={bid.cleaner.cleanerProfile?.licensedAndInsured ?? false}
       message={bid.message ?? undefined}
-      timing={formatBidTiming(bid)}
+      timing={`${formatBidTiming(bid)} · ${formatEstimatedHours(bid.estimatedHours)}`}
       amount={formatBidAmount(bid)}
       status={mapBidStatus(bid.status)}
       selected={bid.status === BidStatus.ACCEPTED}

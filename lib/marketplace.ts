@@ -1,5 +1,6 @@
 import {
   BidPricingType,
+  BidSelectionPriority,
   BidStatus,
   CleanLevel,
   EntryMethod,
@@ -87,12 +88,46 @@ export function formatBidAmount(bid: {
   pricingType: BidPricingType;
   hourlyRateCents: number | null;
   flatRateCents: number | null;
+  estimatedHours?: number | null;
 }) {
   if (bid.pricingType === BidPricingType.HOURLY) {
-    return `$${((bid.hourlyRateCents ?? 0) / 100).toFixed(0)}/hr`;
+    const rate = `$${((bid.hourlyRateCents ?? 0) / 100).toFixed(0)}/hr`;
+    const estimatedTotalCents = getBidEstimatedTotalCents(bid);
+    return estimatedTotalCents
+      ? `${rate} · est. ${formatWholeCurrency(estimatedTotalCents)}`
+      : rate;
   }
 
   return `$${((bid.flatRateCents ?? 0) / 100).toFixed(0)} flat`;
+}
+
+export function formatEstimatedHours(hours?: number | null) {
+  if (!hours) return "Hours not estimated";
+  return `${hours.toLocaleString("en-US", {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: Number.isInteger(hours) ? 0 : 1,
+  })} ${hours === 1 ? "hour" : "hours"} estimated`;
+}
+
+function formatWholeCurrency(cents: number) {
+  return `$${Math.round(cents / 100).toLocaleString("en-US")}`;
+}
+
+export function getBidEstimatedTotalCents(bid: {
+  pricingType: BidPricingType;
+  hourlyRateCents: number | null;
+  flatRateCents: number | null;
+  estimatedHours?: number | null;
+}) {
+  if (bid.pricingType === BidPricingType.FLAT) {
+    return bid.flatRateCents;
+  }
+
+  if (!bid.hourlyRateCents || !bid.estimatedHours) {
+    return null;
+  }
+
+  return Math.round(bid.hourlyRateCents * bid.estimatedHours);
 }
 
 export function formatBidTiming(bid: {
@@ -157,46 +192,130 @@ export function getCustomerHistorySummary(input: {
 
 export function rankVisibleBids<T extends {
   etaMinutes: number | null;
+  arrivalDate?: Date | null;
+  arrivalWindowStart?: string | null;
   pricingType: BidPricingType;
   hourlyRateCents: number | null;
   flatRateCents: number | null;
+  estimatedHours?: number | null;
   cleaner: {
     cleanerProfile: {
       googleRating: number | null;
       googleReviewCount: number | null;
     } | null;
   };
-}>(bids: T[]) {
+}>(bids: T[], priority: BidSelectionPriority = BidSelectionPriority.BEST_OVERALL) {
   return [...bids].sort((a, b) => {
-    const aRating = a.cleaner.cleanerProfile?.googleRating ?? 0;
-    const bRating = b.cleaner.cleanerProfile?.googleRating ?? 0;
-    if (bRating !== aRating) {
-      return bRating - aRating;
+    if (priority === BidSelectionPriority.CHEAPEST) {
+      return compareByPrice(a, b) || compareByQuality(a, b) || compareByTiming(a, b);
     }
 
-    const aReviews = a.cleaner.cleanerProfile?.googleReviewCount ?? 0;
-    const bReviews = b.cleaner.cleanerProfile?.googleReviewCount ?? 0;
-    if (bReviews !== aReviews) {
-      return bReviews - aReviews;
+    if (priority === BidSelectionPriority.FASTEST) {
+      return compareByTiming(a, b) || compareByPrice(a, b) || compareByQuality(a, b);
     }
 
-    const aEta = a.etaMinutes ?? 9999;
-    const bEta = b.etaMinutes ?? 9999;
-    if (aEta !== bEta) {
-      return aEta - bEta;
+    if (priority === BidSelectionPriority.BEST_QUALITY) {
+      return compareByQuality(a, b) || compareByPrice(a, b) || compareByTiming(a, b);
     }
 
-    const aPrice =
-      a.pricingType === BidPricingType.HOURLY
-        ? a.hourlyRateCents ?? Number.MAX_SAFE_INTEGER
-        : a.flatRateCents ?? Number.MAX_SAFE_INTEGER;
-    const bPrice =
-      b.pricingType === BidPricingType.HOURLY
-        ? b.hourlyRateCents ?? Number.MAX_SAFE_INTEGER
-        : b.flatRateCents ?? Number.MAX_SAFE_INTEGER;
-
-    return aPrice - bPrice;
+    return compareByQuality(a, b) || compareByTiming(a, b) || compareByPrice(a, b);
   });
+}
+
+function compareByQuality<T extends {
+  cleaner: {
+    cleanerProfile: {
+      googleRating: number | null;
+      googleReviewCount: number | null;
+    } | null;
+  };
+}>(a: T, b: T) {
+  const aRating = a.cleaner.cleanerProfile?.googleRating ?? 0;
+  const bRating = b.cleaner.cleanerProfile?.googleRating ?? 0;
+  if (bRating !== aRating) {
+    return bRating - aRating;
+  }
+
+  const aReviews = a.cleaner.cleanerProfile?.googleReviewCount ?? 0;
+  const bReviews = b.cleaner.cleanerProfile?.googleReviewCount ?? 0;
+  if (bReviews !== aReviews) {
+    return bReviews - aReviews;
+  }
+
+  return 0;
+}
+
+function compareByTiming<T extends {
+  etaMinutes: number | null;
+  arrivalDate?: Date | null;
+  arrivalWindowStart?: string | null;
+}>(a: T, b: T) {
+  return getTimingRank(a) - getTimingRank(b);
+}
+
+function getTimingRank(bid: {
+  etaMinutes: number | null;
+  arrivalDate?: Date | null;
+  arrivalWindowStart?: string | null;
+}) {
+  if (bid.etaMinutes) {
+    return bid.etaMinutes;
+  }
+
+  if (!bid.arrivalDate) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+
+  const [hours = 23, minutes = 59] = (bid.arrivalWindowStart ?? "23:59")
+    .split(":")
+    .map(Number);
+  const arrival = new Date(bid.arrivalDate);
+  arrival.setHours(hours, minutes, 0, 0);
+  return arrival.getTime() / 60000;
+}
+
+function compareByPrice<T extends {
+  pricingType: BidPricingType;
+  hourlyRateCents: number | null;
+  flatRateCents: number | null;
+  estimatedHours?: number | null;
+}>(a: T, b: T) {
+  return getPriceRank(a) - getPriceRank(b);
+}
+
+function getPriceRank(bid: {
+  pricingType: BidPricingType;
+  hourlyRateCents: number | null;
+  flatRateCents: number | null;
+  estimatedHours?: number | null;
+}) {
+  return getBidEstimatedTotalCents(bid) ?? Number.MAX_SAFE_INTEGER;
+}
+
+export function getBidSelectionPriorityLabel(priority: BidSelectionPriority) {
+  switch (priority) {
+    case BidSelectionPriority.CHEAPEST:
+      return "Cheapest";
+    case BidSelectionPriority.FASTEST:
+      return "Fastest";
+    case BidSelectionPriority.BEST_QUALITY:
+      return "Best quality";
+    default:
+      return "Best overall";
+  }
+}
+
+export function getPrimaryBidHighlight(priority: BidSelectionPriority) {
+  switch (priority) {
+    case BidSelectionPriority.CHEAPEST:
+      return "Best value";
+    case BidSelectionPriority.FASTEST:
+      return "Fastest available";
+    case BidSelectionPriority.BEST_QUALITY:
+      return "Best quality";
+    default:
+      return "Best overall";
+  }
 }
 
 export async function getRecommendedCleaners(input: {

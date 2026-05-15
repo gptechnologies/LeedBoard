@@ -121,15 +121,6 @@ export async function POST(request: Request) {
         tx,
       });
 
-      if (!user.phone && formData.get("phone")) {
-        await tx.user.update({
-          where: { id: user.id },
-          data: {
-            phone: String(formData.get("phone")).trim() || null,
-          },
-        });
-      }
-
       return created;
     });
 
@@ -142,7 +133,7 @@ export async function POST(request: Request) {
     const baseUrl = new URL(request.url).origin;
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      customer_email: user.email,
+      ...(user.email ? { customer_email: user.email } : {}),
       metadata: {
         bookingId: booking.id,
       },

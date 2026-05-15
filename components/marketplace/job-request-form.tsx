@@ -55,7 +55,7 @@ type LocationDraft = {
   hasPets: boolean;
 };
 
-const steps = ["Details", "Schedule", "Review"] as const;
+const steps = ["Where", "When", "Notes"] as const;
 const dateHints = ["Fastest", "Popular", "Flexible", "Good fit", "Open", "Open", "Open", "Open"];
 const defaultWholeHomeRooms = [
   RoomType.KITCHEN,
@@ -65,33 +65,105 @@ const defaultWholeHomeRooms = [
   RoomType.DINING_ROOM,
   RoomType.ENTRYWAY,
 ];
-function parseRawRoomCleanLevels(raw: unknown): RoomCleanLevels {
-  if (!raw || typeof raw !== "object") return {};
-  const result: RoomCleanLevels = {};
-  const validRooms = Object.values(RoomType) as string[];
-  const validLevels = Object.values(CleanLevel) as string[];
-  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
-    if (validRooms.includes(key) && validLevels.includes(String(value))) {
-      result[key as RoomType] = String(value) as CleanLevel;
-    }
-  }
-  return result;
-}
 
-function initRoomCleanLevels(profile: WizardHomeProfile | null): RoomCleanLevels {
-  if (!profile) return getDefaultWholeHomeCleanLevels();
-  const parsed = parseRawRoomCleanLevels(profile.roomCleanLevels);
-  if (Object.keys(parsed).length > 0) return parsed;
-  const map: RoomCleanLevels = {};
-  const roomTypes = profile.defaultRoomTypes.length > 0 ? profile.defaultRoomTypes : defaultWholeHomeRooms;
-  for (const room of roomTypes) {
-    map[room] = profile.defaultCleanLevel;
-  }
-  return map;
-}
+type CleaningPresetId = "standard" | "deep" | "move_out" | "kitchen_bath" | "floors_surfaces";
 
-function getDefaultWholeHomeCleanLevels(): RoomCleanLevels {
-  return Object.fromEntries(defaultWholeHomeRooms.map((room) => [room, CleanLevel.MEDIUM]));
+const cleaningPresets: Array<{
+  id: CleaningPresetId;
+  label: string;
+  description: string;
+  cleanLevel: CleanLevel;
+  roomTypes: RoomType[];
+  serviceNeeds: ServiceNeed[];
+}> = [
+  {
+    id: "standard",
+    label: "Standard clean",
+    description: "Regular reset for the whole home.",
+    cleanLevel: CleanLevel.MEDIUM,
+    roomTypes: defaultWholeHomeRooms,
+    serviceNeeds: [
+      ServiceNeed.GENERAL_CLEANING,
+      ServiceNeed.KITCHEN,
+      ServiceNeed.BATHROOMS,
+      ServiceNeed.FLOORS,
+      ServiceNeed.DUSTING,
+    ],
+  },
+  {
+    id: "deep",
+    label: "Deep clean",
+    description: "More detail for buildup, corners, and high-touch areas.",
+    cleanLevel: CleanLevel.DEEP,
+    roomTypes: defaultWholeHomeRooms,
+    serviceNeeds: [
+      ServiceNeed.GENERAL_CLEANING,
+      ServiceNeed.DEEP_CLEAN,
+      ServiceNeed.KITCHEN,
+      ServiceNeed.BATHROOMS,
+      ServiceNeed.FLOORS,
+      ServiceNeed.DUSTING,
+    ],
+  },
+  {
+    id: "move_out",
+    label: "Move-out clean",
+    description: "Empty-home cleaning for move-out or turnover.",
+    cleanLevel: CleanLevel.DEEP,
+    roomTypes: defaultWholeHomeRooms,
+    serviceNeeds: [
+      ServiceNeed.MOVE_OUT,
+      ServiceNeed.DEEP_CLEAN,
+      ServiceNeed.KITCHEN,
+      ServiceNeed.BATHROOMS,
+      ServiceNeed.FLOORS,
+      ServiceNeed.WINDOWS,
+    ],
+  },
+  {
+    id: "kitchen_bath",
+    label: "Kitchen & bath focus",
+    description: "Prioritize the rooms that need the most work.",
+    cleanLevel: CleanLevel.DEEP,
+    roomTypes: [RoomType.KITCHEN, RoomType.BATHROOM],
+    serviceNeeds: [
+      ServiceNeed.GENERAL_CLEANING,
+      ServiceNeed.DEEP_CLEAN,
+      ServiceNeed.KITCHEN,
+      ServiceNeed.BATHROOMS,
+    ],
+  },
+  {
+    id: "floors_surfaces",
+    label: "Floors & surfaces",
+    description: "Floors, dusting, counters, and visible surfaces.",
+    cleanLevel: CleanLevel.MEDIUM,
+    roomTypes: [
+      RoomType.KITCHEN,
+      RoomType.BATHROOM,
+      RoomType.BEDROOM,
+      RoomType.LIVING_AREA,
+      RoomType.ENTRYWAY,
+    ],
+    serviceNeeds: [
+      ServiceNeed.GENERAL_CLEANING,
+      ServiceNeed.FLOORS,
+      ServiceNeed.DUSTING,
+    ],
+  },
+];
+
+const focusNeedOptions = [
+  ServiceNeed.KITCHEN,
+  ServiceNeed.BATHROOMS,
+  ServiceNeed.FLOORS,
+  ServiceNeed.DUSTING,
+  ServiceNeed.WINDOWS,
+  ServiceNeed.LAUNDRY,
+] as const;
+
+function getPresetCleanLevels(preset: { roomTypes: RoomType[]; cleanLevel: CleanLevel }): RoomCleanLevels {
+  return Object.fromEntries(preset.roomTypes.map((room) => [room, preset.cleanLevel]));
 }
 
 function getDominantCleanLevel(levels: RoomCleanLevels): CleanLevel {
@@ -104,16 +176,20 @@ function getDominantCleanLevel(levels: RoomCleanLevels): CleanLevel {
 
 export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfile[] }) {
   const initialHomeProfile = homeProfiles[0] ?? null;
+  const defaultPreset = cleaningPresets[0];
   const [savedHomeProfiles, setSavedHomeProfiles] = useState(homeProfiles);
   const [selectedHomeProfileId, setSelectedHomeProfileId] = useState(initialHomeProfile?.id ?? "");
   const [step, setStep] = useState(0);
+  const [selectedCleaningPresetId, setSelectedCleaningPresetId] =
+    useState<CleaningPresetId>(defaultPreset.id);
+  const [focusNeeds, setFocusNeeds] = useState<ServiceNeed[]>([]);
   const [addressLine1, setAddressLine1] = useState(initialHomeProfile?.addressLine1 ?? "");
   const [addressLine2, setAddressLine2] = useState(initialHomeProfile?.addressLine2 ?? "");
   const [city, setCity] = useState(initialHomeProfile?.city ?? "");
   const [state, setState] = useState(initialHomeProfile?.state ?? "New York");
   const [postalCode, setPostalCode] = useState(initialHomeProfile?.postalCode ?? "");
   const [roomCleanLevels, setRoomCleanLevels] = useState<RoomCleanLevels>(
-    () => initRoomCleanLevels(initialHomeProfile),
+    () => getPresetCleanLevels(defaultPreset),
   );
   const [entryMethod, setEntryMethod] = useState<EntryMethod>(
     initialHomeProfile?.entryMethod ?? EntryMethod.I_WILL_BE_HOME,
@@ -140,9 +216,11 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
   const wizardTopRef = useRef<HTMLDivElement>(null);
   const submitIntentRef = useRef(false);
 
+  const selectedCleaningPreset =
+    cleaningPresets.find((preset) => preset.id === selectedCleaningPresetId) ?? defaultPreset;
   const roomTypes = Object.keys(roomCleanLevels) as RoomType[];
   const cleanLevel = getDominantCleanLevel(roomCleanLevels);
-  const serviceNeeds = deriveServiceNeeds(roomTypes, cleanLevel);
+  const serviceNeeds = deriveServiceNeeds(selectedCleaningPreset, focusNeeds);
   const dateOptions = getDateOptions();
   const hourOptions = getHourOptions();
   const todayValue = dateOptions[0]?.value ?? toDateInputValue(new Date());
@@ -175,7 +253,7 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
     setCity(profile.city);
     setState(profile.state);
     setPostalCode(profile.postalCode);
-    setRoomCleanLevels(initRoomCleanLevels(profile));
+    setRoomCleanLevels(getPresetCleanLevels(selectedCleaningPreset));
     setEntryMethod(profile.entryMethod);
     setEntryNotes(profile.entryNotes ?? "");
     setLocationDraft(getLocationDraft(profile));
@@ -191,7 +269,7 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
     setCity(profile.city);
     setState(profile.state);
     setPostalCode(profile.postalCode);
-    setRoomCleanLevels(initRoomCleanLevels(profile));
+    setRoomCleanLevels(getPresetCleanLevels(selectedCleaningPreset));
     setEntryMethod(profile.entryMethod);
     setEntryNotes(profile.entryNotes ?? "");
     setLocationDraft(getLocationDraft(profile));
@@ -332,6 +410,20 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
     setValidationMessage("");
   }
 
+  function chooseCleaningPreset(preset: (typeof cleaningPresets)[number]) {
+    setSelectedCleaningPresetId(preset.id);
+    setRoomCleanLevels(getPresetCleanLevels(preset));
+    setValidationMessage("");
+  }
+
+  function toggleFocusNeed(serviceNeed: ServiceNeed) {
+    setFocusNeeds((current) =>
+      current.includes(serviceNeed)
+        ? current.filter((value) => value !== serviceNeed)
+        : [...current, serviceNeed],
+    );
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     if (step < steps.length - 1 || !submitIntentRef.current) {
       event.preventDefault();
@@ -371,12 +463,13 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
       {step === 0 ? (
         <section className="market-form-section market-question-flow">
           <div className="market-section-heading">
-            <h2>1. Job details</h2>
+            <h2>Where should cleaners go?</h2>
           </div>
 
           <section className="market-question-block stack">
             <div className="market-question-copy">
-              <h3>Where should cleaners go?</h3>
+              <span>Saved homes make this faster.</span>
+              <h3>Choose the home for this clean.</h3>
             </div>
 
             {selectedHomeProfile ? (
@@ -424,14 +517,51 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
 
           {hasAddress ? (
             <section className="market-question-block stack">
-              <div className="field">
-                <label htmlFor="notes">Notes for cleaners</label>
-                <textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(event) => setNotes(event.target.value)}
-                  placeholder="Any notes, areas to focus on, or specific clean up items?"
-                />
+              <div className="market-question-copy">
+                <span>Cleaning type</span>
+                <h3>What kind of cleaning do you need?</h3>
+                <p>Pick the closest fit. We will use it to match cleaners and organize bids.</p>
+              </div>
+              <div className="market-cleaning-presets" role="radiogroup" aria-label="Cleaning type">
+                {cleaningPresets.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    className={
+                      preset.id === selectedCleaningPresetId
+                        ? "market-cleaning-preset active"
+                        : "market-cleaning-preset"
+                    }
+                    onClick={() => chooseCleaningPreset(preset)}
+                    aria-pressed={preset.id === selectedCleaningPresetId}
+                  >
+                    <strong>{preset.label}</strong>
+                    <span>{preset.description}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="market-focus-area-block stack small">
+                <div className="market-schedule-label">
+                  <strong>Optional focus areas</strong>
+                  <span>Add only what matters.</span>
+                </div>
+                <div className="market-focus-chip-grid">
+                  {focusNeedOptions.map((serviceNeed) => (
+                    <button
+                      key={serviceNeed}
+                      type="button"
+                      className={
+                        focusNeeds.includes(serviceNeed)
+                          ? "market-focus-chip active"
+                          : "market-focus-chip"
+                      }
+                      onClick={() => toggleFocusNeed(serviceNeed)}
+                      aria-pressed={focusNeeds.includes(serviceNeed)}
+                    >
+                      {getServiceNeedShortLabel(serviceNeed)}
+                    </button>
+                  ))}
+                </div>
               </div>
             </section>
           ) : null}
@@ -441,12 +571,13 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
       {step === 1 ? (
         <section className="market-form-section market-question-flow">
           <div className="market-section-heading">
-            <h2>2. When would you like to schedule?</h2>
+            <h2>When should cleaners come?</h2>
           </div>
 
           <section className="market-question-block stack">
             <div className="market-question-copy">
-              <span>Choose a day:</span>
+              <span>Timing</span>
+              <h3>Choose the day and arrival window.</h3>
             </div>
             <div className="market-segmented">
               <label className={dayChoice === "today" ? "market-segmented__option active" : "market-segmented__option"}>
@@ -633,47 +764,62 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
               ) : null}
             </section>
           ) : null}
-
-          {canContinueFromSchedule ? (
-            <section className="market-question-block stack">
-              <div className="field">
-                <label htmlFor="entryMethod">How will the cleaners enter</label>
-                <select
-                  id="entryMethod"
-                  value={entryMethod}
-                  onChange={(event) => setEntryMethod(event.target.value as EntryMethod)}
-                >
-                  {entryMethodOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="field">
-                <label htmlFor="entryNotes">Entry details</label>
-                <textarea
-                  id="entryNotes"
-                  value={entryNotes}
-                  onChange={(event) => setEntryNotes(event.target.value)}
-                  placeholder="Door code, hidden key spot, or call box instructions."
-                />
-              </div>
-            </section>
-          ) : null}
         </section>
       ) : null}
 
       {step === 2 ? (
-        <section className="market-form-section stack">
+        <section className="market-form-section market-question-flow">
           <div className="market-section-heading">
-            <h2>Review</h2>
+            <h2>Any notes?</h2>
           </div>
+
+          <section className="market-question-block stack">
+            <div className="market-question-copy">
+              <span>Details</span>
+              <h3>Add anything cleaners should know.</h3>
+              <p>Keep it short. Cleaners will see this before they bid.</p>
+            </div>
+            <div className="field">
+              <label htmlFor="notes">Notes for cleaners</label>
+              <textarea
+                id="notes"
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+                placeholder="Areas to focus on, pets, parking, or anything unusual."
+              />
+            </div>
+          </section>
+
+          <section className="market-question-block stack">
+            <div className="field">
+              <label htmlFor="entryMethod">How will the cleaner enter?</label>
+              <select
+                id="entryMethod"
+                value={entryMethod}
+                onChange={(event) => setEntryMethod(event.target.value as EntryMethod)}
+              >
+                {entryMethodOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="entryNotes">Entry details</label>
+              <textarea
+                id="entryNotes"
+                value={entryNotes}
+                onChange={(event) => setEntryNotes(event.target.value)}
+                placeholder="Door code, hidden key spot, call box, or parking notes."
+              />
+            </div>
+          </section>
 
           <article className="market-card">
             <div className="stack small">
               <strong>{addressLine1}, {city}, {state} {postalCode}</strong>
-              <span className="market-card__meta">Whole-home clean</span>
+              <span className="market-card__meta">{selectedCleaningPreset.label}</span>
               <span className="market-card__meta">{entryMethodOptions.find((option) => option.value === entryMethod)?.label ?? entryMethod}</span>
               <span className="market-card__meta">
                 {timingPreference === TimingPreference.ASAP
@@ -686,7 +832,7 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
           {notes ? <div className="notice">{notes}</div> : null}
 
           <div className="notice">
-            Cleaners will submit their own prices. You choose which bid to accept.
+            We will notify vetted cleaners who match your location and timing, then rank the strongest bids for you.
           </div>
         </section>
       ) : null}
@@ -754,33 +900,30 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
   );
 }
 
-function deriveServiceNeeds(roomTypes: RoomType[], cleanLevel: CleanLevel) {
-  const needs = new Set<ServiceNeed>([ServiceNeed.GENERAL_CLEANING]);
+function deriveServiceNeeds(
+  preset: (typeof cleaningPresets)[number],
+  focusNeeds: ServiceNeed[],
+) {
+  return Array.from(new Set([...preset.serviceNeeds, ...focusNeeds]));
+}
 
-  for (const roomType of roomTypes) {
-    if (roomType === RoomType.KITCHEN) {
-      needs.add(ServiceNeed.KITCHEN);
-    }
-
-    if (roomType === RoomType.BATHROOM) {
-      needs.add(ServiceNeed.BATHROOMS);
-    }
-
-    if (roomType === RoomType.LAUNDRY) {
-      needs.add(ServiceNeed.LAUNDRY);
-    }
+function getServiceNeedShortLabel(serviceNeed: ServiceNeed) {
+  switch (serviceNeed) {
+    case ServiceNeed.KITCHEN:
+      return "Kitchen";
+    case ServiceNeed.BATHROOMS:
+      return "Bathrooms";
+    case ServiceNeed.FLOORS:
+      return "Floors";
+    case ServiceNeed.DUSTING:
+      return "Dusting";
+    case ServiceNeed.WINDOWS:
+      return "Windows";
+    case ServiceNeed.LAUNDRY:
+      return "Laundry";
+    default:
+      return "Focus area";
   }
-
-  if (cleanLevel === CleanLevel.DEEP) {
-    needs.add(ServiceNeed.DEEP_CLEAN);
-  }
-
-  if (cleanLevel !== CleanLevel.LIGHT) {
-    needs.add(ServiceNeed.FLOORS);
-    needs.add(ServiceNeed.DUSTING);
-  }
-
-  return Array.from(needs);
 }
 
 function getLocationDraft(profile: WizardHomeProfile | null): LocationDraft {

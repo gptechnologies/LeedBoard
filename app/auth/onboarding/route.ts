@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getRequiredString } from "@/lib/auth";
 import { getRoleHome, requireSignedInIdentity } from "@/lib/session";
 
-function toError(request: Request, message: string, role?: string) {
+function toError(request: Request, message: string, role?: string, inviteToken?: string) {
   const search = new URLSearchParams({
     error: message,
   });
@@ -13,12 +13,17 @@ function toError(request: Request, message: string, role?: string) {
     search.set("role", role);
   }
 
+  if (inviteToken) {
+    search.set("inviteToken", inviteToken);
+  }
+
   return NextResponse.redirect(new URL(`/welcome?${search.toString()}`, request.url));
 }
 
 export async function POST(request: Request) {
   const identity = await requireSignedInIdentity();
   const formData = await request.formData();
+  const inviteToken = String(formData.get("inviteToken") || "").trim();
   const roleValue = getRequiredString(formData.get("role"), "Role");
   const role =
     roleValue === UserRole.CLEANER
@@ -28,33 +33,23 @@ export async function POST(request: Request) {
         : null;
 
   if (!role) {
-    return toError(request, "Please choose a valid account type.");
+    return toError(request, "Please choose a valid account type.", undefined, inviteToken);
   }
 
   try {
-    const firstName =
-      String(formData.get("firstName") || "").trim() || identity.firstName || "WellKept";
-    const lastName =
-      String(formData.get("lastName") || "").trim() || identity.lastName || "Member";
-    const phone = String(formData.get("phone") || "").trim() || null;
+    const firstName = getRequiredString(formData.get("firstName"), "First name");
+    const lastName = getRequiredString(formData.get("lastName"), "Last name");
+    const email = String(formData.get("email") || "").trim().toLowerCase() || null;
+    const businessName = String(formData.get("businessName") || "").trim() || null;
+    const website = String(formData.get("website") || "").trim() || null;
     const bio = String(formData.get("bio") || "").trim() || null;
-
-    const user = await prisma.user.upsert({
-      where: { email: identity.email },
-      update: {
-        clerkUserId: identity.clerkUserId,
+    const user = await prisma.user.update({
+      where: { id: identity.userId },
+      data: {
         role,
         firstName,
         lastName,
-        phone,
-      },
-      create: {
-        clerkUserId: identity.clerkUserId,
-        role,
-        firstName,
-        lastName,
-        email: identity.email,
-        phone,
+        email,
       },
     });
 
@@ -63,6 +58,8 @@ export async function POST(request: Request) {
         where: { userId: user.id },
         update: {
           bio,
+          businessName,
+          website,
           isAvailable: true,
           serviceAreaPostalCodes: [],
           serviceNeeds: [],
@@ -70,6 +67,8 @@ export async function POST(request: Request) {
         create: {
           userId: user.id,
           bio,
+          businessName,
+          website,
           isAvailable: true,
           serviceAreaPostalCodes: [],
           serviceNeeds: [],
@@ -77,11 +76,15 @@ export async function POST(request: Request) {
       });
     }
 
-    const nextPath = role === UserRole.CUSTOMER ? "/onboarding/homeowner" : getRoleHome(role);
+    const nextPath = inviteToken
+      ? `/invite/cleaner/${inviteToken}`
+      : role === UserRole.CUSTOMER
+        ? "/onboarding/homeowner"
+        : getRoleHome(role);
     return NextResponse.redirect(new URL(nextPath, request.url));
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "We couldn't complete your account setup.";
-    return toError(request, message, role);
+    return toError(request, message, role, inviteToken);
   }
 }

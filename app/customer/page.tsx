@@ -39,8 +39,8 @@ export default async function CustomerDashboard({ searchParams }: CustomerDashbo
             </svg>
           </span>
           <span className="customer-post-job-cta__copy">
-            <strong>Post a Cleaning Job</strong>
-            <span>Get bids and choose your cleaner.</span>
+            <strong>Request a Cleaning</strong>
+            <span>Tell us what you need. We will surface the best bids.</span>
           </span>
         </PulsatingPrimaryLink>
 
@@ -83,12 +83,12 @@ export default async function CustomerDashboard({ searchParams }: CustomerDashbo
             <article>
               <span>1</span>
               <strong>Post job</strong>
-              <p>Tell cleaners what you need and when.</p>
+              <p>Tell us where, when, and what kind of clean.</p>
             </article>
             <article>
               <span>2</span>
-              <strong>Receive bids</strong>
-              <p>Vetted cleaners submit their best offers.</p>
+              <strong>We match cleaners</strong>
+              <p>Vetted cleaners review the request and submit offers.</p>
             </article>
             <article>
               <span>3</span>

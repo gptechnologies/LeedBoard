@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import type { ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 
 type AddressState = {
   addressLine1: string;
@@ -9,6 +9,7 @@ type AddressState = {
   city: string;
   state: string;
   postalCode: string;
+  googlePlaceId: string;
 };
 
 type PropertyType = "HOUSE" | "APARTMENT";
@@ -70,6 +71,7 @@ export function HomeownerOnboardingFlow({
     city: "",
     state: "",
     postalCode: "",
+    googlePlaceId: "",
   });
   const [addressError, setAddressError] = useState("");
 
@@ -77,6 +79,22 @@ export function HomeownerOnboardingFlow({
   const firstNameCopy = firstName ? `${firstName}, ` : "";
 
   const steps = [
+    {
+      key: "address",
+      eyebrow: "Address",
+      title: "Where should cleaners arrive?",
+      helper: "Start typing your address, then choose the matching place to fill the details.",
+      summary: address.addressLine1,
+      isComplete: !validateAddress(),
+      content: (
+        <AddressFields
+          address={address}
+          addressError={addressError}
+          updateAddress={updateAddress}
+          setAddress={setAddress}
+        />
+      ),
+    },
     {
       key: "property",
       eyebrow: "Home profile",
@@ -220,21 +238,6 @@ export function HomeownerOnboardingFlow({
         </ChoiceGrid>
       ),
     },
-    {
-      key: "address",
-      eyebrow: "Address",
-      title: "Where should cleaners arrive?",
-      helper: "This creates your first home preset for faster requests.",
-      summary: address.addressLine1,
-      isComplete: !validateAddress(),
-      content: (
-        <AddressFields
-          address={address}
-          addressError={addressError}
-          updateAddress={updateAddress}
-        />
-      ),
-    },
   ];
 
   const currentStep = steps[step];
@@ -278,6 +281,7 @@ export function HomeownerOnboardingFlow({
         <input type="hidden" name="city" value={address.city} readOnly />
         <input type="hidden" name="state" value={address.state} readOnly />
         <input type="hidden" name="postalCode" value={address.postalCode} readOnly />
+        <input type="hidden" name="googlePlaceId" value={address.googlePlaceId} readOnly />
 
         <div className="onboarding-progress" aria-label={`Step ${step + 1} of ${steps.length}`}>
           <div className="onboarding-progress__text">
@@ -394,24 +398,85 @@ function SegmentedNumberGrid({ children, label }: { children: ReactNode; label: 
 function AddressFields({
   address,
   addressError,
+  setAddress,
   updateAddress,
 }: {
   address: AddressState;
   addressError: string;
+  setAddress: Dispatch<SetStateAction<AddressState>>;
   updateAddress: (field: keyof AddressState, value: string) => void;
 }) {
+  const autocompleteRef = useRef<HTMLInputElement | null>(null);
+  const [autocompleteStatus, setAutocompleteStatus] = useState<"idle" | "ready" | "manual">(
+    "idle",
+  );
+
+  useEffect(() => {
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+    if (!apiKey || !autocompleteRef.current) {
+      setAutocompleteStatus("manual");
+      return;
+    }
+
+    let cancelled = false;
+
+    loadGooglePlaces(apiKey)
+      .then(() => {
+        if (cancelled || !autocompleteRef.current || !window.google?.maps?.places) {
+          return;
+        }
+
+        const autocomplete = new window.google.maps.places.Autocomplete(
+          autocompleteRef.current,
+          {
+            componentRestrictions: { country: "us" },
+            fields: ["address_components", "place_id"],
+            types: ["address"],
+          },
+        );
+
+        autocomplete.addListener("place_changed", () => {
+          const place = autocomplete.getPlace();
+          const parsedAddress = parseGoogleAddress(place);
+
+          if (!parsedAddress) return;
+
+          setAddress((current) => ({
+            ...current,
+            ...parsedAddress,
+            googlePlaceId: place.place_id ?? "",
+          }));
+        });
+        setAutocompleteStatus("ready");
+      })
+      .catch(() => setAutocompleteStatus("manual"));
+
+    return () => {
+      cancelled = true;
+    };
+  }, [setAddress]);
+
   return (
     <div className="onboarding-fields stack">
       {addressError ? <div className="notice error">{addressError}</div> : null}
 
       <div className="field">
-        <label htmlFor="onboardingAddressLine1">Street address</label>
+        <label htmlFor="onboardingAddressSearch">Street address</label>
         <input
-          id="onboardingAddressLine1"
+          ref={autocompleteRef}
+          id="onboardingAddressSearch"
           value={address.addressLine1}
-          onChange={(event) => updateAddress("addressLine1", event.target.value)}
+          onChange={(event) => {
+            updateAddress("addressLine1", event.target.value);
+            updateAddress("googlePlaceId", "");
+          }}
           autoComplete="street-address"
+          placeholder="Start typing your address"
         />
+        {autocompleteStatus === "manual" ? (
+          <span className="field-hint">Address lookup is unavailable. Enter it manually.</span>
+        ) : null}
       </div>
       <div className="field">
         <label htmlFor="onboardingAddressLine2">Apartment or suite</label>
@@ -454,4 +519,103 @@ function AddressFields({
       </div>
     </div>
   );
+}
+
+type GoogleAddressPart = {
+  long_name: string;
+  short_name: string;
+  types: string[];
+};
+
+type GooglePlace = {
+  address_components?: GoogleAddressPart[];
+  place_id?: string;
+};
+
+declare global {
+  interface Window {
+    google?: {
+      maps?: {
+        places?: {
+          Autocomplete: new (
+            input: HTMLInputElement,
+            options: Record<string, unknown>,
+          ) => {
+            addListener: (eventName: string, callback: () => void) => void;
+            getPlace: () => GooglePlace;
+          };
+        };
+      };
+    };
+  }
+}
+
+let googlePlacesPromise: Promise<void> | null = null;
+
+function loadGooglePlaces(apiKey: string) {
+  if (window.google?.maps?.places) {
+    return Promise.resolve();
+  }
+
+  if (googlePlacesPromise) {
+    return googlePlacesPromise;
+  }
+
+  googlePlacesPromise = new Promise((resolve, reject) => {
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      'script[data-google-places="true"]',
+    );
+
+    if (existingScript) {
+      existingScript.addEventListener("load", () => resolve(), { once: true });
+      existingScript.addEventListener("error", reject, { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.dataset.googlePlaces = "true";
+    script.onload = () => resolve();
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+
+  return googlePlacesPromise;
+}
+
+function parseGoogleAddress(place: GooglePlace): AddressState | null {
+  const components = place.address_components;
+
+  if (!components?.length) {
+    return null;
+  }
+
+  const streetNumber = getAddressComponent(components, "street_number", "long");
+  const route = getAddressComponent(components, "route", "long");
+  const city =
+    getAddressComponent(components, "locality", "long") ||
+    getAddressComponent(components, "postal_town", "long") ||
+    getAddressComponent(components, "sublocality", "long");
+  const state = getAddressComponent(components, "administrative_area_level_1", "short");
+  const postalCode = getAddressComponent(components, "postal_code", "long");
+
+  return {
+    addressLine1: [streetNumber, route].filter(Boolean).join(" ").trim(),
+    addressLine2: "",
+    city,
+    state,
+    postalCode,
+    googlePlaceId: place.place_id ?? "",
+  };
+}
+
+function getAddressComponent(
+  components: GoogleAddressPart[],
+  type: string,
+  name: "long" | "short",
+) {
+  const component = components.find((item) => item.types.includes(type));
+  return name === "short" ? component?.short_name ?? "" : component?.long_name ?? "";
 }

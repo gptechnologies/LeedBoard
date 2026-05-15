@@ -91,6 +91,7 @@ export async function POST(request: Request) {
       city: getRequiredString(formData.get("city"), "City"),
       state: getRequiredString(formData.get("state"), "State"),
       postalCode: getRequiredString(formData.get("postalCode"), "ZIP code"),
+      googlePlaceId: optionalString(formData.get("googlePlaceId")),
     };
     const pushChoice = String(formData.get("pushChoice") || "").trim();
     const notificationPermission = String(formData.get("notificationPermission") || "").trim();

@@ -1,8 +1,7 @@
-import { auth } from "@clerk/nextjs/server";
 import { UserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { HomeownerOnboardingFlow } from "@/components/onboarding/homeowner-onboarding-flow";
-import { getCurrentUser, getRoleHome } from "@/lib/session";
+import { getCurrentUser, getRoleHome, needsAccountSetup } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -16,13 +15,13 @@ export default async function HomeownerOnboardingPage({
   searchParams,
 }: HomeownerOnboardingPageProps) {
   const params = await searchParams;
-  const [{ userId }, user] = await Promise.all([auth(), getCurrentUser()]);
+  const user = await getCurrentUser();
 
-  if (!userId) {
+  if (!user) {
     redirect("/login");
   }
 
-  if (!user) {
+  if (needsAccountSetup(user)) {
     redirect("/welcome?role=CUSTOMER");
   }
 

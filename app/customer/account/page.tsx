@@ -24,17 +24,18 @@ export default async function CustomerAccountPage() {
           <div className="market-card__header">
             <div className="stack small">
               <strong>{user.firstName} {user.lastName}</strong>
-              <span className="market-card__meta">{user.email}</span>
+              <span className="market-card__meta">{user.email || user.phone}</span>
             </div>
             <AccountUserButton
               email={user.email}
+              phone={user.phone}
               firstName={user.firstName}
               lastName={user.lastName}
               role={user.role}
             />
           </div>
           <p className="market-card__copy">
-            Update your profile, sign-in methods, and account access through the account menu.
+            Your phone number is your sign-in method. We will text a code whenever you need access.
           </p>
           <div className="market-card__actions market-card__actions--start">
             <Link href="/customer/my-home" className="button-link secondary">

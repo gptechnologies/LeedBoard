@@ -1,24 +1,17 @@
-import { auth, currentUser as getClerkCurrentUser } from "@clerk/nextjs/server";
-import { UserRole } from "@prisma/client";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
+import { createHash, randomBytes } from "node:crypto";
+import { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
-function normalizeEmail(value: string) {
-  return value.trim().toLowerCase();
-}
+const SESSION_COOKIE = "wellkept_session";
+const SESSION_DAYS = 30;
 
-function getClerkPrimaryEmail(
-  clerkUser: Awaited<ReturnType<typeof getClerkCurrentUser>>,
-) {
-  const email =
-    clerkUser?.primaryEmailAddress?.emailAddress ??
-    clerkUser?.emailAddresses.find((item) => item.id === clerkUser.primaryEmailAddressId)
-      ?.emailAddress ??
-    clerkUser?.emailAddresses[0]?.emailAddress;
-
-  return email ? normalizeEmail(email) : null;
-}
+export type SignedInIdentity = {
+  userId: string;
+  phone: string;
+};
 
 export function getRoleHome(role: UserRole) {
   if (role === UserRole.CLEANER) {
@@ -28,79 +21,120 @@ export function getRoleHome(role: UserRole) {
   return "/customer";
 }
 
-async function findOrAttachUser(clerkUserId: string) {
-  const byClerkId = await prisma.user.findUnique({
-    where: { clerkUserId },
-    include: {
-      cleanerProfile: true,
-    },
-  });
+export function normalizePhone(value: string) {
+  const trimmed = value.trim();
+  const digits = trimmed.replace(/\D/g, "");
 
-  if (byClerkId) {
-    return byClerkId;
+  if (trimmed.startsWith("+") && digits.length >= 8 && digits.length <= 15) {
+    return `+${digits}`;
   }
 
-  const clerkUser = await getClerkCurrentUser();
-  const email = getClerkPrimaryEmail(clerkUser);
-
-  if (!clerkUser || !email) {
-    return null;
+  if (digits.length === 10) {
+    return `+1${digits}`;
   }
 
-  const existing = await prisma.user.findUnique({
-    where: { email },
-    include: {
-      cleanerProfile: true,
-    },
-  });
-
-  if (!existing) {
-    return null;
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return `+${digits}`;
   }
 
-  return prisma.user.update({
-    where: { id: existing.id },
+  throw new Error("Enter a valid mobile phone number.");
+}
+
+function hashToken(token: string) {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+function getSessionExpiresAt() {
+  return new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
+}
+
+export function needsAccountSetup(user: {
+  firstName: string | null;
+  lastName: string | null;
+}) {
+  return !user.firstName?.trim() || !user.lastName?.trim();
+}
+
+export async function createUserSession(userId: string) {
+  const token = randomBytes(32).toString("base64url");
+  const expiresAt = getSessionExpiresAt();
+
+  await prisma.session.create({
     data: {
-      clerkUserId,
-      email,
-      firstName: clerkUser.firstName?.trim() || existing.firstName,
-      lastName: clerkUser.lastName?.trim() || existing.lastName,
-    },
-    include: {
-      cleanerProfile: true,
+      userId,
+      tokenHash: hashToken(token),
+      expiresAt,
     },
   });
+
+  const cookieStore = await cookies();
+  cookieStore.set(SESSION_COOKIE, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    expires: expiresAt,
+  });
+}
+
+export async function destroyUserSession() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(SESSION_COOKIE)?.value;
+
+  if (token) {
+    await prisma.session.deleteMany({
+      where: {
+        tokenHash: hashToken(token),
+      },
+    });
+  }
+
+  cookieStore.delete(SESSION_COOKIE);
 }
 
 export async function getCurrentUser() {
-  const { userId } = await auth();
+  const cookieStore = await cookies();
+  const token = cookieStore.get(SESSION_COOKIE)?.value;
 
-  if (!userId) {
+  if (!token) {
     return null;
   }
 
-  return findOrAttachUser(userId);
+  const session = await prisma.session.findUnique({
+    where: {
+      tokenHash: hashToken(token),
+    },
+    include: {
+      user: {
+        include: {
+          cleanerProfile: true,
+        },
+      },
+    },
+  });
+
+  if (!session || session.expiresAt <= new Date()) {
+    if (session) {
+      await prisma.session.delete({
+        where: { id: session.id },
+      });
+    }
+    return null;
+  }
+
+  return session.user;
 }
 
 export async function getSignedInIdentity() {
-  const { userId } = await auth();
+  const user = await getCurrentUser();
 
-  if (!userId) {
-    return null;
-  }
-
-  const clerkUser = await getClerkCurrentUser();
-  const email = getClerkPrimaryEmail(clerkUser);
-
-  if (!clerkUser || !email) {
+  if (!user) {
     return null;
   }
 
   return {
-    clerkUserId: userId,
-    email,
-    firstName: clerkUser.firstName?.trim() || "",
-    lastName: clerkUser.lastName?.trim() || "",
+    userId: user.id,
+    phone: user.phone,
   };
 }
 
@@ -115,16 +149,14 @@ export async function requireSignedInIdentity() {
 }
 
 export async function requireUser(role?: UserRole) {
-  const { userId } = await auth();
+  const user = await getCurrentUser();
 
-  if (!userId) {
+  if (!user) {
     redirect("/login");
   }
 
-  const user = await findOrAttachUser(userId);
-
-  if (!user) {
-    redirect("/welcome");
+  if (needsAccountSetup(user)) {
+    redirect(`/welcome?role=${user.role}`);
   }
 
   if (role && user.role !== role) {
@@ -135,16 +167,14 @@ export async function requireUser(role?: UserRole) {
 }
 
 export async function requireApiUser(request: Request, role?: UserRole) {
-  const { userId } = await auth();
+  const user = await getCurrentUser();
 
-  if (!userId) {
+  if (!user) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  const user = await findOrAttachUser(userId);
-
-  if (!user) {
-    return NextResponse.redirect(new URL("/welcome", request.url));
+  if (needsAccountSetup(user)) {
+    return NextResponse.redirect(new URL(`/welcome?role=${user.role}`, request.url));
   }
 
   if (role && user.role !== role) {

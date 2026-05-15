@@ -1,5 +1,6 @@
 import {
   BidPricingType,
+  BidSelectionPriority,
   CleanLevel,
   EntryMethod,
   RoomType,
@@ -120,6 +121,16 @@ function parseCleanLevel(value: FormDataEntryValue | null) {
   return cleanLevel as CleanLevel;
 }
 
+function parseBidSelectionPriority(value: FormDataEntryValue | null) {
+  const priority = String(value || "").trim();
+
+  if (Object.values(BidSelectionPriority).includes(priority as BidSelectionPriority)) {
+    return priority as BidSelectionPriority;
+  }
+
+  return BidSelectionPriority.BEST_OVERALL;
+}
+
 export function parseHomeProfileForm(formData: FormData) {
   const roomCleanLevels = getDefaultWholeHomeCleanLevels();
   const defaultRoomTypes = getDefaultWholeHomeRoomTypes();
@@ -194,6 +205,7 @@ export function parseJobRequestForm(formData: FormData) {
     cleanLevel,
     roomCleanLevels,
     priorityTypes: [],
+    selectionPriority: parseBidSelectionPriority(formData.get("selectionPriority")),
     entryMethod: parseEntryMethod(formData.get("entryMethod")),
     entryNotes: String(formData.get("entryNotes") || "").trim() || null,
     suppliesSource: SuppliesSource.CLEANER_BRINGS_ALL,
@@ -244,6 +256,7 @@ export function parseBidForm(formData: FormData, isAsap: boolean) {
       pricingType === BidPricingType.FLAT
         ? requirePositiveMoney(formData.get("flatRate"), "Flat fee")
         : null,
+    estimatedHours: parseEstimatedHours(formData.get("estimatedHours")),
     message: String(formData.get("message") || "").trim() || null,
   };
 
@@ -282,6 +295,17 @@ export function parseBidForm(formData: FormData, isAsap: boolean) {
     arrivalWindowEnd,
     etaMinutes: null,
   };
+}
+
+function parseEstimatedHours(value: FormDataEntryValue | null) {
+  const raw = getRequiredString(value, "Estimated hours");
+  const parsed = Number(raw);
+
+  if (!Number.isFinite(parsed) || parsed <= 0 || parsed > 24) {
+    throw new Error("Estimated hours must be between 0 and 24.");
+  }
+
+  return Math.round(parsed * 4) / 4;
 }
 
 function buildJobTitle(serviceNeeds: ServiceNeed[], roomTypes: RoomType[]) {

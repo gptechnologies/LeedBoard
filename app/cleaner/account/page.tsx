@@ -3,6 +3,7 @@ import { UserRole } from "@prisma/client";
 import { AccountUserButton } from "@/components/account-user-button";
 import { SignOutButton } from "@/components/sign-out-button";
 import { CleanerDefaultsForm } from "@/components/marketplace/cleaner-defaults-form";
+import { PushNotificationToggle } from "@/components/marketplace/push-notification-toggle";
 
 import { requireUser } from "@/lib/session";
 
@@ -36,10 +37,11 @@ export default async function CleanerAccountPage({ searchParams }: CleanerAccoun
               <strong>
                 {user.firstName} {user.lastName}
               </strong>
-              <span className="market-card__meta">{user.email}</span>
+              <span className="market-card__meta">{user.email || user.phone}</span>
             </div>
             <AccountUserButton
               email={user.email}
+              phone={user.phone}
               firstName={user.firstName}
               lastName={user.lastName}
               role={user.role}
@@ -74,6 +76,11 @@ export default async function CleanerAccountPage({ searchParams }: CleanerAccoun
               user.cleanerProfile?.standardDeepCleanFlatRateCents ?? null,
             defaultEtaMinutes: user.cleanerProfile?.defaultEtaMinutes ?? null,
           }}
+        />
+
+        <PushNotificationToggle
+          enabled={user.pushNotificationsEnabled}
+          publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY}
         />
       </section>
     </div>

@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
 import "@/app/globals.css";
 import { SiteHeader } from "@/components/site-header";
-import { clerkAppearance } from "@/lib/clerk";
 
 export const metadata: Metadata = {
   title: "Well Kept",
@@ -18,16 +16,14 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider appearance={clerkAppearance}>
-      <html lang="en">
-        <body>
-          <a href="#main-content" className="skip-link">
-            Skip to content
-          </a>
-          <SiteHeader />
-          <main id="main-content">{children}</main>
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="en">
+      <body>
+        <a href="#main-content" className="skip-link">
+          Skip to content
+        </a>
+        <SiteHeader />
+        <main id="main-content">{children}</main>
+      </body>
+    </html>
   );
 }

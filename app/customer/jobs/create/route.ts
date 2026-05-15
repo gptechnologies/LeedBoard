@@ -1,6 +1,7 @@
 import { JobRequestStatus, PropertyType, UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { parseJobRequestForm } from "@/lib/marketplace-form";
+import { createJobOutreachForJob } from "@/lib/outreach";
 import { prisma } from "@/lib/prisma";
 import { requireApiUser } from "@/lib/session";
 
@@ -57,7 +58,15 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.redirect(new URL(`/customer/jobs/${job.id}/bids`, request.url));
+    await createJobOutreachForJob({
+      city: job.city,
+      jobRequestId: job.id,
+      postalCode: job.postalCode,
+      serviceNeeds: job.serviceNeeds,
+      state: job.state,
+    });
+
+    return NextResponse.redirect(new URL(`/customer/jobs/${job.id}/priority`, request.url));
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unable to post your job right now.";

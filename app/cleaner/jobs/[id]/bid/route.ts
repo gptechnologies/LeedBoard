@@ -1,6 +1,7 @@
 import { BidStatus, JobRequestStatus, UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { parseBidForm } from "@/lib/marketplace-form";
+import { attributeBidToOutreach } from "@/lib/outreach";
 import { prisma } from "@/lib/prisma";
 import { requireApiUser } from "@/lib/session";
 
@@ -58,6 +59,12 @@ export async function POST(request: Request, { params }: { params: Params }) {
         jobRequestId: job.id,
         cleanerId: user.id,
       },
+    });
+
+    await attributeBidToOutreach({
+      jobRequestId: job.id,
+      cleanerId: user.id,
+      bidId: bid.id,
     });
 
     return NextResponse.redirect(new URL(`/cleaner/messages/${bid.id}`, request.url));

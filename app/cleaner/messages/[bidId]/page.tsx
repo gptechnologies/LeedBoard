@@ -2,6 +2,7 @@ import { BidStatus, UserRole } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { JobCoordinationSummary } from "@/components/marketplace/job-coordination-summary";
 import { StatusPill } from "@/components/marketplace/status-pill";
 import { getCleaningJobTitle } from "@/lib/job-title";
 import {
@@ -49,6 +50,7 @@ export default async function CleanerMessageThreadPage({
   }
 
   const homeownerName = `${bid.jobRequest.customer.firstName} ${bid.jobRequest.customer.lastName}`;
+  const cleanerName = `${user.firstName} ${user.lastName}`;
   const statusTone = bid.status === BidStatus.ACCEPTED ? "success" : "default";
 
   return (
@@ -66,6 +68,14 @@ export default async function CleanerMessageThreadPage({
         </header>
 
         <div className="message-thread">
+          <JobCoordinationSummary
+            bid={bid}
+            cleanerName={cleanerName}
+            customerName={homeownerName}
+            job={bid.jobRequest}
+            role="cleaner"
+          />
+
           <article className="message-event message-event--bid">
             <div className="message-event__meta">
               <strong>Your bid</strong>
