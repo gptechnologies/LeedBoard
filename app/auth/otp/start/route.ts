@@ -1,6 +1,6 @@
 import { UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
-import { sendOtp } from "@/lib/otp";
+import { sendOtp, type OtpChannel } from "@/lib/otp";
 
 function getRole(value: FormDataEntryValue | null) {
   return value === UserRole.CLEANER ? UserRole.CLEANER : UserRole.CUSTOMER;
@@ -31,14 +31,26 @@ export async function POST(request: Request) {
   const inviteToken = String(formData.get("inviteToken") || "").trim();
   const role = getRole(formData.get("role"));
   const mode = String(formData.get("mode") || "login");
+  const channel = formData.get("channel") === "email" ? "email" : "sms";
+  const destinationField = channel === "email" ? "email" : "phone";
+  const destination = String(formData.get(destinationField) || "");
 
   try {
-    const result = await sendOtp(String(formData.get("phone") || ""));
+    const result = await sendOtp(destination, channel as OtpChannel);
     const search = new URLSearchParams({
-      phone: result.phone,
+      channel: result.channel,
+      destination: result.destination,
       role,
       mode,
     });
+
+    if (result.channel === "sms" && "phone" in result) {
+      search.set("phone", result.phone);
+    }
+
+    if (result.channel === "email") {
+      search.set("email", result.destination);
+    }
 
     if (inviteToken) {
       search.set("inviteToken", inviteToken);

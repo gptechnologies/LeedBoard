@@ -1,4 +1,4 @@
-import { BidStatus, UserRole } from "@prisma/client";
+import { BidStatus, JobRequestStatus, UserRole } from "@prisma/client";
 import { CleanerUpNextJobCard, HomeownerOpenJobsCarousel } from "@/components/marketplace";
 import { CleanerJobsFeed } from "@/components/marketplace/cleaner-jobs-feed";
 import { formatTimeAgo } from "@/lib/format";
@@ -22,7 +22,9 @@ export default async function CleanerDashboard({ searchParams }: CleanerDashboar
   const params = await searchParams;
   const { cleaner, openJobs, bids } = await getCleanerHomeData(user.id);
   const upcomingBids = bids.filter(
-    (bid) => bid.status === BidStatus.SUBMITTED || bid.status === BidStatus.ACCEPTED,
+    (bid) =>
+      bid.jobRequest.status !== JobRequestStatus.COMPLETED &&
+      (bid.status === BidStatus.SUBMITTED || bid.status === BidStatus.ACCEPTED),
   );
   const bidDefaults = {
     standardHourlyRateCents: cleaner?.cleanerProfile?.standardHourlyRateCents ?? null,

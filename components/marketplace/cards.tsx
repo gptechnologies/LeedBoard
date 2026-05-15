@@ -293,6 +293,7 @@ export function CleanerNearbyJobCard({
 function mapJobStatus(status: JobRequestStatus): JobStatus {
   if (status === JobRequestStatus.OPEN) return "open";
   if (status === JobRequestStatus.AWARDED) return "awarded";
+  if (status === JobRequestStatus.COMPLETED) return "completed";
   if (status === JobRequestStatus.CANCELLED) return "cancelled";
   if (status === JobRequestStatus.EXPIRED) return "expired";
   return "draft";

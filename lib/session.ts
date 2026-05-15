@@ -10,7 +10,8 @@ const SESSION_DAYS = 30;
 
 export type SignedInIdentity = {
   userId: string;
-  phone: string;
+  email: string | null;
+  phone: string | null;
 };
 
 export function getRoleHome(role: UserRole) {
@@ -38,6 +39,16 @@ export function normalizePhone(value: string) {
   }
 
   throw new Error("Enter a valid mobile phone number.");
+}
+
+export function normalizeEmail(value: string) {
+  const email = value.trim().toLowerCase();
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error("Enter a valid email address.");
+  }
+
+  return email;
 }
 
 function hashToken(token: string) {
@@ -134,6 +145,7 @@ export async function getSignedInIdentity() {
 
   return {
     userId: user.id,
+    email: user.email,
     phone: user.phone,
   };
 }

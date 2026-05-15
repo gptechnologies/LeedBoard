@@ -3,6 +3,9 @@ import { getCurrentUser, getRoleHome } from "@/lib/session";
 
 type VerifyPageProps = {
   searchParams: Promise<{
+    channel?: string;
+    destination?: string;
+    email?: string;
     phone?: string;
     role?: string;
     error?: string;
@@ -22,18 +25,23 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
     redirect(getRoleHome(user.role));
   }
 
-  if (!params.phone) {
+  const channel = params.channel === "email" ? "email" : "sms";
+  const destination =
+    params.destination || (channel === "email" ? params.email : params.phone);
+
+  if (!destination) {
     redirect("/login");
   }
 
   const role = params.role === "CLEANER" ? "CLEANER" : "CUSTOMER";
+  const contactLabel = channel === "email" ? destination : params.phone || destination;
 
   return (
     <section className="auth-shell stack">
       <div>
-        <div className="eyebrow">Check your texts</div>
+        <div className="eyebrow">{channel === "email" ? "Check your email" : "Check your texts"}</div>
         <h1>Enter your one-time code.</h1>
-        <p className="subtle">We sent a code to {params.phone}.</p>
+        <p className="subtle">We sent a code to {contactLabel}.</p>
       </div>
 
       {params.error ? <div className="notice error">{params.error}</div> : null}
@@ -42,7 +50,10 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
       ) : null}
 
       <form action="/auth/otp/verify" method="post" className="stack">
-        <input type="hidden" name="phone" value={params.phone} />
+        <input type="hidden" name="channel" value={channel} />
+        <input type="hidden" name="destination" value={destination} />
+        {channel === "sms" ? <input type="hidden" name="phone" value={destination} /> : null}
+        {channel === "email" ? <input type="hidden" name="email" value={destination} /> : null}
         <input type="hidden" name="role" value={role} />
         {params.inviteToken ? (
           <input type="hidden" name="inviteToken" value={params.inviteToken} />
@@ -59,13 +70,15 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
             required
           />
         </div>
-        <button type="submit">Verify phone</button>
+        <button type="submit">{channel === "email" ? "Verify email" : "Verify phone"}</button>
       </form>
 
       <form action="/auth/otp/start" method="post">
         <input type="hidden" name="mode" value="login" />
         <input type="hidden" name="role" value={role} />
-        <input type="hidden" name="phone" value={params.phone} />
+        <input type="hidden" name="channel" value={channel} />
+        {channel === "sms" ? <input type="hidden" name="phone" value={destination} /> : null}
+        {channel === "email" ? <input type="hidden" name="email" value={destination} /> : null}
         {params.inviteToken ? (
           <input type="hidden" name="inviteToken" value={params.inviteToken} />
         ) : null}

@@ -1,4 +1,4 @@
-import { BidStatus, UserRole } from "@prisma/client";
+import { BidStatus, JobRequestStatus, UserRole } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -57,7 +57,9 @@ export default async function CustomerMessageThreadPage({
 
   const cleanerName = `${bid.cleaner.firstName} ${bid.cleaner.lastName}`;
   const customerName = `${user.firstName} ${user.lastName}`;
+  const isCompleted = bid.jobRequest.status === JobRequestStatus.COMPLETED;
   const statusTone = bid.status === BidStatus.ACCEPTED ? "success" : "default";
+  const statusLabel = isCompleted ? "Completed" : getBidStatusLabel(bid.status);
 
   return (
     <div className="market-shell market-shell--detail">
@@ -74,7 +76,7 @@ export default async function CustomerMessageThreadPage({
             <h1>{cleanerName}</h1>
             <p>{getCleaningJobTitle(bid.jobRequest)}</p>
           </div>
-          <StatusPill label={getBidStatusLabel(bid.status)} tone={statusTone} />
+          <StatusPill label={statusLabel} tone={isCompleted ? "success" : statusTone} />
         </header>
 
         <div className="message-thread">
@@ -103,8 +105,12 @@ export default async function CustomerMessageThreadPage({
 
           {bid.status === BidStatus.ACCEPTED ? (
             <article className="message-event message-event--system">
-              <strong>You accepted this bid.</strong>
-              <p>The cleaner will see this confirmation in the same thread.</p>
+              <strong>{isCompleted ? "Cleaner marked this job complete." : "You accepted this bid."}</strong>
+              <p>
+                {isCompleted
+                  ? "Payment is still ignored for testing, so this is the end state for now."
+                  : "The cleaner will see this confirmation in the same thread."}
+              </p>
             </article>
           ) : null}
         </div>

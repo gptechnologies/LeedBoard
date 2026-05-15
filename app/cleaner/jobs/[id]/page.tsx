@@ -42,7 +42,7 @@ export default async function CleanerJobDetailPage({
         include: {
           customerJobRequests: {
             where: {
-              status: JobRequestStatus.AWARDED,
+              status: JobRequestStatus.COMPLETED,
             },
             select: { id: true },
           },

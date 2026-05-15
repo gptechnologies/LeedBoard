@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       prisma.jobRequest.count({
         where: {
           customerId: user.id,
-          status: JobRequestStatus.AWARDED,
+          status: JobRequestStatus.COMPLETED,
         },
       }),
     ]);

@@ -15,6 +15,7 @@ enum UserRole {
 enum JobRequestStatus {
   OPEN
   AWARDED
+  COMPLETED
   CANCELLED
   EXPIRED
 }
@@ -118,6 +119,7 @@ enum OutreachEventType {
 }
 
 enum NotificationChannel {
+  EMAIL
   SMS
   PUSH
 }
@@ -182,6 +184,7 @@ model User {
   firstName                      String
   lastName                       String
   email                          String?         @unique
+  emailVerifiedAt                DateTime?
   phone                          String?
   phoneVerifiedAt                DateTime?
   homeownerOnboardingCompletedAt DateTime?
@@ -203,6 +206,20 @@ model User {
   jobOutreaches                  JobOutreach[]   @relation("OutreachCleanerUser")
   notificationDeliveries         NotificationDelivery[]
   pushSubscriptions              PushSubscription[]
+}
+
+model OtpChallenge {
+  id          String    @id @default(cuid())
+  channel     String
+  destination String
+  codeHash    String
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  attempts    Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([channel, destination, consumedAt])
 }
 
 model PhoneIdentity {

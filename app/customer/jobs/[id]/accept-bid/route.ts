@@ -22,6 +22,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
 
   const { id } = await params;
   const formData = await request.formData();
+  let acceptedBidId: string | null = null;
 
   try {
     const bidId = getRequiredString(formData.get("bidId"), "Bid");
@@ -71,9 +72,11 @@ export async function POST(request: Request, { params }: { params: Params }) {
           acceptedBidId: bid.id,
         },
       });
+
+      acceptedBidId = bid.id;
     });
 
-    return NextResponse.redirect(new URL(`/customer/jobs/${id}`, request.url));
+    return NextResponse.redirect(new URL(`/customer/messages/${acceptedBidId ?? id}`, request.url));
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unable to accept that bid right now.";

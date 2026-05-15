@@ -39,7 +39,7 @@ export async function POST(request: Request) {
   try {
     const firstName = getRequiredString(formData.get("firstName"), "First name");
     const lastName = getRequiredString(formData.get("lastName"), "Last name");
-    const email = String(formData.get("email") || "").trim().toLowerCase() || null;
+    const submittedEmail = String(formData.get("email") || "").trim().toLowerCase() || null;
     const businessName = String(formData.get("businessName") || "").trim() || null;
     const website = String(formData.get("website") || "").trim() || null;
     const bio = String(formData.get("bio") || "").trim() || null;
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
         role,
         firstName,
         lastName,
-        email,
+        email: submittedEmail,
       },
     });
 

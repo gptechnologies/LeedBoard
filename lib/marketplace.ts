@@ -154,6 +154,8 @@ export function getJobRequestStatusLabel(status: JobRequestStatus) {
   switch (status) {
     case JobRequestStatus.AWARDED:
       return "Bid accepted";
+    case JobRequestStatus.COMPLETED:
+      return "Completed";
     case JobRequestStatus.CANCELLED:
       return "Cancelled";
     case JobRequestStatus.EXPIRED:
@@ -477,7 +479,7 @@ export async function getCleanerHomeData(cleanerId: string) {
         include: {
           customerJobRequests: {
             where: {
-              status: JobRequestStatus.AWARDED,
+              status: JobRequestStatus.COMPLETED,
             },
             select: { id: true },
           },

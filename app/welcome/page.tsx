@@ -64,14 +64,23 @@ export default async function WelcomePage({ searchParams }: WelcomePageProps) {
           </div>
         </div>
 
-        <div className="field">
-          <label htmlFor="phone">Phone</label>
-          <input id="phone" name="phone" value={user.phone ?? ""} readOnly />
-        </div>
+        {user.phone ? (
+          <div className="field">
+            <label htmlFor="phone">Phone</label>
+            <input id="phone" name="phone" value={user.phone} readOnly />
+          </div>
+        ) : null}
 
         <div className="field">
           <label htmlFor="email">Email</label>
-          <input id="email" name="email" type="email" placeholder="Optional" />
+          <input
+            id="email"
+            name="email"
+            type="email"
+            defaultValue={user.email ?? ""}
+            placeholder={user.email ? undefined : "Optional"}
+            readOnly={Boolean(user.emailVerifiedAt)}
+          />
         </div>
 
         {isCleaner ? (

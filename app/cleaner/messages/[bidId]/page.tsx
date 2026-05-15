@@ -1,4 +1,4 @@
-import { BidStatus, UserRole } from "@prisma/client";
+import { BidStatus, JobRequestStatus, UserRole } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -21,11 +21,16 @@ type Params = Promise<{
 
 export default async function CleanerMessageThreadPage({
   params,
+  searchParams,
 }: {
   params: Params;
+  searchParams: Promise<{
+    completed?: string;
+    error?: string;
+  }>;
 }) {
   const user = await requireUser(UserRole.CLEANER);
-  const { bidId } = await params;
+  const [{ bidId }, query] = await Promise.all([params, searchParams]);
   const bid = await prisma.jobBid.findFirst({
     where: {
       id: bidId,
@@ -51,7 +56,9 @@ export default async function CleanerMessageThreadPage({
 
   const homeownerName = `${bid.jobRequest.customer.firstName} ${bid.jobRequest.customer.lastName}`;
   const cleanerName = `${user.firstName} ${user.lastName}`;
+  const isCompleted = bid.jobRequest.status === JobRequestStatus.COMPLETED;
   const statusTone = bid.status === BidStatus.ACCEPTED ? "success" : "default";
+  const statusLabel = isCompleted ? "Completed" : getBidStatusLabel(bid.status);
 
   return (
     <div className="market-shell market-shell--detail">
@@ -64,8 +71,11 @@ export default async function CleanerMessageThreadPage({
             <h1>{homeownerName}</h1>
             <p>{getCleaningJobTitle(bid.jobRequest)}</p>
           </div>
-          <StatusPill label={getBidStatusLabel(bid.status)} tone={statusTone} />
+          <StatusPill label={statusLabel} tone={isCompleted ? "success" : statusTone} />
         </header>
+
+        {query.error ? <div className="notice error">{query.error}</div> : null}
+        {query.completed ? <div className="notice">Job marked complete.</div> : null}
 
         <div className="message-thread">
           <JobCoordinationSummary
@@ -93,9 +103,25 @@ export default async function CleanerMessageThreadPage({
 
           {bid.status === BidStatus.ACCEPTED ? (
             <article className="message-event message-event--system">
-              <strong>Homeowner accepted your bid.</strong>
-              <p>This job is confirmed. Keep details and next steps in this thread.</p>
+              <strong>
+                {isCompleted ? "You marked this job complete." : "Homeowner accepted your bid."}
+              </strong>
+              <p>
+                {isCompleted
+                  ? "The homeowner can now see the completed job state in this thread."
+                  : "This job is confirmed. Keep details and next steps in this thread."}
+              </p>
             </article>
+          ) : null}
+
+          {bid.status === BidStatus.ACCEPTED && !isCompleted ? (
+            <form action={`/cleaner/jobs/${bid.jobRequestId}/complete`} method="post" className="market-bottom-action">
+              <div>
+                <strong>Finish the job</strong>
+                <span>Mark complete after the cleaning is done.</span>
+              </div>
+              <button type="submit">Mark Complete</button>
+            </form>
           ) : null}
         </div>
       </section>
