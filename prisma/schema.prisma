@@ -439,6 +439,7 @@ model NotificationDelivery {
   id                String             @id @default(cuid())
   channel           NotificationChannel
   status            NotificationStatus @default(PENDING)
+  toEmail           String?
   toPhone           String?
   providerMessageId String?
   payload           Json               @default("{}")

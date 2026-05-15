@@ -1,4 +1,11 @@
 import { createHash, randomInt } from "node:crypto";
+import {
+  buildOtpEmail,
+  createEmailDelivery,
+  markEmailDeliveryFailed,
+  markEmailDeliverySent,
+  sendTransactionalEmail,
+} from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 import { normalizeEmail, normalizePhone } from "@/lib/session";
 
@@ -48,6 +55,7 @@ function getEmailOtpExpiresAt() {
 async function sendEmailOtp(rawEmail: string) {
   const email = normalizeEmail(rawEmail);
   const code = createOtpCode();
+  const emailContent = buildOtpEmail({ code });
 
   await prisma.otpChallenge.create({
     data: {
@@ -58,14 +66,39 @@ async function sendEmailOtp(rawEmail: string) {
     },
   });
 
-  if (process.env.EMAIL_OTP_MODE === "send") {
-    throw new Error("Email OTP sending is not configured yet. Use dry-run mode for testing.");
+  const delivery = await createEmailDelivery({
+    toEmail: email,
+    payload: {
+      purpose: "email_otp",
+      subject: emailContent.subject,
+    },
+  });
+
+  try {
+    const result = await sendTransactionalEmail({
+      to: email,
+      subject: emailContent.subject,
+      text: emailContent.text,
+      idempotencyKey: `otp-${delivery.id}`,
+    });
+
+    await markEmailDeliverySent({
+      deliveryId: delivery.id,
+      providerMessageId: result.providerMessageId,
+    });
+  } catch (error) {
+    const failureReason = error instanceof Error ? error.message : "Unable to send email OTP.";
+    await markEmailDeliveryFailed({
+      deliveryId: delivery.id,
+      failureReason,
+    });
+    throw new Error("We couldn't send that code by email. Check the address and try again.");
   }
 
   return {
     channel: "email" as const,
     destination: email,
-    devCode: code,
+    devCode: process.env.NODE_ENV !== "production" ? code : null,
   };
 }
 

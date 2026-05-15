@@ -7,6 +7,15 @@ import {
   type ServiceNeed,
 } from "@prisma/client";
 import { randomBytes } from "node:crypto";
+import {
+  buildAppUrl,
+  buildCleanerJobPostedEmail,
+  createEmailDelivery,
+  markEmailDeliveryFailed,
+  markEmailDeliverySent,
+  sendTransactionalEmail,
+} from "@/lib/email";
+import { formatTimingSummary } from "@/lib/marketplace";
 import { prisma } from "@/lib/prisma";
 import { getNewJobPushPayload, sendPushNotification } from "@/lib/push";
 import { sendCleanerInviteSms } from "@/lib/sms";
@@ -51,6 +60,7 @@ export async function createJobOutreachForJob(input: {
   externalLeadLimit?: number;
 }) {
   const externalLeadLimit = input.externalLeadLimit ?? 10;
+  const smsOutreachEnabled = process.env.ENABLE_SMS_OUTREACH === "true";
   const [cleaners, externalLeads] = await Promise.all([
     prisma.user.findMany({
       where: {
@@ -171,7 +181,7 @@ export async function createJobOutreachForJob(input: {
     );
 
     for (const lead of externalLeads) {
-      if (!existingLeadChannelKeys.has(`${lead.id}:${OutreachChannel.SMS}`)) {
+      if (smsOutreachEnabled && !existingLeadChannelKeys.has(`${lead.id}:${OutreachChannel.SMS}`)) {
         const smsOutreach = await tx.jobOutreach.create({
           data: {
             jobRequestId: input.jobRequestId,
@@ -236,8 +246,10 @@ export async function createJobOutreachForJob(input: {
     }
   });
 
-  for (const outreachId of createdSmsOutreachIds) {
-    await sendCleanerInviteSms(outreachId);
+  if (smsOutreachEnabled) {
+    for (const outreachId of createdSmsOutreachIds) {
+      await sendCleanerInviteSms(outreachId);
+    }
   }
 
   const pushPayload = getNewJobPushPayload({
@@ -255,6 +267,151 @@ export async function createJobOutreachForJob(input: {
       payload: pushPayload,
     });
   }
+
+  await sendJobPostedEmailsToCleaners({
+    jobRequestId: input.jobRequestId,
+    outreaches: createdAppOutreaches,
+  });
+}
+
+async function sendJobPostedEmailsToCleaners(input: {
+  jobRequestId: string;
+  outreaches: Array<{
+    cleanerUserId: string;
+    outreachId: string;
+  }>;
+}) {
+  if (input.outreaches.length === 0) {
+    return;
+  }
+
+  const job = await prisma.jobRequest.findUnique({
+    where: { id: input.jobRequestId },
+    include: {
+      homeProfile: {
+        select: {
+          bathroomCount: true,
+          bedroomCount: true,
+          estimatedSquareFeet: true,
+        },
+      },
+    },
+  });
+
+  if (!job) {
+    return;
+  }
+
+  const cleaners = await prisma.user.findMany({
+    where: {
+      id: {
+        in: input.outreaches.map((outreach) => outreach.cleanerUserId),
+      },
+      email: {
+        not: null,
+      },
+    },
+    select: {
+      email: true,
+      id: true,
+    },
+  });
+  const cleanerById = new Map(cleaners.map((cleaner) => [cleaner.id, cleaner]));
+  const jobUrl = buildAppUrl(`/cleaner/jobs/${job.id}`);
+  const emailContent = buildCleanerJobPostedEmail({
+    city: job.city,
+    homeFacts: formatHomeFacts({
+      bathroomCount: job.homeProfile?.bathroomCount ?? null,
+      bedroomCount: job.homeProfile?.bedroomCount ?? null,
+      estimatedSquareFeet: job.homeProfile?.estimatedSquareFeet ?? null,
+    }),
+    jobUrl,
+    notes: job.notes,
+    postalCode: job.postalCode,
+    state: job.state,
+    timing: formatTimingSummary(job),
+  });
+
+  for (const outreach of input.outreaches) {
+    const cleaner = cleanerById.get(outreach.cleanerUserId);
+    if (!cleaner?.email) {
+      continue;
+    }
+
+    const payload: Prisma.InputJsonObject = {
+      jobUrl,
+      purpose: "cleaner_job_posted",
+      subject: emailContent.subject,
+    };
+    const delivery = await createEmailDelivery({
+      toEmail: cleaner.email,
+      payload,
+      jobOutreachId: outreach.outreachId,
+      jobRequestId: job.id,
+      userId: cleaner.id,
+    });
+
+    try {
+      const result = await sendTransactionalEmail({
+        to: cleaner.email,
+        subject: emailContent.subject,
+        text: emailContent.text,
+        idempotencyKey: `job-posted-${delivery.id}`,
+      });
+
+      await markEmailDeliverySent({
+        deliveryId: delivery.id,
+        providerMessageId: result.providerMessageId,
+      });
+
+      await createOutreachEvent({
+        jobOutreachId: outreach.outreachId,
+        eventType: OutreachEventType.SENT,
+        payload: {
+          channel: "EMAIL",
+          providerMessageId: result.providerMessageId,
+        },
+      });
+    } catch (error) {
+      const failureReason =
+        error instanceof Error ? error.message : "Unable to send job posted email.";
+      await markEmailDeliveryFailed({
+        deliveryId: delivery.id,
+        failureReason,
+      });
+      await createOutreachEvent({
+        jobOutreachId: outreach.outreachId,
+        eventType: OutreachEventType.FAILED,
+        payload: {
+          channel: "EMAIL",
+          reason: failureReason,
+        },
+      });
+    }
+  }
+}
+
+function formatHomeFacts(input: {
+  bathroomCount?: number | null;
+  bedroomCount?: number | null;
+  estimatedSquareFeet?: number | null;
+}) {
+  const bedroomLabel =
+    input.bedroomCount === null || input.bedroomCount === undefined
+      ? null
+      : `${input.bedroomCount} bed`;
+  const bathroomLabel =
+    input.bathroomCount === null || input.bathroomCount === undefined
+      ? null
+      : `${Number.isInteger(input.bathroomCount)
+          ? input.bathroomCount.toFixed(0)
+          : input.bathroomCount} bath`;
+  const squareFeetLabel = input.estimatedSquareFeet
+    ? `${input.estimatedSquareFeet.toLocaleString("en-US")} sq ft`
+    : null;
+
+  return [bedroomLabel, bathroomLabel, squareFeetLabel].filter(Boolean).join(" / ") ||
+    "Home details are in the job link";
 }
 
 export async function markOutreachInterested(outreachId: string) {
