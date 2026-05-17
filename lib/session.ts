@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 
 const SESSION_COOKIE = "wellkept_session";
 const SESSION_DAYS = 30;
+const REQUIRE_PHONE_VERIFICATION = false;
 
 export type SignedInIdentity = {
   userId: string;
@@ -14,12 +15,70 @@ export type SignedInIdentity = {
   phone: string | null;
 };
 
+type VerificationUser = {
+  role: UserRole;
+  email: string | null;
+  emailVerifiedAt: Date | null;
+  phone: string | null;
+  phoneVerifiedAt: Date | null;
+};
+
+export type MissingVerificationChannel = "email" | "sms";
+
 export function getRoleHome(role: UserRole) {
   if (role === UserRole.CLEANER) {
     return "/cleaner";
   }
 
   return "/customer";
+}
+
+export function getMissingVerificationChannel(
+  user: VerificationUser,
+): MissingVerificationChannel | null {
+  if (user.role === UserRole.ADMIN) {
+    return null;
+  }
+
+  if (!user.email || !user.emailVerifiedAt) {
+    return "email";
+  }
+
+  if (!REQUIRE_PHONE_VERIFICATION) {
+    return null;
+  }
+
+  if (!user.phone || !user.phoneVerifiedAt) {
+    return "sms";
+  }
+
+  return null;
+}
+
+export function isFullyVerified(user: VerificationUser) {
+  return getMissingVerificationChannel(user) === null;
+}
+
+export function getVerifyContactPath(
+  user: VerificationUser,
+  options: { inviteToken?: string } = {},
+) {
+  const channel = getMissingVerificationChannel(user);
+
+  if (!channel) {
+    return getRoleHome(user.role);
+  }
+
+  const search = new URLSearchParams({
+    channel,
+    role: user.role,
+  });
+
+  if (options.inviteToken) {
+    search.set("inviteToken", options.inviteToken);
+  }
+
+  return `/verify-contact?${search.toString()}`;
 }
 
 export function normalizePhone(value: string) {
@@ -151,13 +210,21 @@ export async function getSignedInIdentity() {
 }
 
 export async function requireSignedInIdentity() {
-  const identity = await getSignedInIdentity();
+  const user = await getCurrentUser();
 
-  if (!identity) {
+  if (!user) {
     redirect("/login");
   }
 
-  return identity;
+  if (!isFullyVerified(user)) {
+    redirect(getVerifyContactPath(user));
+  }
+
+  return {
+    userId: user.id,
+    email: user.email,
+    phone: user.phone,
+  };
 }
 
 export async function requireUser(role?: UserRole) {
@@ -165,6 +232,10 @@ export async function requireUser(role?: UserRole) {
 
   if (!user) {
     redirect("/login");
+  }
+
+  if (!isFullyVerified(user)) {
+    redirect(getVerifyContactPath(user));
   }
 
   if (needsAccountSetup(user)) {
@@ -183,6 +254,10 @@ export async function requireApiUser(request: Request, role?: UserRole) {
 
   if (!user) {
     return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  if (!isFullyVerified(user)) {
+    return NextResponse.redirect(new URL(getVerifyContactPath(user), request.url));
   }
 
   if (needsAccountSetup(user)) {

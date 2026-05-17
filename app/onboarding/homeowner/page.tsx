@@ -1,7 +1,13 @@
 import { UserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { HomeownerOnboardingFlow } from "@/components/onboarding/homeowner-onboarding-flow";
-import { getCurrentUser, getRoleHome, needsAccountSetup } from "@/lib/session";
+import {
+  getCurrentUser,
+  getRoleHome,
+  getVerifyContactPath,
+  isFullyVerified,
+  needsAccountSetup,
+} from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +25,10 @@ export default async function HomeownerOnboardingPage({
 
   if (!user) {
     redirect("/login");
+  }
+
+  if (!isFullyVerified(user)) {
+    redirect(getVerifyContactPath(user));
   }
 
   if (needsAccountSetup(user)) {

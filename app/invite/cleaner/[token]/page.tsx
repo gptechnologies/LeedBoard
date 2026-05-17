@@ -7,7 +7,12 @@ import {
   isOutreachExpired,
 } from "@/lib/outreach";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser, needsAccountSetup } from "@/lib/session";
+import {
+  getCurrentUser,
+  getVerifyContactPath,
+  isFullyVerified,
+  needsAccountSetup,
+} from "@/lib/session";
 import { formatTimingSummary } from "@/lib/marketplace";
 import { getCleaningJobTitle } from "@/lib/job-title";
 
@@ -59,6 +64,10 @@ export default async function CleanerInvitePage({ params }: { params: Params }) 
           </p>
         </InviteShell>
       );
+    }
+
+    if (!isFullyVerified(user)) {
+      redirect(getVerifyContactPath(user, { inviteToken: token }));
     }
 
     if (needsAccountSetup(user)) {

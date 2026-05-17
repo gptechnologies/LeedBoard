@@ -1,6 +1,6 @@
 import { UserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
-import { getCurrentUser, getRoleHome } from "@/lib/session";
+import { getCurrentUser, getRoleHome, getVerifyContactPath, isFullyVerified } from "@/lib/session";
 
 type WelcomePageProps = {
   searchParams: Promise<{
@@ -18,6 +18,10 @@ export default async function WelcomePage({ searchParams }: WelcomePageProps) {
 
   if (!user) {
     redirect("/login");
+  }
+
+  if (!isFullyVerified(user)) {
+    redirect(getVerifyContactPath(user, { inviteToken: params.inviteToken }));
   }
 
   if (user.firstName.trim() && user.lastName.trim() && params.inviteToken) {

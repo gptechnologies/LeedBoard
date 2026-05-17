@@ -11,9 +11,11 @@ function toError(
   message: string,
   role: UserRole,
   mode: string,
+  channel: string,
   inviteToken?: string,
 ) {
   const search = new URLSearchParams({
+    channel,
     error: message,
     role,
   });
@@ -22,7 +24,8 @@ function toError(
     search.set("inviteToken", inviteToken);
   }
 
-  const pathname = mode === "signup" ? "/signup" : "/login";
+  const pathname =
+    mode === "verify-contact" ? "/verify-contact" : mode === "signup" ? "/signup" : "/login";
   return NextResponse.redirect(new URL(`${pathname}?${search.toString()}`, request.url));
 }
 
@@ -63,6 +66,6 @@ export async function POST(request: Request) {
     return NextResponse.redirect(new URL(`/verify?${search.toString()}`, request.url));
   } catch (error) {
     const message = error instanceof Error ? error.message : "We couldn't send that code.";
-    return toError(request, message, role, mode, inviteToken);
+    return toError(request, message, role, mode, channel, inviteToken);
   }
 }

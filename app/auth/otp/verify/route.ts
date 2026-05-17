@@ -2,7 +2,14 @@ import { UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { verifyOtp, type OtpChannel } from "@/lib/otp";
 import { prisma } from "@/lib/prisma";
-import { createUserSession, getRoleHome, needsAccountSetup } from "@/lib/session";
+import {
+  createUserSession,
+  getCurrentUser,
+  getMissingVerificationChannel,
+  getRoleHome,
+  getVerifyContactPath,
+  needsAccountSetup,
+} from "@/lib/session";
 
 function getRole(value: FormDataEntryValue | null) {
   return value === UserRole.CLEANER ? UserRole.CLEANER : UserRole.CUSTOMER;
@@ -46,7 +53,18 @@ export async function POST(request: Request) {
   const role = getRole(formData.get("role"));
 
   try {
+    const currentUser = await getCurrentUser();
     const verification = await verifyOtp(rawDestination, String(formData.get("code") || ""), channel);
+    const currentMissingChannel = currentUser
+      ? getMissingVerificationChannel(currentUser)
+      : null;
+
+    if (currentUser && currentMissingChannel && currentMissingChannel !== verification.channel) {
+      return NextResponse.redirect(
+        new URL(getVerifyContactPath(currentUser, { inviteToken }), request.url),
+      );
+    }
+
     const existingIdentity =
       verification.channel === "sms"
         ? await prisma.phoneIdentity.findUnique({
@@ -54,7 +72,31 @@ export async function POST(request: Request) {
             include: { user: true },
           })
         : null;
+
+    if (
+      currentUser &&
+      verification.channel === "sms" &&
+      existingIdentity &&
+      existingIdentity.userId !== currentUser.id
+    ) {
+      throw new Error("That phone number is already connected to another account.");
+    }
+
+    if (currentUser && verification.channel === "email") {
+      const existingEmailUser = await prisma.user.findFirst({
+        where: {
+          email: verification.destination,
+          id: { not: currentUser.id },
+        },
+      });
+
+      if (existingEmailUser) {
+        throw new Error("That email is already connected to another account.");
+      }
+    }
+
     const existingUser =
+      currentUser ??
       existingIdentity?.user ??
       (verification.channel === "email"
         ? await prisma.user.findFirst({
@@ -79,42 +121,55 @@ export async function POST(request: Request) {
         },
       }));
 
-    if (verification.channel === "sms" && !existingIdentity) {
-      await prisma.phoneIdentity.create({
-        data: {
-          phone: verification.destination,
-          userId: user.id,
-          phoneVerifiedAt: new Date(),
-        },
-      });
-    }
+    const verifiedAt = new Date();
 
-    if (verification.channel === "sms" && (!user.phoneVerifiedAt || user.phone !== verification.destination)) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          phone: verification.destination,
-          phoneVerifiedAt: new Date(),
-        },
-      });
-    }
+    const updatedUser = await prisma.$transaction(async (tx) => {
+      if (verification.channel === "sms") {
+        await tx.phoneIdentity.upsert({
+          where: { userId: user.id },
+          update: {
+            phone: verification.destination,
+            phoneVerifiedAt: verifiedAt,
+          },
+          create: {
+            phone: verification.destination,
+            userId: user.id,
+            phoneVerifiedAt: verifiedAt,
+          },
+        });
 
-    if (verification.channel === "email" && (!user.emailVerifiedAt || user.email !== verification.destination)) {
-      await prisma.user.update({
+        return tx.user.update({
+          where: { id: user.id },
+          data: {
+            phone: verification.destination,
+            phoneVerifiedAt: verifiedAt,
+          },
+        });
+      }
+
+      return tx.user.update({
         where: { id: user.id },
         data: {
           email: verification.destination,
-          emailVerifiedAt: new Date(),
+          emailVerifiedAt: verifiedAt,
         },
       });
+    });
+
+    if (!currentUser) {
+      await createUserSession(updatedUser.id);
     }
 
-    await createUserSession(user.id);
+    if (getMissingVerificationChannel(updatedUser)) {
+      return NextResponse.redirect(
+        new URL(getVerifyContactPath(updatedUser, { inviteToken }), request.url),
+      );
+    }
 
-    if (needsAccountSetup(user)) {
+    if (needsAccountSetup(updatedUser)) {
       const path = inviteToken
-        ? `/welcome?role=${user.role}&inviteToken=${encodeURIComponent(inviteToken)}`
-        : `/welcome?role=${user.role}`;
+        ? `/welcome?role=${updatedUser.role}&inviteToken=${encodeURIComponent(inviteToken)}`
+        : `/welcome?role=${updatedUser.role}`;
       return NextResponse.redirect(new URL(path, request.url));
     }
 
@@ -122,11 +177,11 @@ export async function POST(request: Request) {
       return NextResponse.redirect(new URL(`/invite/cleaner/${inviteToken}`, request.url));
     }
 
-    if (user.role === UserRole.CUSTOMER && !user.homeownerOnboardingCompletedAt) {
+    if (updatedUser.role === UserRole.CUSTOMER && !updatedUser.homeownerOnboardingCompletedAt) {
       return NextResponse.redirect(new URL("/onboarding/homeowner", request.url));
     }
 
-    return NextResponse.redirect(new URL(getRoleHome(user.role), request.url));
+    return NextResponse.redirect(new URL(getRoleHome(updatedUser.role), request.url));
   } catch (error) {
     const message = error instanceof Error ? error.message : "We couldn't verify that code.";
     return toVerifyError(request, message, rawDestination, role, channel, inviteToken);

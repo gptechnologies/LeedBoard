@@ -1,5 +1,10 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser, getRoleHome } from "@/lib/session";
+import {
+  getCurrentUser,
+  getMissingVerificationChannel,
+  getRoleHome,
+  getVerifyContactPath,
+} from "@/lib/session";
 
 type VerifyPageProps = {
   searchParams: Promise<{
@@ -8,6 +13,7 @@ type VerifyPageProps = {
     email?: string;
     phone?: string;
     role?: string;
+    mode?: string;
     error?: string;
     devCode?: string;
     inviteToken?: string;
@@ -17,23 +23,31 @@ type VerifyPageProps = {
 export default async function VerifyPage({ searchParams }: VerifyPageProps) {
   const [params, user] = await Promise.all([searchParams, getCurrentUser()]);
 
-  if (user && params.inviteToken) {
-    redirect(`/invite/cleaner/${params.inviteToken}`);
-  }
-
-  if (user) {
-    redirect(getRoleHome(user.role));
-  }
-
   const channel = params.channel === "email" ? "email" : "sms";
   const destination =
     params.destination || (channel === "email" ? params.email : params.phone);
 
   if (!destination) {
-    redirect("/login");
+    redirect(user ? getVerifyContactPath(user, { inviteToken: params.inviteToken }) : "/login");
   }
 
-  const role = params.role === "CLEANER" ? "CLEANER" : "CUSTOMER";
+  if (user) {
+    const missingChannel = getMissingVerificationChannel(user);
+
+    if (!missingChannel) {
+      if (params.inviteToken) {
+        redirect(`/invite/cleaner/${params.inviteToken}`);
+      }
+
+      redirect(getRoleHome(user.role));
+    }
+
+    if (missingChannel !== channel) {
+      redirect(getVerifyContactPath(user, { inviteToken: params.inviteToken }));
+    }
+  }
+
+  const role = user?.role ?? (params.role === "CLEANER" ? "CLEANER" : "CUSTOMER");
   const contactLabel = channel === "email" ? destination : params.phone || destination;
 
   return (
@@ -74,7 +88,7 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
       </form>
 
       <form action="/auth/otp/start" method="post">
-        <input type="hidden" name="mode" value="login" />
+        <input type="hidden" name="mode" value={params.mode ?? "login"} />
         <input type="hidden" name="role" value={role} />
         <input type="hidden" name="channel" value={channel} />
         {channel === "sms" ? <input type="hidden" name="phone" value={destination} /> : null}
