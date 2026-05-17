@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { EntryMethod } from "@prisma/client";
+import { useEffect, useRef, useState } from "react";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
+import { entryMethodOptions } from "@/lib/marketplace-constants";
 
 type AddressState = {
   addressLine1: string;
@@ -65,6 +67,8 @@ export function HomeownerOnboardingFlow({
   const [estimatedSquareFeet, setEstimatedSquareFeet] = useState<number | null>(null);
   const [storyCount, setStoryCount] = useState<number | null>(null);
   const [hasPets, setHasPets] = useState<boolean | null>(null);
+  const [entryMethod, setEntryMethod] = useState<EntryMethod>(EntryMethod.I_WILL_BE_HOME);
+  const [entryNotes, setEntryNotes] = useState("");
   const [address, setAddress] = useState<AddressState>({
     addressLine1: "",
     addressLine2: "",
@@ -75,7 +79,6 @@ export function HomeownerOnboardingFlow({
   });
   const [addressError, setAddressError] = useState("");
 
-  const progress = useMemo(() => Math.round(((step + 1) / 6) * 100), [step]);
   const firstNameCopy = firstName ? `${firstName}, ` : "";
 
   const steps = [
@@ -238,10 +241,46 @@ export function HomeownerOnboardingFlow({
         </ChoiceGrid>
       ),
     },
+    {
+      key: "entry",
+      eyebrow: "Entry",
+      title: "How should cleaners enter?",
+      helper: "We save this to your home profile so you do not have to repeat it for every job.",
+      summary: entryMethodOptions.find((option) => option.value === entryMethod)?.label ?? "",
+      isComplete: Boolean(entryMethod),
+      content: (
+        <div className="onboarding-fields stack">
+          <div className="field">
+            <label htmlFor="onboardingEntryMethod">Entry method</label>
+            <select
+              id="onboardingEntryMethod"
+              value={entryMethod}
+              onChange={(event) => setEntryMethod(event.target.value as EntryMethod)}
+            >
+              {entryMethodOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="onboardingEntryNotes">Entry details</label>
+            <textarea
+              id="onboardingEntryNotes"
+              value={entryNotes}
+              onChange={(event) => setEntryNotes(event.target.value)}
+              placeholder="Door code, hidden key spot, call box, or parking notes."
+            />
+          </div>
+        </div>
+      ),
+    },
   ];
 
   const currentStep = steps[step];
   const canContinue = currentStep.isComplete;
+  const progress = Math.round(((step + 1) / steps.length) * 100);
 
   function updateAddress(field: keyof AddressState, value: string) {
     setAddress((current) => ({ ...current, [field]: value }));
@@ -276,6 +315,8 @@ export function HomeownerOnboardingFlow({
         <input type="hidden" name="estimatedSquareFeet" value={estimatedSquareFeet ?? ""} readOnly />
         <input type="hidden" name="storyCount" value={storyCount ?? ""} readOnly />
         <input type="hidden" name="hasPets" value={hasPets === null ? "" : String(hasPets)} readOnly />
+        <input type="hidden" name="entryMethod" value={entryMethod} readOnly />
+        <input type="hidden" name="entryNotes" value={entryNotes} readOnly />
         <input type="hidden" name="addressLine1" value={address.addressLine1} readOnly />
         <input type="hidden" name="addressLine2" value={address.addressLine2} readOnly />
         <input type="hidden" name="city" value={address.city} readOnly />

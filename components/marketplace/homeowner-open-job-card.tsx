@@ -24,7 +24,7 @@ import { getCleaningJobTitle } from "@/lib/job-title";
 import { JobActivityTracker } from "@/components/marketplace/job-activity-tracker";
 import { Card } from "@/components/ui/card";
 
-type CustomerJobCardMode = "full" | "summary";
+type CustomerJobCardMode = "dashboard" | "full" | "summary";
 
 type HomeProfileSnapshot = {
   bedroomCount: number | null;
@@ -64,7 +64,7 @@ type OpenJobCardJob = {
 export function HomeownerOpenJobCard({ href, job }: { href: string; job: OpenJobCardJob }) {
   return (
     <Link href={href} className="customer-job-card-link">
-      <HomeownerOpenJobCardContent job={job} mode="full" />
+      <HomeownerOpenJobCardContent job={job} mode="dashboard" />
     </Link>
   );
 }
@@ -102,7 +102,8 @@ function HomeownerOpenJobCardContent({
   job: OpenJobCardJob;
   mode: CustomerJobCardMode;
 }) {
-  const showActivity = mode === "full";
+  const showActivity = mode === "dashboard" || mode === "full";
+  const showExtraDetails = mode === "full";
   const extraDetails = [
     job.cleanType
       ? {
@@ -166,7 +167,7 @@ function HomeownerOpenJobCardContent({
         </span>
       </div>
 
-      {mode === "full" && extraDetails.length > 0 ? (
+      {showExtraDetails && extraDetails.length > 0 ? (
         <div className="customer-job-card__notes">
           {extraDetails.map((detail) => (
             <div key={detail.label}>

@@ -401,6 +401,16 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
     setValidationMessage("");
   }
 
+  function changeScheduleDay() {
+    setDayChoice("");
+    setRequestedDate("");
+    setArrivalChoice("");
+    setTimingPreference(TimingPreference.ASAP);
+    setStartHour("");
+    setEndHour("");
+    setValidationMessage("");
+  }
+
   function chooseAsap() {
     setArrivalChoice("asap");
     setTimingPreference(TimingPreference.ASAP);
@@ -541,30 +551,45 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
                   <p>Choose the day and arrival window.</p>
                 </div>
 
-                <div className="market-segmented">
-                  <label className={dayChoice === "today" ? "market-segmented__option active" : "market-segmented__option"}>
-                    <input
-                      type="radio"
-                      value="today"
-                      checked={dayChoice === "today"}
-                      onChange={chooseToday}
-                    />
-                    <CalendarDays aria-hidden="true" />
-                    Today
-                  </label>
-                  <label className={dayChoice === "another" ? "market-segmented__option active" : "market-segmented__option"}>
-                    <input
-                      type="radio"
-                      value="another"
-                      checked={dayChoice === "another"}
-                      onChange={chooseAnotherDay}
-                    />
-                    <CalendarDays aria-hidden="true" />
-                    Another day
-                  </label>
-                </div>
+                {hasScheduleDay ? (
+                  <div className="market-schedule-choice-summary" aria-live="polite">
+                    <span className="market-location-choice__icon" aria-hidden="true">
+                      <CalendarDays />
+                    </span>
+                    <span>
+                      <strong>{formatDateForReview(requestedDate)}</strong>
+                      <em>Day selected</em>
+                    </span>
+                    <button type="button" onClick={changeScheduleDay}>
+                      Change
+                    </button>
+                  </div>
+                ) : (
+                  <div className="market-segmented">
+                    <label className="market-segmented__option">
+                      <input
+                        type="radio"
+                        value="today"
+                        checked={false}
+                        onChange={chooseToday}
+                      />
+                      <CalendarDays aria-hidden="true" />
+                      Today
+                    </label>
+                    <label className={dayChoice === "another" ? "market-segmented__option active" : "market-segmented__option"}>
+                      <input
+                        type="radio"
+                        value="another"
+                        checked={dayChoice === "another"}
+                        onChange={chooseAnotherDay}
+                      />
+                      <CalendarDays aria-hidden="true" />
+                      Another day
+                    </label>
+                  </div>
+                )}
 
-                {dayChoice === "another" ? (
+                {dayChoice === "another" && !requestedDate ? (
                   <Popover>
                     <PopoverTrigger asChild>
                       <button type="button" className="market-date-input">
@@ -589,6 +614,10 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
 
                 {hasScheduleDay ? (
                   <div className="stack small">
+                    <div className="market-schedule-label">
+                      <strong>Arrival</strong>
+                      <span>Choose speed or set a custom window.</span>
+                    </div>
                     <div className="market-segmented">
                       <label className={arrivalChoice === "asap" ? "market-segmented__option active" : "market-segmented__option"}>
                         <input
@@ -690,27 +719,6 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
                     value={notes}
                     onChange={(event) => setNotes(event.target.value)}
                     placeholder="Areas to focus on, pets, parking, or anything unusual."
-                  />
-                </div>
-                <div className="field">
-                  <label htmlFor="entryMethod">How will the cleaner enter?</label>
-                  <select
-                    id="entryMethod"
-                    value={entryMethod}
-                    onChange={(event) => setEntryMethod(event.target.value as EntryMethod)}
-                  >
-                    {entryMethodOptions.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="field">
-                  <label htmlFor="entryNotes">Entry details</label>
-                  <textarea
-                    id="entryNotes"
-                    value={entryNotes}
-                    onChange={(event) => setEntryNotes(event.target.value)}
-                    placeholder="Door code, hidden key spot, call box, or parking notes."
                   />
                 </div>
               </div>
@@ -948,29 +956,44 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
               <span>Timing</span>
               <h3>Choose the day and arrival window.</h3>
             </div>
-            <div className="market-segmented">
-              <label className={dayChoice === "today" ? "market-segmented__option active" : "market-segmented__option"}>
-                <input
-                  type="radio"
-                  value="today"
-                  checked={dayChoice === "today"}
-                  onChange={chooseToday}
-                />
-                Today
-              </label>
-              <label className={dayChoice === "another" ? "market-segmented__option active" : "market-segmented__option"}>
-                <input
-                  type="radio"
-                  value="another"
-                  checked={dayChoice === "another"}
-                  onChange={chooseAnotherDay}
-                />
-                Another day
-              </label>
-            </div>
+            {hasScheduleDay ? (
+              <div className="market-schedule-choice-summary" aria-live="polite">
+                <span className="market-location-choice__icon" aria-hidden="true">
+                  <CalendarDays />
+                </span>
+                <span>
+                  <strong>{formatDateForReview(requestedDate)}</strong>
+                  <em>Day selected</em>
+                </span>
+                <button type="button" onClick={changeScheduleDay}>
+                  Change
+                </button>
+              </div>
+            ) : (
+              <div className="market-segmented">
+                <label className="market-segmented__option">
+                  <input
+                    type="radio"
+                    value="today"
+                    checked={false}
+                    onChange={chooseToday}
+                  />
+                  Today
+                </label>
+                <label className={dayChoice === "another" ? "market-segmented__option active" : "market-segmented__option"}>
+                  <input
+                    type="radio"
+                    value="another"
+                    checked={dayChoice === "another"}
+                    onChange={chooseAnotherDay}
+                  />
+                  Another day
+                </label>
+              </div>
+            )}
           </section>
 
-          {dayChoice === "another" ? (
+          {dayChoice === "another" && !requestedDate ? (
             <section className="market-question-block stack">
               <div className="market-schedule-label">
                 <strong>Choose a day</strong>
@@ -1155,32 +1178,6 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
                 value={notes}
                 onChange={(event) => setNotes(event.target.value)}
                 placeholder="Areas to focus on, pets, parking, or anything unusual."
-              />
-            </div>
-          </section>
-
-          <section className="market-question-block stack">
-            <div className="field">
-              <label htmlFor="entryMethod">How will the cleaner enter?</label>
-              <select
-                id="entryMethod"
-                value={entryMethod}
-                onChange={(event) => setEntryMethod(event.target.value as EntryMethod)}
-              >
-                {entryMethodOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label htmlFor="entryNotes">Entry details</label>
-              <textarea
-                id="entryNotes"
-                value={entryNotes}
-                onChange={(event) => setEntryNotes(event.target.value)}
-                placeholder="Door code, hidden key spot, call box, or parking notes."
               />
             </div>
           </section>

@@ -46,7 +46,7 @@ export default async function CustomerDashboard({ searchParams }: CustomerDashbo
 
         <section className="stack">
           <div className="market-section-heading">
-            <h2>Open Jobs ({jobs.length})</h2>
+            <h2>Posted Jobs ({jobs.length})</h2>
             {jobs.length > 0 ? <Link href="/customer/jobs">View all &gt;</Link> : null}
           </div>
           {openJobs.length > 1 ? (

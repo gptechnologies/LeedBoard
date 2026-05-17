@@ -1,4 +1,4 @@
-import { PropertyType, UserRole } from "@prisma/client";
+import { EntryMethod, PropertyType, UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { getRequiredString } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -37,6 +37,16 @@ function parsePropertyType(value: FormDataEntryValue | null) {
   }
 
   return propertyType as PropertyType;
+}
+
+function parseEntryMethod(value: FormDataEntryValue | null) {
+  const entryMethod = getRequiredString(value, "Entry method");
+
+  if (!Object.values(EntryMethod).includes(entryMethod as EntryMethod)) {
+    throw new Error("Choose a valid entry method.");
+  }
+
+  return entryMethod as EntryMethod;
 }
 
 function parseNumber(value: FormDataEntryValue | null, label: string) {
@@ -92,6 +102,8 @@ export async function POST(request: Request) {
       state: getRequiredString(formData.get("state"), "State"),
       postalCode: getRequiredString(formData.get("postalCode"), "ZIP code"),
       googlePlaceId: optionalString(formData.get("googlePlaceId")),
+      entryMethod: parseEntryMethod(formData.get("entryMethod")),
+      entryNotes: optionalString(formData.get("entryNotes")),
     };
     const pushChoice = String(formData.get("pushChoice") || "").trim();
     const notificationPermission = String(formData.get("notificationPermission") || "").trim();

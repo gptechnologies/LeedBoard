@@ -4148,7 +4148,8 @@ button:active,
 }
 
 .market-location-choice,
-.market-date-input {
+.market-date-input,
+.market-schedule-choice-summary {
   width: 100%;
   min-height: 58px;
   display: flex;
@@ -4171,6 +4172,41 @@ button:active,
   border-radius: 50%;
   background: var(--accent-soft);
   color: var(--accent);
+}
+
+.market-schedule-choice-summary {
+  background: var(--accent-soft);
+  border-color: oklch(72% 0.065 145);
+}
+
+.market-schedule-choice-summary span:nth-child(2) {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.market-schedule-choice-summary strong {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.market-schedule-choice-summary em {
+  color: var(--muted-foreground);
+  font-style: normal;
+  line-height: 1.35;
+}
+
+.market-schedule-choice-summary button {
+  min-height: 38px;
+  margin-left: auto;
+  border: 1px solid oklch(72% 0.055 145);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--accent-strong);
+  cursor: pointer;
+  padding: 0 13px;
+  font-size: 0.82rem;
+  font-weight: 900;
 }
 
 .market-location-choice svg,
