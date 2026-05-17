@@ -2,9 +2,7 @@ import Link from "next/link";
 import { BidStatus, JobRequestStatus, UserRole } from "@prisma/client";
 import { BidCard } from "@/components/marketplace/cards";
 import { HomeownerOpenJobDetailCard } from "@/components/marketplace";
-import { JobActivityPanel } from "@/components/marketplace/job-activity-panel";
 import { Trash2 } from "lucide-react";
-import { getRecommendedCleaners } from "@/lib/marketplace";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { notFound } from "next/navigation";
@@ -66,24 +64,6 @@ export default async function CustomerJobDetailPage({
     notFound();
   }
 
-  const recommendedCleaners =
-    job.status === JobRequestStatus.OPEN
-      ? await getRecommendedCleaners({
-          postalCode: job.postalCode,
-          city: job.city,
-          serviceNeeds: job.serviceNeeds,
-          limit: 8,
-        })
-      : [];
-  const insuredCleanerCount = recommendedCleaners.filter(
-    (cleaner) => cleaner.cleanerProfile?.licensedAndInsured,
-  ).length;
-  const topRating = recommendedCleaners.reduce<number | null>((bestRating, cleaner) => {
-    const rating = cleaner.cleanerProfile?.googleRating;
-    if (!rating) return bestRating;
-    return bestRating === null ? rating : Math.max(bestRating, rating);
-  }, null);
-
   return (
     <div className="market-shell market-shell--detail">
       <section className="market-surface">
@@ -105,15 +85,6 @@ export default async function CustomerJobDetailPage({
           }
           job={job}
         />
-
-        {job.status === JobRequestStatus.OPEN ? (
-          <JobActivityPanel
-            activeBidCount={job.bids.length}
-            insuredCleanerCount={insuredCleanerCount}
-            matchedCleanerCount={recommendedCleaners.length}
-            topRating={topRating}
-          />
-        ) : null}
 
         {job.acceptedBid ? (
           <section className="stack">

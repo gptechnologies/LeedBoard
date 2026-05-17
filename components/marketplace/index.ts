@@ -9,6 +9,7 @@ export {
 export {
   HomeownerOpenJobCard,
   HomeownerOpenJobDetailCard,
+  HomeownerJobSummaryCard,
 } from "@/components/marketplace/homeowner-open-job-card";
 export { HomeownerOpenJobsCarousel } from "@/components/marketplace/homeowner-open-jobs-carousel";
 export { EmptyState } from "@/components/marketplace/empty-state";

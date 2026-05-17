@@ -1,15 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import {
-  Bath,
-  BedDouble,
-  ChevronRight,
-  Clock,
-  MapPin,
-  PawPrint,
-  Ruler,
-  type LucideIcon,
-} from "lucide-react";
+import { Clock, MapPin } from "lucide-react";
 import {
   CleanLevel,
   JobRequestStatus,
@@ -24,6 +15,8 @@ import {
 import { getCleaningJobTitle } from "@/lib/job-title";
 import { JobActivityTracker } from "@/components/marketplace/job-activity-tracker";
 import { Card } from "@/components/ui/card";
+
+type CustomerJobCardMode = "full" | "summary";
 
 type HomeProfileSnapshot = {
   bedroomCount: number | null;
@@ -58,17 +51,22 @@ type OpenJobCardJob = {
 
 export function HomeownerOpenJobCard({ href, job }: { href: string; job: OpenJobCardJob }) {
   return (
-    <Link href={href} className="customer-open-job-link">
-      <HomeownerOpenJobCardContent
-        action={
-          <span className="customer-open-job-chevron" aria-hidden="true">
-            <ChevronRight />
-          </span>
-        }
-        includePetsInChips={false}
-        showActivity
-        job={job}
-      />
+    <Link href={href} className="customer-job-card-link">
+      <HomeownerOpenJobCardContent job={job} mode="full" />
+    </Link>
+  );
+}
+
+export function HomeownerJobSummaryCard({
+  href,
+  job,
+}: {
+  href: string;
+  job: OpenJobCardJob;
+}) {
+  return (
+    <Link href={href} className="customer-job-card-link">
+      <HomeownerOpenJobCardContent job={job} mode="summary" />
     </Link>
   );
 }
@@ -80,23 +78,19 @@ export function HomeownerOpenJobDetailCard({
   action?: ReactNode;
   job: OpenJobCardJob;
 }) {
-  return <HomeownerOpenJobCardContent action={action} compact job={job} />;
+  return <HomeownerOpenJobCardContent action={action} job={job} mode="full" />;
 }
 
 function HomeownerOpenJobCardContent({
   action,
-  compact = false,
-  includePetsInChips = true,
   job,
-  showActivity = false,
+  mode,
 }: {
   action?: ReactNode;
-  compact?: boolean;
-  includePetsInChips?: boolean;
   job: OpenJobCardJob;
-  showActivity?: boolean;
+  mode: CustomerJobCardMode;
 }) {
-  const homeDetails = getHomeDetailChips(job.homeProfile, includePetsInChips);
+  const showActivity = mode === "full";
   const extraDetails = [
     job.notes
       ? {
@@ -107,25 +101,25 @@ function HomeownerOpenJobCardContent({
   ].filter(Boolean) as Array<{ label: string; value: string }>;
 
   return (
-    <Card className={compact ? "customer-open-job-card customer-open-job-card--compact" : "customer-open-job-card"}>
-      <div className="customer-open-job-topline">
+    <Card className={`customer-job-card customer-job-card--${mode}`}>
+      <div className="customer-job-card__topline">
         <span>{formatPostedLabel(job.createdAt)}</span>
         <span
-          className={`customer-open-job-status${
-            job.status === JobRequestStatus.OPEN ? " customer-open-job-status--active" : ""
+          className={`customer-job-card__status${
+            job.status === JobRequestStatus.OPEN ? " customer-job-card__status--active" : ""
           }`}
         >
           <span aria-hidden="true" />
-          {getJobRequestStatusLabel(job.status)}
+          {getCustomerJobStatusLabel(job.status)}
         </span>
       </div>
 
-      <div className="customer-open-job-title-row">
+      <div className="customer-job-card__title-row">
         <h3>{getCleaningJobTitle(job)}</h3>
-        {action}
+        {action ? <div className="customer-job-card__action">{action}</div> : null}
       </div>
 
-      <div className="customer-open-job-meta">
+      <div className="customer-job-card__meta">
         <span>
           <MapPin aria-hidden="true" />
           {formatJobLocation(job)}
@@ -136,22 +130,8 @@ function HomeownerOpenJobCardContent({
         </span>
       </div>
 
-      {!compact ? (
-        <div
-          className={`customer-open-job-chips${includePetsInChips ? "" : " customer-open-job-chips--summary"}`}
-          aria-label="Home details"
-        >
-          {homeDetails.map((detail) => (
-            <span key={detail.label}>
-              <detail.Icon aria-hidden="true" />
-              {detail.label}
-            </span>
-          ))}
-        </div>
-      ) : null}
-
-      {extraDetails.length > 0 ? (
-        <div className="customer-open-job-detail-notes">
+      {mode === "full" && extraDetails.length > 0 ? (
+        <div className="customer-job-card__notes">
           {extraDetails.map((detail) => (
             <div key={detail.label}>
               <strong>{detail.label}</strong>
@@ -165,6 +145,7 @@ function HomeownerOpenJobCardContent({
         <JobActivityTracker
           bidCount={job.bids.length}
           cleanersNotifiedCount={job.cleanersNotifiedCount}
+          createdAt={job.createdAt}
           jobId={job.id}
           status={job.status}
           viewCount={job.viewCount}
@@ -174,42 +155,13 @@ function HomeownerOpenJobCardContent({
   );
 }
 
-function getHomeDetailChips(homeProfile: HomeProfileSnapshot, includePets: boolean) {
-  const chips: Array<{ Icon: LucideIcon; label: string }> = [
-    {
-      Icon: BedDouble,
-      label:
-        homeProfile?.bedroomCount !== null && homeProfile?.bedroomCount !== undefined
-          ? `${homeProfile.bedroomCount} Bed`
-          : "- Bed",
-    },
-    {
-      Icon: Bath,
-      label:
-        homeProfile?.bathroomCount !== null && homeProfile?.bathroomCount !== undefined
-          ? `${formatNumber(homeProfile.bathroomCount)} Bath`
-          : "- Bath",
-    },
-    {
-      Icon: Ruler,
-      label:
-        homeProfile?.estimatedSquareFeet !== null && homeProfile?.estimatedSquareFeet !== undefined
-          ? `${homeProfile.estimatedSquareFeet} Sq Ft`
-          : "- Sq Ft",
-    },
-  ];
-  if (includePets) {
-    chips.push({
-      Icon: PawPrint,
-      label:
-        homeProfile?.hasPets === undefined ? "- Pets" : homeProfile.hasPets ? "Pets" : "No Pets",
-    });
-  }
-  return chips;
-}
-
-function formatNumber(value: number) {
-  return Number.isInteger(value) ? value.toFixed(0) : value.toString();
+function getCustomerJobStatusLabel(status: JobRequestStatus) {
+  if (status === JobRequestStatus.OPEN) return "Accepting Bids";
+  if (status === JobRequestStatus.AWARDED) return "Bid Accepted";
+  if (status === JobRequestStatus.COMPLETED) return "Completed";
+  if (status === JobRequestStatus.CANCELLED) return "Cancelled";
+  if (status === JobRequestStatus.EXPIRED) return "Expired";
+  return getJobRequestStatusLabel(status);
 }
 
 function formatJobLocation(job: OpenJobCardJob) {

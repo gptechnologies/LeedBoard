@@ -45,11 +45,6 @@ export default async function HomePage() {
               Sign up as Cleaner
             </Link>
           </div>
-          <div className="landing-proof-row" aria-label="Well Kept marketplace benefits">
-            <span>New York homes and apartments</span>
-            <span>Professional cleaner bids</span>
-            <span>On-demand job requests</span>
-          </div>
         </div>
       </section>
 

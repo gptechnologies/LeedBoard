@@ -23,15 +23,7 @@ export async function SiteHeader() {
         </Link>
         <nav className="nav-links">
           {!user ? (
-            <>
-              <Link href="/signup?role=CUSTOMER" className="primary">
-                Find a Cleaner
-              </Link>
-              <Link href="/login">Sign In</Link>
-              <Link href="/signup?role=CLEANER" className="quiet-link">
-                Cleaner access
-              </Link>
-            </>
+            <Link href="/login">Sign In</Link>
           ) : needsAccountSetup(user) ? (
             <Link href={`/welcome?role=${user.role}`} className="primary">
               Finish setup

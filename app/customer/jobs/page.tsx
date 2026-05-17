@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { UserRole } from "@prisma/client";
-import { JobRequestCard } from "@/components/marketplace/cards";
+import { HomeownerJobSummaryCard } from "@/components/marketplace";
 
 import { getCustomerHomeData } from "@/lib/marketplace";
 import { requireUser } from "@/lib/session";
@@ -35,7 +35,7 @@ export default async function CustomerJobsPage() {
         ) : (
           <div className="stack">
             {jobs.map((job) => (
-              <JobRequestCard
+              <HomeownerJobSummaryCard
                 key={job.id}
                 job={job}
                 href={
@@ -43,7 +43,6 @@ export default async function CustomerJobsPage() {
                     ? `/customer/jobs/${job.id}/bids`
                     : `/customer/jobs/${job.id}`
                 }
-                showAcceptedCleaner
               />
             ))}
           </div>

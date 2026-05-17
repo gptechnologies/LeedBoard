@@ -1,55 +1,61 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Loader2, Radio, Sparkles, UsersRound } from "lucide-react";
+import { CheckCircle2, ChevronDown, Loader2 } from "lucide-react";
 
 type ActivityStatus = "OPEN" | "AWARDED" | "COMPLETED" | "CANCELLED" | "EXPIRED";
 
 type ActivityTrackerProps = {
   bidCount: number;
   cleanersNotifiedCount: number;
-  compact?: boolean;
+  createdAt: Date;
+  defaultExpanded?: boolean;
   jobId: string;
   status: ActivityStatus;
   viewCount: number;
 };
 
-const stageLabels = [
-  "Job Posted",
-  "Cleaners Notified",
-  "Cleaner Reviewing",
-  "Bid Received",
-  "Bid Accepted",
-  "Home Sparkling",
-];
+type TimelineItem = {
+  key: string;
+  label: string;
+  state: "active" | "complete" | "pending";
+  timestamp: Date;
+};
 
 export function JobActivityTracker({
   bidCount,
   cleanersNotifiedCount,
-  compact = false,
+  createdAt,
+  defaultExpanded = true,
   jobId,
   status,
   viewCount,
 }: ActivityTrackerProps) {
   const router = useRouter();
-  const stage = getActivityStage({ bidCount, cleanersNotifiedCount, status, viewCount });
-  const progress = ((stage + 1) / stageLabels.length) * 100;
-  const activityLines = useMemo(
-    () => getActivityLines({ bidCount, cleanersNotifiedCount, status, viewCount }),
-    [bidCount, cleanersNotifiedCount, status, viewCount],
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  const timeline = useMemo(
+    () =>
+      getTimelineItems({
+        bidCount,
+        cleanersNotifiedCount,
+        createdAt,
+        status,
+        viewCount,
+      }),
+    [bidCount, cleanersNotifiedCount, createdAt, status, viewCount],
   );
-  const avatarCount = Math.min(5, Math.max(0, cleanersNotifiedCount || viewCount || bidCount));
+  const isUpdating = status === "OPEN";
 
   useEffect(() => {
-    if (status !== "OPEN") return;
+    if (!isUpdating) return;
 
     const interval = window.setInterval(() => {
       router.refresh();
     }, 15000);
 
     return () => window.clearInterval(interval);
-  }, [router, status]);
+  }, [isUpdating, router]);
 
   useEffect(() => {
     if (bidCount <= 0) return;
@@ -63,107 +69,138 @@ export function JobActivityTracker({
   }, [bidCount, jobId]);
 
   return (
-    <section
-      className={compact ? "job-activity-tracker job-activity-tracker--compact" : "job-activity-tracker"}
-      aria-label="Marketplace activity"
-    >
+    <section className="job-activity-tracker" aria-label="Live activity">
       <div className="job-activity-tracker__header">
-        <div>
-          <span className="job-activity-tracker__eyebrow">Live marketplace</span>
-          <strong>{stageLabels[stage]}</strong>
-        </div>
-        <span className={status === "OPEN" ? "job-activity-tracker__live is-updating" : "job-activity-tracker__live"}>
-          {status === "OPEN" ? <Loader2 aria-hidden="true" /> : <CheckCircle2 aria-hidden="true" />}
-          {status === "OPEN" ? "Updating" : "Confirmed"}
+        <button
+          type="button"
+          className="job-activity-tracker__toggle"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((current) => !current)}
+        >
+          <ChevronDown aria-hidden="true" />
+          <span>Live Activity</span>
+        </button>
+        <span className={isUpdating ? "job-activity-tracker__live is-updating" : "job-activity-tracker__live"}>
+          {isUpdating ? <Loader2 aria-hidden="true" /> : <CheckCircle2 aria-hidden="true" />}
+          {isUpdating ? "Updating" : "Confirmed"}
         </span>
       </div>
 
-      <div className="job-activity-tracker__bar" aria-hidden="true">
-        <span style={{ width: `${progress}%` }} />
-      </div>
-
-      <div className="job-activity-tracker__stages" aria-hidden="true">
-        {stageLabels.map((label, index) => (
-          <span className={index <= stage ? "complete" : ""} key={label} />
-        ))}
-      </div>
-
-      <div className="job-activity-tracker__body">
-        <div className="job-activity-feed">
-          {activityLines.map((line, index) => (
-            <p className={index === 0 ? "active" : ""} key={line}>
-              {index === 0 ? <Radio aria-hidden="true" /> : <Sparkles aria-hidden="true" />}
-              <span>{line}</span>
-            </p>
+      {expanded ? (
+        <ol className="job-activity-timeline">
+          {timeline.map((item) => (
+            <li className={`job-activity-timeline__item ${item.state}`} key={item.key}>
+              <span className="job-activity-timeline__rail" aria-hidden="true" />
+              <span className="job-activity-timeline__dot" aria-hidden="true" />
+              <span className="job-activity-timeline__content">
+                <strong>{item.label}</strong>
+                <small>{formatActivityTime(item.timestamp)}</small>
+              </span>
+            </li>
           ))}
-        </div>
-
-        <div className="job-activity-avatars" aria-label={`${avatarCount} cleaners in activity`}>
-          {Array.from({ length: avatarCount }).map((_, index) => (
-            <span key={index}>{getAvatarInitial(index)}</span>
-          ))}
-          {avatarCount === 0 ? (
-            <span>
-              <UsersRound aria-hidden="true" />
-            </span>
-          ) : null}
-        </div>
-      </div>
+        </ol>
+      ) : null}
     </section>
   );
 }
 
-function getActivityStage(input: {
+function getTimelineItems(input: {
   bidCount: number;
   cleanersNotifiedCount: number;
+  createdAt: Date;
   status: ActivityStatus;
   viewCount: number;
 }) {
-  if (input.status === "COMPLETED") return 5;
-  if (input.status === "AWARDED") return 4;
-  if (input.bidCount > 0) return 3;
-  if (input.viewCount > 0) return 2;
-  if (input.cleanersNotifiedCount > 0) return 1;
-  return 0;
+  const createdAt = new Date(input.createdAt);
+  const hasNotifiedCleaners = input.cleanersNotifiedCount > 0 || input.viewCount > 0 || input.bidCount > 0;
+  const hasCleanerEngagement = input.viewCount > 0 || input.bidCount > 0;
+  const hasBid = input.bidCount > 0 || input.status === "AWARDED" || input.status === "COMPLETED";
+  const accepted = input.status === "AWARDED" || input.status === "COMPLETED";
+  const completed = input.status === "COMPLETED";
+
+  const chronological: Array<Omit<TimelineItem, "state"> & { done: boolean }> = [
+    {
+      key: "posted",
+      label: "Job has been posted",
+      timestamp: createdAt,
+      done: true,
+    },
+    {
+      key: "notifying",
+      label: "Cleaners are being notified",
+      timestamp: addMinutes(createdAt, 2),
+      done: hasNotifiedCleaners,
+    },
+    {
+      key: "notified",
+      label: hasNotifiedCleaners
+        ? `${Math.max(input.cleanersNotifiedCount, input.viewCount, input.bidCount)} cleaners notified in your area`
+        : "Cleaners notified in your area",
+      timestamp: addMinutes(createdAt, 4),
+      done: hasNotifiedCleaners,
+    },
+    {
+      key: "collecting",
+      label: "Collecting bids",
+      timestamp: addMinutes(createdAt, 6),
+      done: hasCleanerEngagement || hasBid,
+    },
+    {
+      key: "bid",
+      label: hasBid
+        ? `${input.bidCount || 1} ${input.bidCount === 1 ? "bid" : "bids"} received`
+        : "Bid received",
+      timestamp: addMinutes(createdAt, 8),
+      done: hasBid,
+    },
+    {
+      key: "accepted",
+      label: "Bid accepted",
+      timestamp: addMinutes(createdAt, 10),
+      done: accepted,
+    },
+    {
+      key: "completed",
+      label: "Home sparkling",
+      timestamp: addMinutes(createdAt, 12),
+      done: completed,
+    },
+  ];
+
+  let currentIndex = 0;
+  for (let index = chronological.length - 1; index >= 0; index -= 1) {
+    if (chronological[index].done) {
+      currentIndex = index;
+      break;
+    }
+  }
+  const visible = chronological
+    .filter((item, index) => item.done || index === currentIndex + 1)
+    .slice(-4)
+    .reverse();
+
+  return visible.map((item, index) => ({
+    key: item.key,
+    label: item.label,
+    timestamp: item.timestamp,
+    state: index === 0 ? "active" : item.done ? "complete" : "pending",
+  }));
 }
 
-function getActivityLines(input: {
-  bidCount: number;
-  cleanersNotifiedCount: number;
-  status: ActivityStatus;
-  viewCount: number;
-}) {
-  if (input.status === "COMPLETED") {
-    return ["Cleaner marked the job complete", "Home sparkling"];
-  }
-
-  if (input.status === "AWARDED") {
-    return ["Bid accepted", "Job details unlocked in messages"];
-  }
-
-  const lines = ["Job has been posted"];
-
-  if (input.cleanersNotifiedCount > 0) {
-    lines.unshift(`${input.cleanersNotifiedCount} cleaners notified in your area`);
-  } else {
-    lines.unshift("Finding cleaners nearby...");
-  }
-
-  if (input.viewCount > 0) {
-    lines.unshift(`${input.viewCount} cleaners viewed your request`);
-  } else {
-    lines.push("Cleaners are being notified");
-  }
-
-  if (input.bidCount > 0) {
-    lines.unshift(`${input.bidCount} ${input.bidCount === 1 ? "bid" : "bids"} received`);
-  } else {
-    lines.push("Collecting bids");
-  }
-
-  return lines.slice(0, 4);
+function addMinutes(date: Date, minutes: number) {
+  return new Date(date.getTime() + minutes * 60_000);
 }
 
-function getAvatarInitial(index: number) {
-  return ["M", "J", "A", "R", "S"][index] ?? "C";
+function formatActivityTime(date: Date) {
+  const now = new Date();
+  const sameDay = date.toDateString() === now.toDateString();
+  const dayLabel = sameDay
+    ? "Today"
+    : date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const timeLabel = date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  return `${dayLabel} • ${timeLabel}`;
 }
