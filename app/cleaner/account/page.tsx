@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { UserRole } from "@prisma/client";
+import { NotificationChannel, UserRole } from "@prisma/client";
 import { AccountUserButton } from "@/components/account-user-button";
 import { SignOutButton } from "@/components/sign-out-button";
 import { CleanerDefaultsForm } from "@/components/marketplace/cleaner-defaults-form";
 import { PushNotificationToggle } from "@/components/marketplace/push-notification-toggle";
 
+import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,28 @@ type CleanerAccountPageProps = {
 export default async function CleanerAccountPage({ searchParams }: CleanerAccountPageProps) {
   const user = await requireUser(UserRole.CLEANER);
   const params = await searchParams;
+  const [pushSubscriptionCount, latestPushDelivery] = await Promise.all([
+    prisma.pushSubscription.count({
+      where: {
+        userId: user.id,
+        disabledAt: null,
+      },
+    }),
+    prisma.notificationDelivery.findFirst({
+      where: {
+        userId: user.id,
+        channel: NotificationChannel.PUSH,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        createdAt: true,
+        failureReason: true,
+        status: true,
+      },
+    }),
+  ]);
 
   return (
     <div className="market-shell market-shell--detail">
@@ -80,7 +103,20 @@ export default async function CleanerAccountPage({ searchParams }: CleanerAccoun
 
         <PushNotificationToggle
           enabled={user.pushNotificationsEnabled}
+          isConfigured={Boolean(
+            process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY,
+          )}
+          latestDelivery={
+            latestPushDelivery
+              ? {
+                  createdAt: latestPushDelivery.createdAt.toISOString(),
+                  failureReason: latestPushDelivery.failureReason,
+                  status: latestPushDelivery.status,
+                }
+              : null
+          }
           publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY}
+          subscriptionCount={pushSubscriptionCount}
         />
       </section>
     </div>

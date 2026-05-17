@@ -256,7 +256,10 @@ export function parseBidForm(formData: FormData, isAsap: boolean) {
       pricingType === BidPricingType.FLAT
         ? requirePositiveMoney(formData.get("flatRate"), "Flat fee")
         : null,
-    estimatedHours: parseEstimatedHours(formData.get("estimatedHours")),
+    estimatedHours:
+      pricingType === BidPricingType.HOURLY
+        ? parseEstimatedHours(formData.get("estimatedHours"))
+        : null,
     message: String(formData.get("message") || "").trim() || null,
   };
 

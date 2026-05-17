@@ -201,26 +201,32 @@ export function BidForm({
               />
             </div>
           )}
-          <div className="field">
-            <label htmlFor="estimatedHours">Estimated hours</label>
-            <input
-              id="estimatedHours"
-              name="estimatedHours"
-              type="number"
-              min="0.5"
-              max="24"
-              step="0.5"
-              inputMode="decimal"
-              value={estimatedHours}
-              onChange={(event) => setEstimatedHours(event.target.value)}
-              required
-            />
-            <span className="field-hint">
-              {estimatedTotal && Number.isFinite(estimatedTotal)
-                ? `Homeowner sees an estimated total of $${Math.round(estimatedTotal).toLocaleString("en-US")}.`
-                : "This helps homeowners compare bids."}
-            </span>
-          </div>
+          {pricingType === BidPricingType.HOURLY ? (
+            <div className="field">
+              <label htmlFor="estimatedHours">Estimated hours</label>
+              <input
+                id="estimatedHours"
+                name="estimatedHours"
+                type="number"
+                min="0.5"
+                max="24"
+                step="0.5"
+                inputMode="decimal"
+                value={estimatedHours}
+                onChange={(event) => setEstimatedHours(event.target.value)}
+                required
+              />
+              <span className="field-hint">
+                {estimatedTotal && Number.isFinite(estimatedTotal)
+                  ? `Homeowner sees an estimated total of $${Math.round(estimatedTotal).toLocaleString("en-US")}.`
+                  : "This helps homeowners compare hourly bids."}
+              </span>
+            </div>
+          ) : (
+            <p className="field-hint bid-flat-rate-hint">
+              Homeowner sees this as the total job price.
+            </p>
+          )}
         </section>
 
         <section className="market-form-section stack">

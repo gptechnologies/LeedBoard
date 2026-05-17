@@ -915,6 +915,10 @@ button[type="submit"]:disabled {
   line-height: 1.4;
 }
 
+.bid-flat-rate-hint {
+  margin: -4px 0 0;
+}
+
 .field input:focus,
 .field select:focus,
 .field textarea:focus,
@@ -5998,6 +6002,19 @@ button {
   box-shadow: 0 14px 32px oklch(45% 0.035 112 / 0.14);
 }
 
+.customer-open-job-card--compact {
+  gap: 12px;
+  padding: clamp(16px, 3.8vw, 22px);
+}
+
+.customer-open-job-card--compact .customer-open-job-title-row h3 {
+  font-size: clamp(1.55rem, 6vw, 2.15rem);
+}
+
+.customer-open-job-card--compact .customer-open-job-meta {
+  font-size: clamp(0.9rem, 3vw, 1rem);
+}
+
 .customer-open-job-topline {
   display: flex;
   align-items: center;
@@ -6248,6 +6265,307 @@ button {
   color: var(--body);
   font-size: clamp(0.75rem, 3.2vw, 0.92rem);
   line-height: 1.15;
+}
+
+.job-activity-tracker {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  overflow: hidden;
+}
+
+.job-activity-tracker::before {
+  content: "";
+  position: absolute;
+  inset: 14px auto auto 6%;
+  width: 42%;
+  height: 72px;
+  border-radius: 999px;
+  background: oklch(83% 0.075 132 / 0.18);
+  filter: blur(18px);
+  pointer-events: none;
+  animation: job-activity-ripple 3.6s ease-out infinite;
+}
+
+.job-activity-tracker__header,
+.job-activity-tracker__body {
+  position: relative;
+  z-index: 1;
+}
+
+.job-activity-tracker__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.job-activity-tracker__header > div {
+  display: grid;
+  gap: 2px;
+}
+
+.job-activity-tracker__eyebrow {
+  color: var(--muted-foreground);
+  font-size: 0.72rem;
+  font-weight: 760;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.job-activity-tracker__header strong {
+  color: var(--accent-strong);
+  font-size: clamp(1rem, 3.5vw, 1.14rem);
+  line-height: 1.1;
+}
+
+.job-activity-tracker__live {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid oklch(81% 0.045 128);
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: oklch(96% 0.022 120);
+  color: var(--accent-strong);
+  font-size: 0.76rem;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.job-activity-tracker__live svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.2;
+}
+
+.job-activity-tracker__live.is-updating svg:first-child {
+  animation: job-activity-spin 1.4s linear infinite;
+}
+
+.job-activity-tracker__bar {
+  position: relative;
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: oklch(91.5% 0.024 112);
+}
+
+.job-activity-tracker__bar span {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, oklch(42% 0.105 145), oklch(68% 0.12 130));
+  transition: width 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.job-activity-tracker__bar span::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, oklch(99% 0.004 112 / 0.52), transparent);
+  transform: translateX(-100%);
+  animation: job-activity-sheen 2.5s ease-out infinite;
+}
+
+.job-activity-tracker__stages {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.job-activity-tracker__stages span {
+  height: 4px;
+  border-radius: 999px;
+  background: oklch(89% 0.018 112);
+}
+
+.job-activity-tracker__stages span.complete {
+  background: oklch(50% 0.09 140);
+}
+
+.job-activity-tracker__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.job-activity-feed {
+  display: grid;
+  gap: 7px;
+}
+
+.job-activity-feed p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: clamp(0.78rem, 3.2vw, 0.92rem);
+  font-weight: 620;
+  line-height: 1.25;
+  animation: job-activity-line-in 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.job-activity-feed p.active {
+  color: var(--accent-strong);
+  font-weight: 760;
+}
+
+.job-activity-feed svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  stroke-width: 2.2;
+}
+
+.job-activity-feed p.active svg {
+  animation: job-activity-pulse 1.9s ease-out infinite;
+}
+
+.job-activity-avatars {
+  display: flex;
+  flex-direction: row-reverse;
+  padding-left: 14px;
+}
+
+.job-activity-avatars span {
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  border: 2px solid oklch(99% 0.004 112);
+  border-radius: 50%;
+  margin-left: -10px;
+  background: oklch(91% 0.043 112);
+  color: var(--accent-strong);
+  font-size: 0.76rem;
+  font-weight: 820;
+  box-shadow: 0 6px 14px oklch(42% 0.055 112 / 0.16);
+  animation: job-activity-avatar-in 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.job-activity-avatars span:nth-child(2) {
+  animation-delay: 80ms;
+}
+
+.job-activity-avatars span:nth-child(3) {
+  animation-delay: 160ms;
+}
+
+.job-activity-avatars span:nth-child(4) {
+  animation-delay: 240ms;
+}
+
+.job-activity-avatars span:nth-child(5) {
+  animation-delay: 320ms;
+}
+
+.job-activity-avatars svg {
+  width: 15px;
+  height: 15px;
+}
+
+.push-diagnostics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.push-diagnostics span {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.76rem;
+  font-weight: 740;
+}
+
+.push-diagnostics span.ok {
+  background: oklch(94% 0.036 135);
+  color: var(--accent-strong);
+}
+
+.push-diagnostics span.warn {
+  background: oklch(94% 0.036 76);
+  color: oklch(39% 0.072 66);
+}
+
+.push-diagnostics__failure {
+  overflow-wrap: anywhere;
+}
+
+@keyframes job-activity-ripple {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scaleX(0.82);
+  }
+
+  50% {
+    opacity: 0.72;
+    transform: scaleX(1.08);
+  }
+}
+
+@keyframes job-activity-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes job-activity-sheen {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  65%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+@keyframes job-activity-line-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes job-activity-pulse {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: scale(1);
+  }
+
+  45% {
+    opacity: 1;
+    transform: scale(1.16);
+  }
+}
+
+@keyframes job-activity-avatar-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.88);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .customer-open-jobs-dots {
@@ -6803,6 +7121,11 @@ button {
     padding: 17px 14px;
   }
 
+  .customer-open-job-card--compact {
+    gap: 10px;
+    padding: 15px 13px;
+  }
+
   .customer-open-job-topline {
     align-items: flex-start;
     gap: 8px;
@@ -6915,6 +7238,36 @@ button {
   }
 
   .customer-open-job-stats small {
+    font-size: 0.68rem;
+  }
+
+  .job-activity-tracker {
+    gap: 10px;
+    padding-top: 13px;
+  }
+
+  .job-activity-tracker__header {
+    align-items: flex-start;
+  }
+
+  .job-activity-tracker__live {
+    min-height: 27px;
+    padding: 5px 8px;
+    font-size: 0.68rem;
+  }
+
+  .job-activity-tracker__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .job-activity-avatars {
+    justify-content: flex-end;
+    padding-left: 0;
+  }
+
+  .job-activity-avatars span {
+    width: 28px;
+    height: 28px;
     font-size: 0.68rem;
   }
 

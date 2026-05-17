@@ -17,14 +17,25 @@ function urlBase64ToUint8Array(base64String: string) {
 
 export function PushNotificationToggle({
   enabled,
+  isConfigured,
+  latestDelivery,
   publicKey,
+  subscriptionCount,
 }: {
   enabled: boolean;
+  isConfigured: boolean;
+  latestDelivery: {
+    createdAt: string;
+    failureReason: string | null;
+    status: string;
+  } | null;
   publicKey?: string;
+  subscriptionCount: number;
 }) {
   const [message, setMessage] = useState("");
   const [isEnabled, setIsEnabled] = useState(enabled);
   const [isSaving, setIsSaving] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
 
   const isSupported =
     typeof window !== "undefined" &&
@@ -106,6 +117,32 @@ export function PushNotificationToggle({
     }
   }
 
+  async function sendTestNotification() {
+    setIsTesting(true);
+    setMessage("");
+
+    try {
+      const response = await fetch("/api/notifications/push/test", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Unable to send test notification.");
+      }
+
+      const result = (await response.json()) as { sent?: number; skipped?: boolean };
+      setMessage(
+        result.sent && result.sent > 0
+          ? "Test notification sent."
+          : "No active browser subscription found. Re-enable job alerts on this device.",
+      );
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to send test notification.");
+    } finally {
+      setIsTesting(false);
+    }
+  }
+
   return (
     <section className="market-card">
       <div className="market-card__header">
@@ -119,16 +156,45 @@ export function PushNotificationToggle({
       <p className="market-card__copy">
         Alerts open directly to the job so you can review details and bid quickly.
       </p>
+      <div className="push-diagnostics" aria-label="Push notification diagnostics">
+        <span className={isSupported ? "ok" : "warn"}>Browser {isSupported ? "supported" : "unsupported"}</span>
+        <span className={isConfigured ? "ok" : "warn"}>VAPID {isConfigured ? "configured" : "missing"}</span>
+        <span className={subscriptionCount > 0 ? "ok" : "warn"}>
+          {subscriptionCount} active {subscriptionCount === 1 ? "subscription" : "subscriptions"}
+        </span>
+        {latestDelivery ? (
+          <span className={latestDelivery.status === "FAILED" ? "warn" : "ok"}>
+            Last push: {latestDelivery.status.toLowerCase()}
+          </span>
+        ) : (
+          <span className="warn">No push delivery yet</span>
+        )}
+      </div>
+      {latestDelivery?.failureReason ? (
+        <p className="market-card__meta push-diagnostics__failure">
+          Last failure: {latestDelivery.failureReason}
+        </p>
+      ) : null}
       <div className="market-card__actions market-card__actions--start">
         {isEnabled ? (
-          <button
-            type="button"
-            className="secondary-submit"
-            onClick={disableNotifications}
-            disabled={isSaving}
-          >
-            {isSaving ? "Saving..." : "Turn off alerts"}
-          </button>
+          <>
+            <button
+              type="button"
+              className="secondary-submit"
+              onClick={disableNotifications}
+              disabled={isSaving}
+            >
+              {isSaving ? "Saving..." : "Turn off alerts"}
+            </button>
+            <button
+              type="button"
+              className="secondary-submit"
+              onClick={sendTestNotification}
+              disabled={isTesting}
+            >
+              {isTesting ? "Sending..." : "Send test"}
+            </button>
+          </>
         ) : (
           <button type="button" onClick={enableNotifications} disabled={isSaving}>
             {isSaving ? "Saving..." : "Enable job alerts"}

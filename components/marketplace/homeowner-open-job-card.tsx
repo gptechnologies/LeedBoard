@@ -3,12 +3,9 @@ import type { ReactNode } from "react";
 import {
   Bath,
   BedDouble,
-  Bell,
   ChevronRight,
   Clock,
-  Eye,
   MapPin,
-  MessageSquare,
   PawPrint,
   Ruler,
   type LucideIcon,
@@ -25,6 +22,7 @@ import {
   getJobRequestStatusLabel,
 } from "@/lib/marketplace";
 import { getCleaningJobTitle } from "@/lib/job-title";
+import { JobActivityTracker } from "@/components/marketplace/job-activity-tracker";
 import { Card } from "@/components/ui/card";
 
 type HomeProfileSnapshot = {
@@ -68,6 +66,7 @@ export function HomeownerOpenJobCard({ href, job }: { href: string; job: OpenJob
           </span>
         }
         includePetsInChips={false}
+        showActivity
         job={job}
       />
     </Link>
@@ -81,17 +80,21 @@ export function HomeownerOpenJobDetailCard({
   action?: ReactNode;
   job: OpenJobCardJob;
 }) {
-  return <HomeownerOpenJobCardContent action={action} includePetsInChips job={job} />;
+  return <HomeownerOpenJobCardContent action={action} compact job={job} />;
 }
 
 function HomeownerOpenJobCardContent({
   action,
+  compact = false,
   includePetsInChips = true,
   job,
+  showActivity = false,
 }: {
   action?: ReactNode;
+  compact?: boolean;
   includePetsInChips?: boolean;
   job: OpenJobCardJob;
+  showActivity?: boolean;
 }) {
   const homeDetails = getHomeDetailChips(job.homeProfile, includePetsInChips);
   const extraDetails = [
@@ -104,7 +107,7 @@ function HomeownerOpenJobCardContent({
   ].filter(Boolean) as Array<{ label: string; value: string }>;
 
   return (
-    <Card className="customer-open-job-card">
+    <Card className={compact ? "customer-open-job-card customer-open-job-card--compact" : "customer-open-job-card"}>
       <div className="customer-open-job-topline">
         <span>{formatPostedLabel(job.createdAt)}</span>
         <span
@@ -133,17 +136,19 @@ function HomeownerOpenJobCardContent({
         </span>
       </div>
 
-      <div
-        className={`customer-open-job-chips${includePetsInChips ? "" : " customer-open-job-chips--summary"}`}
-        aria-label="Home details"
-      >
-        {homeDetails.map((detail) => (
-          <span key={detail.label}>
-            <detail.Icon aria-hidden="true" />
-            {detail.label}
-          </span>
-        ))}
-      </div>
+      {!compact ? (
+        <div
+          className={`customer-open-job-chips${includePetsInChips ? "" : " customer-open-job-chips--summary"}`}
+          aria-label="Home details"
+        >
+          {homeDetails.map((detail) => (
+            <span key={detail.label}>
+              <detail.Icon aria-hidden="true" />
+              {detail.label}
+            </span>
+          ))}
+        </div>
+      ) : null}
 
       {extraDetails.length > 0 ? (
         <div className="customer-open-job-detail-notes">
@@ -156,32 +161,16 @@ function HomeownerOpenJobCardContent({
         </div>
       ) : null}
 
-      <div className="customer-open-job-stats" aria-label="Job activity">
-        <StatItem Icon={Bell} label="Cleaners Notified" value={job.cleanersNotifiedCount} />
-        <StatItem Icon={Eye} label="Views" value={job.viewCount} />
-        <StatItem Icon={MessageSquare} label="Bids" value={job.bids.length} />
-      </div>
+      {showActivity ? (
+        <JobActivityTracker
+          bidCount={job.bids.length}
+          cleanersNotifiedCount={job.cleanersNotifiedCount}
+          jobId={job.id}
+          status={job.status}
+          viewCount={job.viewCount}
+        />
+      ) : null}
     </Card>
-  );
-}
-
-function StatItem({
-  Icon,
-  label,
-  value,
-}: {
-  Icon: LucideIcon;
-  label: string;
-  value: number;
-}) {
-  return (
-    <span>
-      <span className="customer-open-job-stat-icon">
-        <Icon aria-hidden="true" />
-      </span>
-      <strong>{value}</strong>
-      <small>{label}</small>
-    </span>
   );
 }
 

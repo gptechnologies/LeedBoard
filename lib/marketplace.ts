@@ -102,7 +102,7 @@ export function formatBidAmount(bid: {
 }
 
 export function formatEstimatedHours(hours?: number | null) {
-  if (!hours) return "Hours not estimated";
+  if (!hours) return "Total price";
   return `${hours.toLocaleString("en-US", {
     maximumFractionDigits: 2,
     minimumFractionDigits: Number.isInteger(hours) ? 0 : 1,
