@@ -37,6 +37,12 @@ enum BidPricingType {
   FLAT
 }
 
+enum ThreadMessageKind {
+  USER
+  BID_ACCEPTED
+  SYSTEM
+}
+
 enum ServiceNeed {
   GENERAL_CLEANING
   DEEP_CLEAN
@@ -222,6 +228,8 @@ model User {
   cleanerBookings                Booking[]       @relation("CleanerBookings")
   customerJobRequests            JobRequest[]    @relation("CustomerJobRequests")
   cleanerBids                    JobBid[]        @relation("CleanerBids")
+  createdMessageThreads          MessageThread[] @relation("CreatedMessageThreads")
+  sentThreadMessages             ThreadMessage[] @relation("SentThreadMessages")
   bookingEvents                  BookingEvent[]
   sessions                       Session[]
   phoneIdentity                  PhoneIdentity?
@@ -391,8 +399,37 @@ model JobBid {
   cleaner               User           @relation("CleanerBids", fields: [cleanerId], references: [id], onDelete: Cascade)
   acceptedForJobRequest JobRequest?    @relation("AcceptedJobBid")
   outreach              JobOutreach?
+  messageThread         MessageThread?
 
   @@unique([jobRequestId, cleanerId])
+}
+
+model MessageThread {
+  id          String          @id @default(cuid())
+  jobBidId    String          @unique
+  createdById String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  jobBid      JobBid          @relation(fields: [jobBidId], references: [id], onDelete: Cascade)
+  createdBy   User?           @relation("CreatedMessageThreads", fields: [createdById], references: [id], onDelete: SetNull)
+  messages    ThreadMessage[]
+
+  @@index([createdById])
+}
+
+model ThreadMessage {
+  id        String            @id @default(cuid())
+  kind      ThreadMessageKind @default(USER)
+  body      String
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  threadId  String
+  senderId  String?
+  thread    MessageThread     @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender    User?             @relation("SentThreadMessages", fields: [senderId], references: [id], onDelete: SetNull)
+
+  @@index([threadId, createdAt])
+  @@index([senderId])
 }
 
 model CleanerLead {

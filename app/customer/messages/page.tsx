@@ -1,23 +1,35 @@
 import { BidStatus, UserRole } from "@prisma/client";
 import Link from "next/link";
 
-import { getCleaningJobTitle } from "@/lib/job-title";
-import { formatBidAmount, getBidStatusLabel } from "@/lib/marketplace";
-import { requireUser } from "@/lib/session";
 import { StatusPill } from "@/components/marketplace/status-pill";
+import { getCleaningJobTitle } from "@/lib/job-title";
+import { formatBidAmount } from "@/lib/marketplace";
 import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-export default async function CleanerMessagesPage() {
-  const user = await requireUser(UserRole.CLEANER);
+export default async function CustomerMessagesPage() {
+  const user = await requireUser(UserRole.CUSTOMER);
 
   const bids = await prisma.jobBid.findMany({
-    where: { cleanerId: user.id },
+    where: {
+      jobRequest: {
+        customerId: user.id,
+      },
+      OR: [
+        { status: BidStatus.ACCEPTED },
+        {
+          messageThread: {
+            isNot: null,
+          },
+        },
+      ],
+    },
     include: {
+      cleaner: true,
       jobRequest: {
         include: {
-          customer: true,
           homeProfile: {
             select: {
               propertyType: true,
@@ -36,29 +48,22 @@ export default async function CleanerMessagesPage() {
         },
       },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: {
+      updatedAt: "desc",
+    },
     take: 20,
   });
 
   const conversations = bids.map((bid) => {
-    const tone: "success" | "danger" | "default" =
-      bid.status === BidStatus.ACCEPTED
-        ? "success"
-        : bid.status === BidStatus.DECLINED || bid.status === BidStatus.WITHDRAWN
-          ? "danger"
-          : "default";
+    const cleanerName = `${bid.cleaner.firstName} ${bid.cleaner.lastName}`;
+    const latestMessage = bid.messageThread?.messages[0]?.body;
 
     return {
       id: bid.id,
-      jobId: bid.jobRequestId,
-      customerName: `${bid.jobRequest.customer.firstName} ${bid.jobRequest.customer.lastName}`,
-      customerInitial: bid.jobRequest.customer.firstName.charAt(0),
+      cleanerName,
+      cleanerInitial: bid.cleaner.firstName.charAt(0),
       jobTitle: getCleaningJobTitle(bid.jobRequest),
-      preview:
-        bid.messageThread?.messages[0]?.body ||
-        `${formatBidAmount(bid)} bid: ${bid.message || "No note added."}`,
-      statusLabel: getBidStatusLabel(bid.status),
-      tone,
+      preview: latestMessage || `${formatBidAmount(bid)} accepted bid`,
     };
   });
 
@@ -75,7 +80,7 @@ export default async function CleanerMessagesPage() {
           <section className="market-empty">
             <strong>No conversations yet.</strong>
             <p className="market-card__copy">
-              When you bid on a job, a conversation with the homeowner will appear here.
+              Accepted bids will appear here so you and the cleaner can confirm details.
             </p>
           </section>
         ) : (
@@ -83,16 +88,16 @@ export default async function CleanerMessagesPage() {
             {conversations.map((convo) => (
               <Link
                 key={convo.id}
-                href={`/cleaner/messages/${convo.id}`}
+                href={`/customer/messages/${convo.id}`}
                 className="cleaner-convo-card"
               >
                 <span className="cleaner-convo-avatar" aria-hidden="true">
-                  {convo.customerInitial}
+                  {convo.cleanerInitial}
                 </span>
                 <div className="cleaner-convo-body">
                   <div className="cleaner-convo-topline">
-                    <strong>{convo.customerName}</strong>
-                    <StatusPill label={convo.statusLabel} tone={convo.tone} />
+                    <strong>{convo.cleanerName}</strong>
+                    <StatusPill label="Accepted" tone="success" />
                   </div>
                   <span className="cleaner-convo-preview">
                     {convo.jobTitle} · {convo.preview}

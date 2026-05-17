@@ -1,4 +1,4 @@
-import { BidStatus, JobRequestStatus, UserRole } from "@prisma/client";
+import { BidStatus, JobRequestStatus, ThreadMessageKind, UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { getRequiredString } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -28,35 +28,62 @@ export async function POST(request: Request, { params }: { params: Params }) {
     const bidId = getRequiredString(formData.get("bidId"), "Bid");
 
     await prisma.$transaction(async (tx) => {
-      const job = await tx.jobRequest.findFirst({
+      const bid = await tx.jobBid.findFirst({
         where: {
-          id,
-          customerId: user.id,
-          status: JobRequestStatus.OPEN,
+          status: BidStatus.SUBMITTED,
+          id: bidId,
+          jobRequest: {
+            is: {
+              id,
+              customerId: user.id,
+              status: JobRequestStatus.OPEN,
+            },
+          },
         },
-        include: {
-          bids: true,
+        select: {
+          id: true,
+          jobRequestId: true,
         },
       });
-
-      if (!job) {
-        throw new Error("This job is no longer open.");
-      }
-
-      const bid = job.bids.find((item) => item.id === bidId && item.status === BidStatus.SUBMITTED);
 
       if (!bid) {
         throw new Error("That bid is no longer available.");
       }
 
-      await tx.jobBid.update({
-        where: { id: bid.id },
-        data: { status: BidStatus.ACCEPTED },
+      const award = await tx.jobRequest.updateMany({
+        where: {
+          id,
+          customerId: user.id,
+          status: JobRequestStatus.OPEN,
+          acceptedBidId: null,
+        },
+        data: {
+          status: JobRequestStatus.AWARDED,
+          acceptedBidId: bid.id,
+        },
       });
+
+      if (award.count !== 1) {
+        throw new Error("This job is no longer open.");
+      }
+
+      const accepted = await tx.jobBid.updateMany({
+        where: {
+          id: bid.id,
+          status: BidStatus.SUBMITTED,
+        },
+        data: {
+          status: BidStatus.ACCEPTED,
+        },
+      });
+
+      if (accepted.count !== 1) {
+        throw new Error("That bid is no longer available.");
+      }
 
       await tx.jobBid.updateMany({
         where: {
-          jobRequestId: job.id,
+          jobRequestId: bid.jobRequestId,
           id: { not: bid.id },
           status: BidStatus.SUBMITTED,
         },
@@ -65,13 +92,40 @@ export async function POST(request: Request, { params }: { params: Params }) {
         },
       });
 
-      await tx.jobRequest.update({
-        where: { id: job.id },
-        data: {
-          status: JobRequestStatus.AWARDED,
-          acceptedBidId: bid.id,
+      const thread = await tx.messageThread.upsert({
+        where: {
+          jobBidId: bid.id,
+        },
+        update: {},
+        create: {
+          jobBidId: bid.id,
+          createdById: user.id,
+        },
+        select: {
+          id: true,
         },
       });
+
+      const existingAcceptanceMessage = await tx.threadMessage.findFirst({
+        where: {
+          threadId: thread.id,
+          kind: ThreadMessageKind.BID_ACCEPTED,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!existingAcceptanceMessage) {
+        await tx.threadMessage.create({
+          data: {
+            threadId: thread.id,
+            senderId: user.id,
+            kind: ThreadMessageKind.BID_ACCEPTED,
+            body: "Looking forward to seeing you then.",
+          },
+        });
+      }
 
       acceptedBidId = bid.id;
     });

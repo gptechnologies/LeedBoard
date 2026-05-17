@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { JobCoordinationSummary } from "@/components/marketplace/job-coordination-summary";
 import { StatusPill } from "@/components/marketplace/status-pill";
+import { MessageComposer, ThreadMessages } from "@/components/marketplace/thread-messages";
 import { getCleaningJobTitle } from "@/lib/job-title";
 import {
   formatBidAmount,
@@ -21,11 +22,15 @@ type Params = Promise<{
 
 export default async function CustomerMessageThreadPage({
   params,
+  searchParams,
 }: {
   params: Params;
+  searchParams: Promise<{
+    error?: string;
+  }>;
 }) {
   const user = await requireUser(UserRole.CUSTOMER);
-  const { bidId } = await params;
+  const [{ bidId }, query] = await Promise.all([params, searchParams]);
   const bid = await prisma.jobBid.findFirst({
     where: {
       id: bidId,
@@ -44,6 +49,23 @@ export default async function CustomerMessageThreadPage({
           homeProfile: {
             select: {
               propertyType: true,
+            },
+          },
+        },
+      },
+      messageThread: {
+        include: {
+          messages: {
+            include: {
+              sender: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
+            orderBy: {
+              createdAt: "asc",
             },
           },
         },
@@ -79,6 +101,8 @@ export default async function CustomerMessageThreadPage({
           <StatusPill label={statusLabel} tone={isCompleted ? "success" : statusTone} />
         </header>
 
+        {query.error ? <div className="notice error">{query.error}</div> : null}
+
         <div className="message-thread">
           <JobCoordinationSummary
             bid={bid}
@@ -103,15 +127,22 @@ export default async function CustomerMessageThreadPage({
             {bid.message ? <p>{bid.message}</p> : null}
           </article>
 
-          {bid.status === BidStatus.ACCEPTED ? (
+          <ThreadMessages
+            bid={bid}
+            currentUserId={user.id}
+            job={bid.jobRequest}
+            messages={bid.messageThread?.messages ?? []}
+          />
+
+          {isCompleted ? (
             <article className="message-event message-event--system">
-              <strong>{isCompleted ? "Cleaner marked this job complete." : "You accepted this bid."}</strong>
-              <p>
-                {isCompleted
-                  ? "Payment is still ignored for testing, so this is the end state for now."
-                  : "The cleaner will see this confirmation in the same thread."}
-              </p>
+              <strong>Cleaner marked this job complete.</strong>
+              <p>Payment is still ignored for testing, so this is the end state for now.</p>
             </article>
+          ) : null}
+
+          {bid.status === BidStatus.ACCEPTED ? (
+            <MessageComposer action={`/customer/messages/${bid.id}/send`} />
           ) : null}
         </div>
       </section>

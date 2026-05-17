@@ -3627,6 +3627,18 @@ button:active,
   gap: 12px;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .coordination-summary {
   display: grid;
   gap: 16px;
@@ -3808,6 +3820,212 @@ button:active,
 .message-event--system {
   border-color: oklch(74% 0.06 130 / 0.34);
   background: oklch(94% 0.035 120);
+}
+
+.conversation-flow {
+  display: grid;
+  gap: 14px;
+  padding: 4px 0 2px;
+}
+
+.conversation-day-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted-foreground);
+  font-size: 0.84rem;
+  font-weight: 720;
+}
+
+.conversation-day-divider::before,
+.conversation-day-divider::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: var(--line);
+}
+
+.conversation-accepted-card {
+  display: grid;
+  gap: 12px;
+  width: min(100%, 520px);
+  border: 1px solid oklch(82% 0.035 112);
+  border-radius: 20px;
+  padding: 16px;
+  background: oklch(98.5% 0.009 112);
+  box-shadow: 0 12px 28px oklch(38% 0.03 112 / 0.1);
+}
+
+.conversation-accepted-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.conversation-accepted-card__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.conversation-accepted-card__title span {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--accent-strong);
+  color: oklch(97.5% 0.012 112);
+}
+
+.conversation-accepted-card__title svg {
+  width: 20px;
+  height: 20px;
+}
+
+.conversation-accepted-card__title strong {
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 1.45rem;
+  font-weight: 520;
+  line-height: 1;
+}
+
+.conversation-accepted-card dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.conversation-accepted-card dl > div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 5px;
+  align-items: baseline;
+}
+
+.conversation-accepted-card dt {
+  color: var(--ink);
+  font-weight: 820;
+}
+
+.conversation-accepted-card dd {
+  margin: 0;
+  color: var(--body);
+  line-height: 1.35;
+}
+
+.conversation-accepted-card p {
+  margin: 2px 0 0;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  color: var(--body);
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.conversation-accepted-card time,
+.conversation-bubble-row time {
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.conversation-bubble-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: end;
+  max-width: 100%;
+}
+
+.conversation-bubble-row--own {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.conversation-bubble-row--own > div {
+  justify-self: end;
+  text-align: right;
+}
+
+.conversation-avatar {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid oklch(82% 0.03 112);
+  border-radius: 999px;
+  background: oklch(91% 0.034 112);
+  color: var(--accent-strong);
+  font-weight: 820;
+}
+
+.conversation-avatar--own {
+  background: oklch(82% 0.065 145);
+}
+
+.conversation-bubble {
+  max-width: min(420px, 100%);
+  margin: 0 0 5px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 12px 14px;
+  background: var(--surface);
+  color: var(--body);
+  font-size: 0.98rem;
+  line-height: 1.45;
+  text-align: left;
+}
+
+.conversation-bubble-row--own .conversation-bubble {
+  border-color: oklch(79% 0.04 112);
+  background: oklch(94.5% 0.026 112);
+}
+
+.conversation-composer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: end;
+  border: 1px solid oklch(84% 0.026 112);
+  border-radius: 24px;
+  padding: 10px;
+  background: oklch(98.8% 0.008 112);
+  box-shadow: 0 14px 30px oklch(38% 0.032 112 / 0.11);
+}
+
+.conversation-composer textarea {
+  min-height: 46px;
+  max-height: 120px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 12px 16px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  line-height: 1.35;
+}
+
+.conversation-composer textarea:focus {
+  border-color: var(--accent);
+  outline: 3px solid oklch(80% 0.06 145 / 0.24);
+}
+
+.conversation-composer button {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  min-height: 48px;
+  place-items: center;
+  border-radius: 999px;
+  padding: 0;
+}
+
+.conversation-composer button svg {
+  width: 22px;
+  height: 22px;
 }
 
 .market-mobile-nav__link.active {

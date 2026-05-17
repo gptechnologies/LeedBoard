@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { JobCoordinationSummary } from "@/components/marketplace/job-coordination-summary";
 import { StatusPill } from "@/components/marketplace/status-pill";
+import { MessageComposer, ThreadMessages } from "@/components/marketplace/thread-messages";
 import { getCleaningJobTitle } from "@/lib/job-title";
 import {
   formatBidAmount,
@@ -43,6 +44,23 @@ export default async function CleanerMessageThreadPage({
           homeProfile: {
             select: {
               propertyType: true,
+            },
+          },
+        },
+      },
+      messageThread: {
+        include: {
+          messages: {
+            include: {
+              sender: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
+            orderBy: {
+              createdAt: "asc",
             },
           },
         },
@@ -101,17 +119,22 @@ export default async function CleanerMessageThreadPage({
             {bid.message ? <p>{bid.message}</p> : null}
           </article>
 
-          {bid.status === BidStatus.ACCEPTED ? (
+          <ThreadMessages
+            bid={bid}
+            currentUserId={user.id}
+            job={bid.jobRequest}
+            messages={bid.messageThread?.messages ?? []}
+          />
+
+          {isCompleted ? (
             <article className="message-event message-event--system">
-              <strong>
-                {isCompleted ? "You marked this job complete." : "Homeowner accepted your bid."}
-              </strong>
-              <p>
-                {isCompleted
-                  ? "The homeowner can now see the completed job state in this thread."
-                  : "This job is confirmed. Keep details and next steps in this thread."}
-              </p>
+              <strong>You marked this job complete.</strong>
+              <p>The homeowner can now see the completed job state in this thread.</p>
             </article>
+          ) : null}
+
+          {bid.status === BidStatus.ACCEPTED && !isCompleted ? (
+            <MessageComposer action={`/cleaner/messages/${bid.id}/send`} />
           ) : null}
 
           {bid.status === BidStatus.ACCEPTED && !isCompleted ? (
