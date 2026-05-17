@@ -3,6 +3,10 @@ import type { ReactNode } from "react";
 import { Clock, MapPin } from "lucide-react";
 import {
   CleanLevel,
+  BidSelectionPriority,
+  HomeCondition,
+  JobCleanType,
+  JobPriorityArea,
   JobRequestStatus,
   type PropertyType,
   RoomType,
@@ -10,6 +14,10 @@ import {
 } from "@prisma/client";
 import {
   formatTimingSummary,
+  getBidSelectionPriorityLabel,
+  getHomeConditionLabel,
+  getJobCleanTypeLabel,
+  getJobPriorityAreaLabel,
   getJobRequestStatusLabel,
 } from "@/lib/marketplace";
 import { getCleaningJobTitle } from "@/lib/job-title";
@@ -36,6 +44,10 @@ type OpenJobCardJob = {
   postalCode: string;
   roomTypes: RoomType[];
   cleanLevel: CleanLevel;
+  cleanType?: JobCleanType | null;
+  currentCondition?: HomeCondition | null;
+  matchingPriorityAreas?: JobPriorityArea[];
+  selectionPriority?: BidSelectionPriority;
   timingPreference: TimingPreference;
   requestedDate: Date | null;
   requestedWindowStart: string | null;
@@ -92,6 +104,30 @@ function HomeownerOpenJobCardContent({
 }) {
   const showActivity = mode === "full";
   const extraDetails = [
+    job.cleanType
+      ? {
+          label: "Clean type",
+          value: getJobCleanTypeLabel(job.cleanType),
+        }
+      : null,
+    job.currentCondition
+      ? {
+          label: "Condition",
+          value: getHomeConditionLabel(job.currentCondition),
+        }
+      : null,
+    job.matchingPriorityAreas && job.matchingPriorityAreas.length > 0
+      ? {
+          label: "Priority areas",
+          value: job.matchingPriorityAreas.map(getJobPriorityAreaLabel).join(", "),
+        }
+      : null,
+    job.selectionPriority
+      ? {
+          label: "Most important",
+          value: getBidSelectionPriorityLabel(job.selectionPriority),
+        }
+      : null,
     job.notes
       ? {
           label: "Notes",

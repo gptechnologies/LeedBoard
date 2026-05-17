@@ -6,6 +6,10 @@ import {
   getCleanLevelLabel,
   getCustomerHistorySummary,
   getEntryMethodLabel,
+  getHomeConditionLabel,
+  getJobCleanTypeLabel,
+  getJobPriorityAreaLabel,
+  getBidSelectionPriorityLabel,
 } from "@/lib/marketplace";
 import { getCleaningJobTitle } from "@/lib/job-title";
 import { prisma } from "@/lib/prisma";
@@ -81,6 +85,21 @@ export default async function CleanerJobDetailPage({
       : job.homeProfile.hasPets
         ? "Pets"
         : "No pets";
+  const matchingDetails = [
+    job.cleanType ? { label: "Clean type", value: getJobCleanTypeLabel(job.cleanType) } : null,
+    job.currentCondition
+      ? { label: "Condition", value: getHomeConditionLabel(job.currentCondition) }
+      : null,
+    job.matchingPriorityAreas.length > 0
+      ? {
+          label: "Priority areas",
+          value: job.matchingPriorityAreas.map(getJobPriorityAreaLabel).join(", "),
+        }
+      : null,
+    job.selectionPriority
+      ? { label: "Most important", value: getBidSelectionPriorityLabel(job.selectionPriority) }
+      : null,
+  ].filter((detail): detail is { label: string; value: string } => Boolean(detail));
 
   return (
     <div className="market-shell market-shell--detail bid-screen">
@@ -127,6 +146,19 @@ export default async function CleanerJobDetailPage({
             <div className="cleaner-detail-note">
               <strong>Job notes</strong>
               <p>{job.notes}</p>
+            </div>
+          ) : null}
+          {matchingDetails.length > 0 ? (
+            <div className="cleaner-detail-note cleaner-detail-matching">
+              <strong>Matching details</strong>
+              <dl>
+                {matchingDetails.map((detail) => (
+                  <div key={detail.label}>
+                    <dt>{detail.label}</dt>
+                    <dd>{detail.value}</dd>
+                  </div>
+                ))}
+              </dl>
             </div>
           ) : null}
         </article>

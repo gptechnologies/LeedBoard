@@ -4,7 +4,10 @@ import {
   BidStatus,
   CleanLevel,
   EntryMethod,
+  HomeCondition,
   HomeProfile,
+  JobCleanType,
+  JobPriorityArea,
   JobRequestStatus,
   RoomType,
   ServiceNeed,
@@ -44,6 +47,49 @@ export function getCleanLevelLabel(value: CleanLevel) {
   }
 
   return "Standard";
+}
+
+export function getJobCleanTypeLabel(value: JobCleanType) {
+  switch (value) {
+    case JobCleanType.DEEP_CLEAN:
+      return "Deep Clean";
+    case JobCleanType.MOVE_OUT_CLEAN:
+      return "Move-Out Clean";
+    case JobCleanType.RECURRING_CLEAN:
+      return "Recurring Clean";
+    case JobCleanType.ASAP_REFRESH:
+      return "ASAP Refresh";
+    default:
+      return "Standard Clean";
+  }
+}
+
+export function getHomeConditionLabel(value: HomeCondition) {
+  switch (value) {
+    case HomeCondition.LIGHT_TOUCH_UP:
+      return "Light touch-up";
+    case HomeCondition.NEEDS_EXTRA_ATTENTION:
+      return "Needs extra attention";
+    default:
+      return "Normal lived-in";
+  }
+}
+
+export function getJobPriorityAreaLabel(value: JobPriorityArea) {
+  switch (value) {
+    case JobPriorityArea.BATHROOMS:
+      return "Bathrooms";
+    case JobPriorityArea.FLOORS:
+      return "Floors";
+    case JobPriorityArea.PET_HAIR:
+      return "Pet hair";
+    case JobPriorityArea.INSIDE_FRIDGE:
+      return "Inside fridge";
+    case JobPriorityArea.INSIDE_OVEN:
+      return "Inside oven";
+    default:
+      return "Kitchen";
+  }
 }
 
 export function formatServiceNeeds(needs: ServiceNeed[]) {

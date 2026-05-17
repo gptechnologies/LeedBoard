@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowRight, CalendarDays, Check, ChevronRight, Home, Lock, StickyNote } from "lucide-react";
 import {
   CleanLevel,
   EntryMethod,
@@ -9,10 +10,13 @@ import {
   TimingPreference,
 } from "@prisma/client";
 import { FormEvent, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import {
   entryMethodOptions,
 } from "@/lib/marketplace-constants";
 import { PulsatingPrimaryButton } from "@/components/marketplace/motion-buttons";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 type RoomCleanLevels = Partial<Record<RoomType, CleanLevel>>;
 type DayChoice = "" | "today" | "another";
@@ -180,6 +184,7 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
   const [savedHomeProfiles, setSavedHomeProfiles] = useState(homeProfiles);
   const [selectedHomeProfileId, setSelectedHomeProfileId] = useState(initialHomeProfile?.id ?? "");
   const [step, setStep] = useState(0);
+  const [flowView, setFlowView] = useState<"compose" | "review">("compose");
   const [selectedCleaningPresetId, setSelectedCleaningPresetId] =
     useState<CleaningPresetId>(defaultPreset.id);
   const [focusNeeds, setFocusNeeds] = useState<ServiceNeed[]>([]);
@@ -425,9 +430,373 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    if (step < steps.length - 1 || !submitIntentRef.current) {
+    if (flowView !== "review" || !submitIntentRef.current) {
       event.preventDefault();
     }
+  }
+
+  function goReview() {
+    if (!hasAddress) {
+      setValidationMessage("Choose or add a location before continuing.");
+      return;
+    }
+
+    if (locationEditorMode !== "closed") {
+      setValidationMessage("Save or cancel the location edit before continuing.");
+      return;
+    }
+
+    if (!hasScheduleDay) {
+      setValidationMessage("Choose a day so cleaners know when to bid.");
+      return;
+    }
+
+    if (!hasScheduleArrival) {
+      setValidationMessage("Choose ASAP or an arrival window to continue.");
+      return;
+    }
+
+    setValidationMessage("");
+    setFlowView("review");
+    window.setTimeout(() => {
+      wizardTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+  }
+
+  if (flowView === "compose" || flowView === "review") {
+    const selectedDate = requestedDate ? dateFromInputValue(requestedDate) : undefined;
+    const timingSummary = arrivalChoice === "asap"
+      ? `${formatDateForReview(requestedDate)} · ASAP`
+      : `${formatDateForReview(requestedDate)} · ${selectedWindow ?? "Choose an arrival window"}`;
+
+    return (
+      <form
+        action="/customer/jobs/create"
+        method="post"
+        className="market-form stack market-job-composer"
+        onSubmit={handleSubmit}
+      >
+        <div ref={wizardTopRef} className="market-form-heading market-job-composer__heading">
+          <h1>{flowView === "review" ? "Review your job" : "Post a Job"}</h1>
+          <p>
+            {flowView === "review"
+              ? "Check the basics before we start collecting bids."
+              : "A few quick details and we will start matching cleaners."}
+          </p>
+        </div>
+
+        {flowView === "compose" ? (
+          <section className="market-job-timeline" aria-label="Post a job details">
+            <article className="market-timeline-step is-complete">
+              <div className="market-timeline-marker">
+                <span><Check aria-hidden="true" /></span>
+              </div>
+              <div className="market-timeline-card">
+                <div className="market-timeline-card__heading">
+                  <h2>1. Where</h2>
+                </div>
+                {selectedHomeProfile ? (
+                  <button type="button" className="market-location-choice" onClick={openEditLocation}>
+                    <span className="market-location-choice__icon" aria-hidden="true">
+                      <Home />
+                    </span>
+                    <span>
+                      <strong>{selectedHomeProfile.label}</strong>
+                      <em>{addressLine1}, {city}, {state} {postalCode}</em>
+                    </span>
+                    <ChevronRight aria-hidden="true" />
+                  </button>
+                ) : (
+                  <div className="notice">Add a home so cleaners know where to go.</div>
+                )}
+
+                {locationEditorMode !== "closed" ? (
+                  <LocationEditor
+                    draft={locationDraft}
+                    mode={locationEditorMode}
+                    presets={savedHomeProfiles}
+                    isSaving={isSavingLocation}
+                    message={locationSaveMessage}
+                    onCancel={selectedHomeProfile ? cancelLocationEdit : undefined}
+                    onChange={updateLocationDraft}
+                    onPresetSelect={choosePresetForEdit}
+                    onSave={saveLocation}
+                  />
+                ) : null}
+
+                <button type="button" className="market-new-location-button" onClick={openNewLocation}>
+                  <span aria-hidden="true">+</span>
+                  New Location
+                </button>
+              </div>
+            </article>
+
+            <article className="market-timeline-step is-active">
+              <div className="market-timeline-marker">
+                <span>2</span>
+              </div>
+              <div className="market-timeline-card">
+                <div className="market-timeline-card__heading">
+                  <h2>2. When</h2>
+                  <p>Choose the day and arrival window.</p>
+                </div>
+
+                <div className="market-segmented">
+                  <label className={dayChoice === "today" ? "market-segmented__option active" : "market-segmented__option"}>
+                    <input
+                      type="radio"
+                      value="today"
+                      checked={dayChoice === "today"}
+                      onChange={chooseToday}
+                    />
+                    <CalendarDays aria-hidden="true" />
+                    Today
+                  </label>
+                  <label className={dayChoice === "another" ? "market-segmented__option active" : "market-segmented__option"}>
+                    <input
+                      type="radio"
+                      value="another"
+                      checked={dayChoice === "another"}
+                      onChange={chooseAnotherDay}
+                    />
+                    <CalendarDays aria-hidden="true" />
+                    Another day
+                  </label>
+                </div>
+
+                {dayChoice === "another" ? (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button type="button" className="market-date-input">
+                        <CalendarDays aria-hidden="true" />
+                        <span>{requestedDate ? formatDateForReview(requestedDate) : "Choose a date"}</span>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="market-date-popover">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
+                        onSelect={(date) => {
+                          if (!date) return;
+                          setRequestedDate(toDateInputValue(date));
+                          setValidationMessage("");
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                ) : null}
+
+                {hasScheduleDay ? (
+                  <div className="stack small">
+                    <div className="market-segmented">
+                      <label className={arrivalChoice === "asap" ? "market-segmented__option active" : "market-segmented__option"}>
+                        <input
+                          type="radio"
+                          value="asap"
+                          checked={arrivalChoice === "asap"}
+                          onChange={chooseAsap}
+                        />
+                        ASAP
+                      </label>
+                      <label className={arrivalChoice === "window" ? "market-segmented__option active" : "market-segmented__option"}>
+                        <input
+                          type="radio"
+                          value="window"
+                          checked={arrivalChoice === "window"}
+                          onChange={chooseTimeSlot}
+                        />
+                        Create a schedule
+                      </label>
+                    </div>
+
+                    {arrivalChoice === "window" ? (
+                      <div className="market-custom-window">
+                        <div className="market-time-slot">
+                          <label className="market-time-slot__copy" htmlFor="startHour">
+                            <span>Arrival time</span>
+                          </label>
+                          <select
+                            id="startHour"
+                            value={startHour}
+                            onChange={(event) => {
+                              setStartHour(event.target.value);
+                              setArrivalChoice("window");
+                              setTimingPreference(TimingPreference.TIME_SLOT);
+                              setValidationMessage("");
+                            }}
+                          >
+                            <option value="">--:--</option>
+                            {hourOptions.map((o) => (
+                              <option key={o.value} value={o.value}>{o.label}</option>
+                            ))}
+                          </select>
+                          <div className="market-time-slot__period">
+                            <button type="button" className={startPeriod === "AM" ? "active" : ""} onClick={() => setStartPeriod("AM")}>AM</button>
+                            <button type="button" className={startPeriod === "PM" ? "active" : ""} onClick={() => setStartPeriod("PM")}>PM</button>
+                          </div>
+                        </div>
+                        <div className="market-time-slot">
+                          <label className="market-time-slot__copy" htmlFor="endHour">
+                            <span>Finish time</span>
+                          </label>
+                          <select
+                            id="endHour"
+                            value={endHour}
+                            onChange={(event) => {
+                              setEndHour(event.target.value);
+                              setArrivalChoice("window");
+                              setTimingPreference(TimingPreference.TIME_SLOT);
+                              setValidationMessage("");
+                            }}
+                          >
+                            <option value="">--:--</option>
+                            {hourOptions.map((o) => (
+                              <option key={o.value} value={o.value}>{o.label}</option>
+                            ))}
+                          </select>
+                          <div className="market-time-slot__period">
+                            <button type="button" className={endPeriod === "AM" ? "active" : ""} onClick={() => setEndPeriod("AM")}>AM</button>
+                            <button type="button" className={endPeriod === "PM" ? "active" : ""} onClick={() => setEndPeriod("PM")}>PM</button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {canContinueFromSchedule ? (
+                      <div className="market-schedule-summary" aria-live="polite">
+                        <span>Selected</span>
+                        <strong>{timingSummary}</strong>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            </article>
+
+            <article className={notes ? "market-timeline-step is-complete" : "market-timeline-step"}>
+              <div className="market-timeline-marker">
+                <span>{notes ? <Check aria-hidden="true" /> : "3"}</span>
+              </div>
+              <div className="market-timeline-card">
+                <div className="market-timeline-card__heading">
+                  <h2>3. Notes / Specifics</h2>
+                  <p>Add any special instructions.</p>
+                </div>
+                <div className="field">
+                  <label htmlFor="notes">Notes for cleaners</label>
+                  <textarea
+                    id="notes"
+                    value={notes}
+                    onChange={(event) => setNotes(event.target.value)}
+                    placeholder="Areas to focus on, pets, parking, or anything unusual."
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="entryMethod">How will the cleaner enter?</label>
+                  <select
+                    id="entryMethod"
+                    value={entryMethod}
+                    onChange={(event) => setEntryMethod(event.target.value as EntryMethod)}
+                  >
+                    {entryMethodOptions.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  <label htmlFor="entryNotes">Entry details</label>
+                  <textarea
+                    id="entryNotes"
+                    value={entryNotes}
+                    onChange={(event) => setEntryNotes(event.target.value)}
+                    placeholder="Door code, hidden key spot, call box, or parking notes."
+                  />
+                </div>
+              </div>
+            </article>
+          </section>
+        ) : (
+          <section className="market-form-section market-review-panel stack">
+            <div className="market-section-heading">
+              <h2>Review details</h2>
+            </div>
+            <div className="market-review-list">
+              <ReviewRow icon={<Home aria-hidden="true" />} label="Where" value={`${addressLine1}, ${city}, ${state} ${postalCode}`} />
+              <ReviewRow icon={<CalendarDays aria-hidden="true" />} label="When" value={timingSummary} />
+              <ReviewRow icon={<StickyNote aria-hidden="true" />} label="Notes" value={notes || "No notes added"} />
+              <ReviewRow
+                icon={<Lock aria-hidden="true" />}
+                label="Entry"
+                value={entryMethodOptions.find((option) => option.value === entryMethod)?.label ?? entryMethod}
+              />
+            </div>
+            <div className="notice">
+              After this, we will ask four quick matching questions so cleaners can see the details before they bid.
+            </div>
+          </section>
+        )}
+
+        <input type="hidden" name="homeProfileId" value={isUsingPreset ? selectedHomeProfile?.id ?? "" : ""} />
+        <input type="hidden" name="addressLine1" value={addressLine1} />
+        <input type="hidden" name="addressLine2" value={addressLine2} />
+        <input type="hidden" name="city" value={city} />
+        <input type="hidden" name="state" value={state} />
+        <input type="hidden" name="postalCode" value={postalCode} />
+        <input type="hidden" name="entryMethod" value={entryMethod} />
+        <input type="hidden" name="entryNotes" value={entryNotes} />
+        <input type="hidden" name="cleanLevel" value={cleanLevel} />
+        <input type="hidden" name="roomCleanLevels" value={JSON.stringify(roomCleanLevels)} />
+        <input type="hidden" name="timingPreference" value={timingPreference} />
+        <input type="hidden" name="requestedDate" value={requestedDate} />
+        <input type="hidden" name="requestedWindowStart" value={windowStartTime} />
+        <input type="hidden" name="requestedWindowEnd" value={windowEndTime} />
+        <input type="hidden" name="notes" value={notes} />
+        {roomTypes.map((roomType) => (
+          <input key={roomType} type="hidden" name="roomTypes" value={roomType} />
+        ))}
+        {serviceNeeds.map((serviceNeed) => (
+          <input key={serviceNeed} type="hidden" name="serviceNeeds" value={serviceNeed} />
+        ))}
+
+        {validationMessage ? (
+          <p className="market-form-error market-form-error--footer" aria-live="polite">
+            {validationMessage}
+          </p>
+        ) : null}
+
+        <div className={flowView === "review" ? "market-wizard-actions" : "market-wizard-actions market-wizard-actions--first"}>
+          <div className="market-wizard-actions__row">
+            {flowView === "review" ? (
+              <button type="button" className="button secondary" onClick={() => setFlowView("compose")}>
+                Back
+              </button>
+            ) : null}
+            {flowView === "compose" ? (
+              <PulsatingPrimaryButton type="button" className="flex-1" onClick={goReview}>
+                Continue <ArrowRight aria-hidden="true" />
+              </PulsatingPrimaryButton>
+            ) : (
+              <PulsatingPrimaryButton
+                type="submit"
+                className="flex-1"
+                onClick={() => {
+                  submitIntentRef.current = true;
+                }}
+              >
+                Post Job for Bids
+              </PulsatingPrimaryButton>
+            )}
+          </div>
+          <Link href="/customer" className="market-cancel-link">
+            Cancel
+          </Link>
+          {flowView === "compose" ? (
+            <span className="market-secure-note"><Lock aria-hidden="true" /> Your info is always secure</span>
+          ) : null}
+        </div>
+      </form>
+    );
   }
 
   return (
@@ -1176,6 +1545,26 @@ function LocationEditor({
   );
 }
 
+function ReviewRow({
+  icon,
+  label,
+  value,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="market-review-row">
+      <span className="market-review-row__icon">{icon}</span>
+      <div>
+        <span>{label}</span>
+        <strong>{value}</strong>
+      </div>
+    </div>
+  );
+}
+
 function formatTime(time: string) {
   if (!time) return "";
   const [h, m] = time.split(":").map(Number);
@@ -1235,6 +1624,11 @@ function toDateInputValue(date: Date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function dateFromInputValue(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
 }
 
 function formatDateForReview(value: string) {

@@ -154,6 +154,29 @@ enum CleanLevel {
   DEEP
 }
 
+enum JobCleanType {
+  STANDARD_CLEAN
+  DEEP_CLEAN
+  MOVE_OUT_CLEAN
+  RECURRING_CLEAN
+  ASAP_REFRESH
+}
+
+enum HomeCondition {
+  LIGHT_TOUCH_UP
+  NORMAL_LIVED_IN
+  NEEDS_EXTRA_ATTENTION
+}
+
+enum JobPriorityArea {
+  KITCHEN
+  BATHROOMS
+  FLOORS
+  PET_HAIR
+  INSIDE_FRIDGE
+  INSIDE_OVEN
+}
+
 enum BookingStatus {
   PENDING_PAYMENT
   BOOKED
@@ -318,6 +341,9 @@ model JobRequest {
   roomTypes                     RoomType[]       @default([])
   cleanLevel                    CleanLevel       @default(MEDIUM)
   roomCleanLevels               Json             @default("{}")
+  cleanType                     JobCleanType?
+  currentCondition              HomeCondition?
+  matchingPriorityAreas         JobPriorityArea[] @default([])
   priorityTypes                 PriorityType[]   @default([])
   selectionPriority             BidSelectionPriority @default(BEST_OVERALL)
   entryMethod                   EntryMethod      @default(I_WILL_BE_HOME)
