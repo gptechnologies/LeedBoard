@@ -1,9 +1,9 @@
 import { BidStatus, JobRequestStatus, UserRole } from "@prisma/client";
-import { ActivityScreen, type ActivityConversation, type ActivityJob } from "@/components/marketplace/activity-screen";
+import { ActivityScreen, type ActivityConversation, type ActivityInlineDetail, type ActivityJob } from "@/components/marketplace/activity-screen";
 import { AppScreenHeader } from "@/components/marketplace/app-screen-header";
 import { formatTimeAgo } from "@/lib/format";
 import { getCleaningJobTitle } from "@/lib/job-title";
-import { formatTimingSummary } from "@/lib/marketplace";
+import { formatBidAmount, formatBidTiming, formatTimingSummary, getBidStatusLabel, getEntryMethodLabel } from "@/lib/marketplace";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 
@@ -25,11 +25,32 @@ export default async function CleanerMessagesPage() {
     take: 20,
   });
 
+  const toInlineDetail = (bid: (typeof bids)[number]): ActivityInlineDetail => {
+    const accepted = bid.status === BidStatus.ACCEPTED;
+    const completed = bid.jobRequest.status === JobRequestStatus.COMPLETED;
+    const address = accepted
+      ? [bid.jobRequest.addressLine1, bid.jobRequest.addressLine2, `${bid.jobRequest.city}, ${bid.jobRequest.state} ${bid.jobRequest.postalCode}`].filter(Boolean).join(", ")
+      : `${bid.jobRequest.city}, ${bid.jobRequest.state} ${bid.jobRequest.postalCode}`;
+    return {
+      canCompleteJobId: accepted && bid.jobRequest.status === JobRequestStatus.AWARDED ? bid.jobRequest.id : undefined,
+      fields: [
+        { label: "Status", value: completed ? "Completed" : getBidStatusLabel(bid.status) },
+        { label: "Your bid", value: formatBidAmount(bid) },
+        { label: "Arrival", value: formatBidTiming(bid) },
+        { label: accepted ? "Address" : "Area", value: address },
+        { label: "Access", value: accepted ? getEntryMethodLabel(bid.jobRequest.entryMethod) : "Shared after acceptance" },
+        { label: "Supplies", value: formatSupplies(bid.jobRequest.suppliesSource) },
+      ],
+      markReadRole: "cleaner",
+      note: bid.message,
+    };
+  };
+
   const conversations: ActivityConversation[] = bids.map((bid) => {
     const customerName = `${bid.jobRequest.customer.firstName} ${bid.jobRequest.customer.lastName}`;
     return {
       avatar: `${bid.jobRequest.customer.firstName.charAt(0)}${bid.jobRequest.customer.lastName.charAt(0)}`.toUpperCase(),
-      href: `/cleaner/messages/${bid.id}`,
+      detail: toInlineDetail(bid),
       id: bid.id,
       name: customerName,
       preview: bid.message || "Your bid is in. Open the job to review its status.",
@@ -45,7 +66,7 @@ export default async function CleanerMessagesPage() {
     .filter((bid) => bid.jobRequest.status !== JobRequestStatus.COMPLETED)
     .map((bid) => ({
       action: bid.status === BidStatus.ACCEPTED ? "Review active job" : "Bid sent",
-      href: `/cleaner/messages/${bid.id}`,
+      detail: toInlineDetail(bid),
       id: bid.id,
       location: `${bid.jobRequest.city}, ${bid.jobRequest.state}`,
       progress: bid.status === BidStatus.ACCEPTED ? 76 : 44,
@@ -57,9 +78,8 @@ export default async function CleanerMessagesPage() {
   return (
     <div className="wk-app-screen wk-activity-screen">
       <AppScreenHeader
-        actionHref="/cleaner/account"
-        actionLabel="Notification settings"
-        actionType="notifications"
+        accountMenu
+        initials={`${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase()}
       />
       <div className="wk-screen-content">
         <h1 className="wk-page-title">Messages</h1>
@@ -67,4 +87,10 @@ export default async function CleanerMessagesPage() {
       </div>
     </div>
   );
+}
+
+function formatSupplies(value: string) {
+  if (value === "HOMEOWNER_PROVIDES") return "Homeowner provides supplies";
+  if (value === "MIXED") return "Supplies are shared";
+  return "Cleaner brings supplies";
 }

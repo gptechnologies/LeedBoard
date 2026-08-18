@@ -1,23 +1,22 @@
 import {
   Bell,
   CalendarDays,
-  ChevronRight,
   CircleDollarSign,
   MapPin,
   MessageSquareText,
   ShieldCheck,
   Sparkles,
   Star,
-  Undo2,
 } from "lucide-react";
-import { NotificationChannel, UserRole } from "@prisma/client";
+import { JobRequestStatus, NotificationChannel, UserRole } from "@prisma/client";
 import { AppScreenHeader } from "@/components/marketplace/app-screen-header";
 import { CleanerDefaultsForm } from "@/components/marketplace/cleaner-defaults-form";
 import { PushNotificationToggle } from "@/components/marketplace/push-notification-toggle";
-import { getServiceNeedLabel } from "@/lib/marketplace";
+import { PassedJobsDisclosure } from "@/components/marketplace/passed-jobs-disclosure";
+import { getCleaningJobTitle } from "@/lib/job-title";
+import { formatTimingSummary, getServiceNeedLabel } from "@/lib/marketplace";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -29,14 +28,38 @@ export default async function CleanerAccountPage({ searchParams }: CleanerAccoun
   const user = await requireUser(UserRole.CLEANER);
   const params = await searchParams;
   const profile = user.cleanerProfile;
-  const [pushSubscriptionCount, latestPushDelivery, passedJobCount] = await Promise.all([
+  const [pushSubscriptionCount, latestPushDelivery, passedJobs] = await Promise.all([
     prisma.pushSubscription.count({ where: { userId: user.id, disabledAt: null } }),
     prisma.notificationDelivery.findFirst({
       where: { userId: user.id, channel: NotificationChannel.PUSH },
       orderBy: { createdAt: "desc" },
       select: { createdAt: true, failureReason: true, status: true },
     }),
-    prisma.cleanerJobPass.count({ where: { cleanerId: user.id } }),
+    prisma.cleanerJobPass.findMany({
+      where: { cleanerId: user.id },
+      orderBy: { passedAt: "desc" },
+      select: {
+        passedAt: true,
+        jobRequest: {
+          select: {
+            id: true,
+            title: true,
+            city: true,
+            state: true,
+            serviceNeeds: true,
+            cleanType: true,
+            currentCondition: true,
+            cleanLevel: true,
+            timingPreference: true,
+            requestedDate: true,
+            requestedWindowStart: true,
+            requestedWindowEnd: true,
+            status: true,
+            homeProfile: { select: { propertyType: true } },
+          },
+        },
+      },
+    }),
   ]);
   const businessName = profile?.businessName || `${user.firstName} ${user.lastName} Cleaning`;
   const initials = businessName
@@ -82,7 +105,14 @@ export default async function CleanerAccountPage({ searchParams }: CleanerAccoun
         <section className="wk-profile-section">
           <h2>Your account</h2>
           <div>
-            <BusinessRow href="/cleaner/account/passed-jobs" Icon={Undo2} label="Passed Jobs" value={String(passedJobCount)} />
+            <PassedJobsDisclosure jobs={passedJobs.map(({ jobRequest: job, passedAt }) => ({
+              id: job.id,
+              location: `${job.city}, ${job.state.toUpperCase()}`,
+              passedLabel: `Passed ${passedAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+              status: job.status === JobRequestStatus.OPEN ? "OPEN" : "CLOSED",
+              timing: formatTimingSummary(job),
+              title: getCleaningJobTitle(job),
+            }))} />
             <BusinessRow Icon={CircleDollarSign} label="Rates & bidding defaults" value="Edit below" />
             <BusinessRow Icon={Star} label="Reviews" value={profile?.googleRating?.toFixed(1) || "New"} />
             <BusinessRow Icon={MessageSquareText} label="Contact information" />
@@ -150,21 +180,18 @@ function BusinessRow({
   Icon,
   label,
   value,
-  href,
 }: {
   Icon: React.ComponentType<{ "aria-hidden"?: boolean }>;
   label: string;
   value?: string;
-  href?: string;
 }) {
-  const content = (
-    <>
-      <Icon />
-      <span>{label}</span>
-      {value ? <strong>{value}</strong> : null}
-      {href ? <ChevronRight aria-hidden="true" /> : null}
-    </>
+  return (
+    <div className="wk-profile-row">
+      <>
+        <Icon />
+        <span>{label}</span>
+        {value ? <strong>{value}</strong> : null}
+      </>
+    </div>
   );
-
-  return href ? <Link className="wk-profile-row" href={href}>{content}</Link> : <div className="wk-profile-row">{content}</div>;
 }

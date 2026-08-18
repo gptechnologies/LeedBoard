@@ -15,8 +15,10 @@ import {
   Bath,
   BedDouble,
   CalendarDays,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   CircleGauge,
   Home,
   MapPin,
@@ -24,11 +26,11 @@ import {
   PawPrint,
   Sparkles,
 } from "lucide-react";
-import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState, type TouchEvent } from "react";
 
 import { EmptyState } from "@/components/marketplace/empty-state";
 import { FastBidDrawer } from "@/components/marketplace/fast-bid-drawer";
+import { PassJobAction } from "@/components/marketplace/pass-job-action";
 import { getCleaningJobTitle } from "@/lib/job-title";
 import { triggerHaptic } from "@/lib/haptics";
 
@@ -87,14 +89,39 @@ export function NearbyJobSwipeCarousel({
   jobs: NearbyJobSwipeItem[];
 }) {
   const [index, setIndex] = useState(0);
+  const [expanded, setExpanded] = useState(false);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
   const current = jobs[index] ?? null;
 
   function move(direction: -1 | 1) {
     const next = Math.min(Math.max(index + direction, 0), Math.max(jobs.length - 1, 0));
     if (next !== index) {
       setIndex(next);
+      setExpanded(false);
       triggerHaptic("light");
     }
+  }
+
+  function handleTouchStart(event: TouchEvent<HTMLElement>) {
+    const touch = event.touches[0];
+    touchStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
+  }
+
+  function handleTouchEnd(event: TouchEvent<HTMLElement>) {
+    const start = touchStart.current;
+    const touch = event.changedTouches[0];
+    touchStart.current = null;
+    if (!start || !touch) return;
+
+    const horizontalDistance = touch.clientX - start.x;
+    const verticalDistance = touch.clientY - start.y;
+    if (Math.abs(horizontalDistance) < 64 || Math.abs(horizontalDistance) <= Math.abs(verticalDistance)) return;
+    move(horizontalDistance < 0 ? 1 : -1);
+  }
+
+  function toggleDetails() {
+    setExpanded((value) => !value);
+    triggerHaptic("selection");
   }
 
   if (!current) {
@@ -108,17 +135,21 @@ export function NearbyJobSwipeCarousel({
 
   return (
     <div className="wk-provider-deck">
+      <JobPager count={jobs.length} index={index} onMove={move} />
+
       <article
         aria-label={`${getCleaningJobTitle(current.job)}, job ${index + 1} of ${jobs.length}`}
-        className="wk-provider-job-card"
+        className={`wk-provider-job-card${expanded ? " is-expanded" : ""}`}
         key={current.id}
         onKeyDown={(event) => {
           if (event.key === "ArrowLeft") move(-1);
           if (event.key === "ArrowRight") move(1);
         }}
+        onTouchEnd={handleTouchEnd}
+        onTouchStart={handleTouchStart}
         tabIndex={0}
       >
-        <ProviderJobOverview item={current} />
+        <ProviderJobOverview detail={expanded} item={current} />
         <div className="wk-provider-job-card__actions">
           <FastBidDrawer
             defaults={defaults}
@@ -126,13 +157,23 @@ export function NearbyJobSwipeCarousel({
             timingLabel={current.timingLabel}
             trigger={<button className="wk-provider-primary-action wk-pressable" type="button">Bid on Job</button>}
           />
-          <Link className="wk-provider-secondary-action wk-pressable" href={`/cleaner/jobs/${current.id}`}>
-            View Details
-          </Link>
+          <button
+            aria-controls={`provider-job-details-${current.id}`}
+            aria-expanded={expanded}
+            className="wk-provider-secondary-action wk-pressable"
+            onClick={toggleDetails}
+            type="button"
+          >
+            {expanded ? "Hide Details" : "View Details"}
+            {expanded ? <ChevronUp aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}
+          </button>
+          {expanded ? (
+            <div className="wk-provider-expanded-actions">
+              <PassJobAction jobId={current.id} />
+            </div>
+          ) : null}
         </div>
       </article>
-
-      <JobPager count={jobs.length} index={index} onMove={move} />
     </div>
   );
 }
@@ -208,11 +249,14 @@ function JobCardDetails({ detail, item }: { detail: boolean; item: NearbyJobSwip
     ...(detail ? [
       { Icon: BedDouble, label: "Bedrooms", value: home?.bedroomCount != null ? String(home.bedroomCount) : "Not provided" },
       { Icon: Bath, label: "Bathrooms", value: home?.bathroomCount != null ? formatNumber(home.bathroomCount) : "Not provided" },
+      { Icon: CircleGauge, label: "Home size", value: home?.estimatedSquareFeet ? `${home.estimatedSquareFeet.toLocaleString()} ft²` : "Not provided" },
+      { Icon: Home, label: "Stories", value: home?.storyCount != null ? String(home.storyCount) : "Not provided" },
+      { Icon: Sparkles, label: "Supplies", value: formatSupplies(job.suppliesSource) },
     ] : []),
   ];
 
   return (
-    <div className="wk-provider-job-card__facts">
+    <div className="wk-provider-job-card__facts" id={`provider-job-details-${item.id}`}>
       <dl>
         {details.map(({ Icon, label, value }) => (
           <div key={label}>

@@ -65,6 +65,7 @@ export function FastBidDrawer({
   const [etaMinutes, setEtaMinutes] = useState(String(defaults.defaultEtaMinutes ?? 60));
   const [timeConfirmed, setTimeConfirmed] = useState(false);
   const [message, setMessage] = useState("");
+  const [open, setOpen] = useState(false);
   const [submitState, setSubmitState] = useState<"idle" | "submitting" | "success">("idle");
   const [submitError, setSubmitError] = useState("");
 
@@ -113,7 +114,10 @@ export function FastBidDrawer({
 
       setSubmitState("success");
       triggerHaptic("success");
-      window.setTimeout(() => router.push(`/cleaner/messages/${result.bidId}`), 650);
+      window.setTimeout(() => {
+        setOpen(false);
+        router.refresh();
+      }, 650);
     } catch (error) {
       setSubmitState("idle");
       setSubmitError(error instanceof Error ? error.message : "We couldn’t submit your bid. Try again.");
@@ -122,7 +126,10 @@ export function FastBidDrawer({
   }
 
   return (
-    <Drawer>
+    <Drawer open={open} onOpenChange={(nextOpen) => {
+      if (submitState === "submitting") return;
+      setOpen(nextOpen);
+    }}>
       <DrawerTrigger asChild>
         {trigger ?? (
           triggerMode === "button" ? (

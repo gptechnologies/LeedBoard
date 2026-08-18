@@ -23,7 +23,6 @@ export function PassJobAction({ jobId }: { jobId: string }) {
       const result = (await response.json().catch(() => null)) as { error?: string } | null;
       if (!response.ok) throw new Error(result?.error || "We couldn’t pass this job.");
       triggerHaptic("success");
-      router.replace("/cleaner?passed=1");
       router.refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "We couldn’t pass this job.");

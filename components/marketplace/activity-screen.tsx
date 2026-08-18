@@ -1,14 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, ChevronRight, Home, MessageCircle, Sparkles } from "lucide-react";
+import { CalendarDays, ChevronDown, ChevronRight, Home, MessageCircle, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { CompleteJobAction } from "@/components/marketplace/complete-job-action";
 import { triggerHaptic } from "@/lib/haptics";
+
+export type ActivityInlineDetail = {
+  canCompleteJobId?: string;
+  fields: Array<{ label: string; value: string }>;
+  markReadRole?: "cleaner" | "customer";
+  note?: string | null;
+};
 
 export type ActivityConversation = {
   avatar: string;
-  href: string;
+  detail?: ActivityInlineDetail;
+  href?: string;
   id: string;
   name: string;
   preview: string;
@@ -19,7 +28,8 @@ export type ActivityConversation = {
 
 export type ActivityJob = {
   action: string;
-  href: string;
+  detail?: ActivityInlineDetail;
+  href?: string;
   id: string;
   location: string;
   progress: number;
@@ -40,6 +50,8 @@ export function ActivityScreen({
   jobsLabel?: string;
 }) {
   const [segment, setSegment] = useState<"updates" | "jobs">("updates");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [readIds, setReadIds] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     const firstUnread = conversations.find((conversation) => conversation.unread);
@@ -51,6 +63,23 @@ export function ActivityScreen({
     triggerHaptic("notification");
   }, [conversations]);
 
+  function toggleDetails(id: string, detail?: ActivityInlineDetail) {
+    const opening = expandedId !== id;
+    setExpandedId(opening ? id : null);
+    triggerHaptic("selection");
+
+    if (!opening || !detail?.markReadRole || readIds.has(id)) return;
+    void fetch(`/api/activity/${id}/read`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: detail.markReadRole }),
+    }).then((response) => {
+      if (!response.ok) return;
+      setReadIds((current) => new Set(current).add(id));
+      window.dispatchEvent(new CustomEvent("wellkept:activity-read", { detail: { bidId: id } }));
+    });
+  }
+
   return (
     <>
       <div className="wk-segmented" role="tablist" aria-label="Activity type">
@@ -61,6 +90,7 @@ export function ActivityScreen({
           className={segment === "updates" ? "is-active" : ""}
           onClick={() => {
             setSegment("updates");
+            setExpandedId(null);
             triggerHaptic("selection");
           }}
           role="tab"
@@ -75,6 +105,7 @@ export function ActivityScreen({
           className={segment === "jobs" ? "is-active" : ""}
           onClick={() => {
             setSegment("jobs");
+            setExpandedId(null);
             triggerHaptic("selection");
           }}
           role="tab"
@@ -99,25 +130,25 @@ export function ActivityScreen({
             </div>
             {conversations.length > 0 ? (
               <div className="wk-conversation-list">
-                {conversations.map((conversation) => (
-                  <Link
-                    className={`wk-conversation-row wk-pressable${conversation.unread ? " is-unread" : ""}`}
-                    href={conversation.href}
-                    key={conversation.id}
-                    onClick={() => triggerHaptic("selection")}
-                  >
-                    <span className="wk-row-avatar">{conversation.avatar}</span>
-                    <span className="wk-row-copy">
-                      <strong>{conversation.name}</strong>
-                      <small>{conversation.service}</small>
-                      <span>{conversation.preview}</span>
-                    </span>
-                    <span className="wk-row-meta">
-                      <time>{conversation.time}</time>
-                      {conversation.unread ? <b>{conversation.unread}</b> : null}
-                    </span>
-                  </Link>
-                ))}
+                {conversations.map((conversation) => {
+                  const unread = conversation.unread && !readIds.has(conversation.id);
+                  const rowClass = `wk-conversation-row wk-pressable${unread ? " is-unread" : ""}`;
+                  return (
+                    <div className={`wk-activity-item${expandedId === conversation.id ? " is-open" : ""}`} key={conversation.id}>
+                      {conversation.detail ? (
+                        <button aria-expanded={expandedId === conversation.id} className={rowClass} onClick={() => toggleDetails(conversation.id, conversation.detail)} type="button">
+                          <ConversationRowContent conversation={conversation} unread={Boolean(unread)} />
+                          <ChevronDown aria-hidden="true" className="wk-activity-item__chevron" />
+                        </button>
+                      ) : (
+                        <Link className={rowClass} href={conversation.href ?? "#"} onClick={() => triggerHaptic("selection")}>
+                          <ConversationRowContent conversation={conversation} unread={Boolean(unread)} />
+                        </Link>
+                      )}
+                      {expandedId === conversation.id && conversation.detail ? <ActivityInlineDetails detail={conversation.detail} /> : null}
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <EmptyActivity
@@ -137,33 +168,20 @@ export function ActivityScreen({
             {jobs.length > 0 ? (
               <div className="wk-job-list">
                 {jobs.map((job) => (
-                  <Link
-                    className="wk-activity-job wk-pressable"
-                    href={job.href}
-                    key={job.id}
-                    onClick={() => triggerHaptic("selection")}
-                  >
-                    <span className="wk-job-symbol">
-                      {job.title.toLowerCase().includes("kitchen") ? (
-                        <Sparkles aria-hidden="true" />
-                      ) : (
-                        <Home aria-hidden="true" />
-                      )}
-                    </span>
-                    <span className="wk-activity-job__copy">
-                      <strong>{job.title}</strong>
-                      <em>{job.status}</em>
-                      <small>{job.timing}</small>
-                      <small>{job.location}</small>
-                      <span className="wk-job-progress" aria-label={`Job progress: ${job.status}`}>
-                        <i className="is-complete"><b aria-hidden="true" /></i>
-                        <i className={job.progress >= 50 ? "is-complete" : "is-current"}><b aria-hidden="true" /></i>
-                        <i className={job.progress >= 75 ? "is-complete" : job.progress >= 50 ? "is-current" : ""}><b aria-hidden="true" /></i>
-                      </span>
-                      <span>{job.action}</span>
-                    </span>
-                    <ChevronRight aria-hidden="true" />
-                  </Link>
+                  <div className={`wk-activity-item${expandedId === job.id ? " is-open" : ""}`} key={job.id}>
+                    {job.detail ? (
+                      <button aria-expanded={expandedId === job.id} className="wk-activity-job wk-pressable" onClick={() => toggleDetails(job.id, job.detail)} type="button">
+                        <JobRowContent job={job} />
+                        <ChevronDown aria-hidden="true" className="wk-activity-item__chevron" />
+                      </button>
+                    ) : (
+                      <Link className="wk-activity-job wk-pressable" href={job.href ?? "#"} onClick={() => triggerHaptic("selection")}>
+                        <JobRowContent job={job} />
+                        <ChevronRight aria-hidden="true" />
+                      </Link>
+                    )}
+                    {expandedId === job.id && job.detail ? <ActivityInlineDetails detail={job.detail} /> : null}
+                  </div>
                 ))}
               </div>
             ) : (
@@ -178,6 +196,57 @@ export function ActivityScreen({
         )}
       </div>
     </>
+  );
+}
+
+function ConversationRowContent({ conversation, unread }: { conversation: ActivityConversation; unread: boolean }) {
+  return (
+    <>
+      <span className="wk-row-avatar">{conversation.avatar}</span>
+      <span className="wk-row-copy">
+        <strong>{conversation.name}</strong>
+        <small>{conversation.service}</small>
+        <span>{conversation.preview}</span>
+      </span>
+      <span className="wk-row-meta">
+        <time>{conversation.time}</time>
+        {unread ? <b>{conversation.unread}</b> : null}
+      </span>
+    </>
+  );
+}
+
+function JobRowContent({ job }: { job: ActivityJob }) {
+  return (
+    <>
+      <span className="wk-job-symbol">
+        {job.title.toLowerCase().includes("kitchen") ? <Sparkles aria-hidden="true" /> : <Home aria-hidden="true" />}
+      </span>
+      <span className="wk-activity-job__copy">
+        <strong>{job.title}</strong>
+        <em>{job.status}</em>
+        <small>{job.timing}</small>
+        <small>{job.location}</small>
+        <span className="wk-job-progress" aria-label={`Job progress: ${job.status}`}>
+          <i className="is-complete"><b aria-hidden="true" /></i>
+          <i className={job.progress >= 50 ? "is-complete" : "is-current"}><b aria-hidden="true" /></i>
+          <i className={job.progress >= 75 ? "is-complete" : job.progress >= 50 ? "is-current" : ""}><b aria-hidden="true" /></i>
+        </span>
+        <span>{job.action}</span>
+      </span>
+    </>
+  );
+}
+
+function ActivityInlineDetails({ detail }: { detail: ActivityInlineDetail }) {
+  return (
+    <div className="wk-activity-inline-detail">
+      <dl>
+        {detail.fields.map((field) => <div key={field.label}><dt>{field.label}</dt><dd>{field.value}</dd></div>)}
+      </dl>
+      {detail.note ? <p>{detail.note}</p> : null}
+      {detail.canCompleteJobId ? <CompleteJobAction jobId={detail.canCompleteJobId} /> : null}
+    </div>
   );
 }
 

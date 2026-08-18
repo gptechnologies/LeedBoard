@@ -9,6 +9,10 @@ type Params = Promise<{
 }>;
 
 function redirectWithError(request: Request, bidId: string | null, message: string) {
+  if (request.headers.get("X-Well-Kept-Client") === "1") {
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+
   const path = bidId ? `/cleaner/messages/${bidId}` : "/cleaner";
   return NextResponse.redirect(new URL(`${path}?error=${encodeURIComponent(message)}`, request.url));
 }
@@ -43,6 +47,9 @@ export async function POST(request: Request, { params }: { params: Params }) {
     }
 
     if (bid.jobRequest.status === JobRequestStatus.COMPLETED) {
+      if (request.headers.get("X-Well-Kept-Client") === "1") {
+        return NextResponse.json({ ok: true });
+      }
       return NextResponse.redirect(new URL(`/cleaner/messages/${bid.id}`, request.url));
     }
 
@@ -71,6 +78,10 @@ export async function POST(request: Request, { params }: { params: Params }) {
       customer: bid.jobRequest.customer,
       job: bid.jobRequest,
     });
+
+    if (request.headers.get("X-Well-Kept-Client") === "1") {
+      return NextResponse.json({ ok: true });
+    }
 
     return NextResponse.redirect(new URL(`/cleaner/messages/${bid.id}?completed=1`, request.url));
   } catch (error) {
