@@ -1,28 +1,23 @@
-import { BidStatus, UserRole } from "@prisma/client";
-import Link from "next/link";
-
+import { BidStatus, JobRequestStatus, UserRole } from "@prisma/client";
+import { ActivityScreen, type ActivityConversation, type ActivityJob } from "@/components/marketplace/activity-screen";
+import { AppScreenHeader } from "@/components/marketplace/app-screen-header";
+import { formatTimeAgo } from "@/lib/format";
 import { getCleaningJobTitle } from "@/lib/job-title";
-import { formatBidAmount, getBidStatusLabel } from "@/lib/marketplace";
-import { requireUser } from "@/lib/session";
-import { StatusPill } from "@/components/marketplace/status-pill";
+import { formatTimingSummary } from "@/lib/marketplace";
 import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function CleanerMessagesPage() {
   const user = await requireUser(UserRole.CLEANER);
-
   const bids = await prisma.jobBid.findMany({
     where: { cleanerId: user.id },
     include: {
       jobRequest: {
         include: {
           customer: true,
-          homeProfile: {
-            select: {
-              propertyType: true,
-            },
-          },
+          homeProfile: { select: { propertyType: true } },
         },
       },
     },
@@ -30,67 +25,46 @@ export default async function CleanerMessagesPage() {
     take: 20,
   });
 
-  const conversations = bids.map((bid) => {
-    const tone: "success" | "danger" | "default" =
-      bid.status === BidStatus.ACCEPTED
-        ? "success"
-        : bid.status === BidStatus.DECLINED || bid.status === BidStatus.WITHDRAWN
-          ? "danger"
-          : "default";
-
+  const conversations: ActivityConversation[] = bids.map((bid) => {
+    const customerName = `${bid.jobRequest.customer.firstName} ${bid.jobRequest.customer.lastName}`;
     return {
+      avatar: `${bid.jobRequest.customer.firstName.charAt(0)}${bid.jobRequest.customer.lastName.charAt(0)}`.toUpperCase(),
+      href: `/cleaner/messages/${bid.id}`,
       id: bid.id,
-      jobId: bid.jobRequestId,
-      customerName: `${bid.jobRequest.customer.firstName} ${bid.jobRequest.customer.lastName}`,
-      customerInitial: bid.jobRequest.customer.firstName.charAt(0),
-      jobTitle: getCleaningJobTitle(bid.jobRequest),
-      preview: `${formatBidAmount(bid)} bid: ${bid.message || "No note added."}`,
-      statusLabel: getBidStatusLabel(bid.status),
-      tone,
+      name: customerName,
+      preview: bid.message || "Your bid is in. Open the job to review its status.",
+      service: getCleaningJobTitle(bid.jobRequest),
+      time: formatTimeAgo(bid.createdAt),
+      unread:
+        bid.status === BidStatus.ACCEPTED && !bid.cleanerViewedAt
+          ? 1
+          : undefined,
     };
   });
+  const activeJobs: ActivityJob[] = bids
+    .filter((bid) => bid.jobRequest.status !== JobRequestStatus.COMPLETED)
+    .map((bid) => ({
+      action: bid.status === BidStatus.ACCEPTED ? "Review active job" : "Bid sent",
+      href: `/cleaner/messages/${bid.id}`,
+      id: bid.id,
+      location: `${bid.jobRequest.city}, ${bid.jobRequest.state}`,
+      progress: bid.status === BidStatus.ACCEPTED ? 76 : 44,
+      status: bid.status === BidStatus.ACCEPTED ? "Booked" : "Awaiting reply",
+      timing: formatTimingSummary(bid.jobRequest),
+      title: getCleaningJobTitle(bid.jobRequest),
+    }));
 
   return (
-    <div className="market-shell market-shell--detail">
-      <section className="market-surface">
-        <header className="market-topbar market-topbar--detail">
-          <div>
-            <h1>Messages</h1>
-          </div>
-        </header>
-
-        {conversations.length === 0 ? (
-          <section className="market-empty">
-            <strong>No conversations yet.</strong>
-            <p className="market-card__copy">
-              When you bid on a job, a conversation with the homeowner will appear here.
-            </p>
-          </section>
-        ) : (
-          <div className="cleaner-conversations">
-            {conversations.map((convo) => (
-              <Link
-                key={convo.id}
-                href={`/cleaner/messages/${convo.id}`}
-                className="cleaner-convo-card"
-              >
-                <span className="cleaner-convo-avatar" aria-hidden="true">
-                  {convo.customerInitial}
-                </span>
-                <div className="cleaner-convo-body">
-                  <div className="cleaner-convo-topline">
-                    <strong>{convo.customerName}</strong>
-                    <StatusPill label={convo.statusLabel} tone={convo.tone} />
-                  </div>
-                  <span className="cleaner-convo-preview">
-                    {convo.jobTitle} · {convo.preview}
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
+    <div className="wk-app-screen wk-activity-screen">
+      <AppScreenHeader
+        actionHref="/cleaner/account"
+        actionLabel="Notification settings"
+        actionType="notifications"
+      />
+      <div className="wk-screen-content">
+        <h1 className="wk-page-title">Messages</h1>
+        <ActivityScreen conversations={conversations} emptyAction={{ href: "/cleaner", label: "Browse jobs" }} jobs={activeJobs} jobsLabel="Active Jobs" />
+      </div>
     </div>
   );
 }

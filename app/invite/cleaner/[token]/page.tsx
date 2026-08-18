@@ -60,7 +60,7 @@ export default async function CleanerInvitePage({ params }: { params: Params }) 
       return (
         <InviteShell eyebrow="Cleaner invite" title="This invite is for a cleaner account.">
           <p className="subtle">
-            Sign out and continue with the phone number you use for cleaner work.
+            Sign out and continue with the email you use for cleaner work.
           </p>
         </InviteShell>
       );

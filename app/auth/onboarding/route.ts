@@ -2,9 +2,9 @@ import { UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getRequiredString } from "@/lib/auth";
-import { getRoleHome, requireSignedInIdentity } from "@/lib/session";
+import { getPostAuthPath, getSafeReturnTo, requireSignedInIdentity } from "@/lib/session";
 
-function toError(request: Request, message: string, role?: string, inviteToken?: string) {
+function toError(request: Request, message: string, role?: string, inviteToken?: string, returnTo?: string) {
   const search = new URLSearchParams({
     error: message,
   });
@@ -16,6 +16,7 @@ function toError(request: Request, message: string, role?: string, inviteToken?:
   if (inviteToken) {
     search.set("inviteToken", inviteToken);
   }
+  if (returnTo) search.set("returnTo", returnTo);
 
   return NextResponse.redirect(new URL(`/welcome?${search.toString()}`, request.url));
 }
@@ -24,6 +25,7 @@ export async function POST(request: Request) {
   const identity = await requireSignedInIdentity();
   const formData = await request.formData();
   const inviteToken = String(formData.get("inviteToken") || "").trim();
+  const returnTo = getSafeReturnTo(String(formData.get("returnTo") || "")) ?? undefined;
   const roleValue = getRequiredString(formData.get("role"), "Role");
   const role =
     roleValue === UserRole.CLEANER
@@ -33,7 +35,7 @@ export async function POST(request: Request) {
         : null;
 
   if (!role) {
-    return toError(request, "Please choose a valid account type.", undefined, inviteToken);
+    return toError(request, "Please choose a valid account type.", undefined, inviteToken, returnTo);
   }
 
   try {
@@ -76,15 +78,15 @@ export async function POST(request: Request) {
       });
     }
 
-    const nextPath = inviteToken
-      ? `/invite/cleaner/${inviteToken}`
+    const nextPath = returnTo || inviteToken
+      ? getPostAuthPath({ inviteToken, returnTo, role })
       : role === UserRole.CUSTOMER
         ? "/onboarding/homeowner"
-        : getRoleHome(role);
+        : getPostAuthPath({ role });
     return NextResponse.redirect(new URL(nextPath, request.url));
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "We couldn't complete your account setup.";
-    return toError(request, message, role, inviteToken);
+    return toError(request, message, role, inviteToken, returnTo);
   }
 }

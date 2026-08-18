@@ -2,7 +2,6 @@ import type { ComponentType } from "react";
 import { BidPricingType, BidStatus, EntryMethod, SuppliesSource } from "@prisma/client";
 import { Clock3, DollarSign, DoorOpen, Home, PackageCheck, ShieldCheck } from "lucide-react";
 
-import { QuickReplyActions } from "@/components/marketplace/quick-reply-actions";
 import { StatusPill } from "@/components/marketplace/status-pill";
 import {
   formatBidAmount,
@@ -55,11 +54,6 @@ export function JobCoordinationSummary({
   const suppliesLabel =
     suppliesSourceOptions.find((option) => option.value === job.suppliesSource)?.label ??
     "Cleaner brings supplies";
-  const replies =
-    role === "customer"
-      ? ["Sounds good", "Can you confirm?", "I'll be home", "Please message me before arrival"]
-      : ["Confirmed", "Can you confirm access?", "I'll message before arrival", "Running a few minutes late"];
-
   return (
     <section className="coordination-summary" aria-labelledby="coordination-summary-title">
       <div className="coordination-summary__topline">
@@ -93,7 +87,6 @@ export function JobCoordinationSummary({
         />
       </div>
 
-      <QuickReplyActions replies={replies} />
     </section>
   );
 }

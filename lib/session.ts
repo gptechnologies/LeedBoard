@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
 import { createHash, randomBytes } from "node:crypto";
@@ -7,7 +7,6 @@ import { prisma } from "@/lib/prisma";
 
 const SESSION_COOKIE = "wellkept_session";
 const SESSION_DAYS = 30;
-const REQUIRE_PHONE_VERIFICATION = false;
 
 export type SignedInIdentity = {
   userId: string;
@@ -24,6 +23,21 @@ type VerificationUser = {
 };
 
 export type MissingVerificationChannel = "email" | "sms";
+
+export function getSafeReturnTo(value?: string | null) {
+  if (!value) return null;
+
+  const candidate = value.trim();
+  if (!candidate.startsWith("/") || candidate.startsWith("//")) return null;
+
+  try {
+    const url = new URL(candidate, "http://wellkept.local");
+    if (url.origin !== "http://wellkept.local") return null;
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return null;
+  }
+}
 
 export function getRoleHome(role: UserRole) {
   if (role === UserRole.CLEANER) {
@@ -44,14 +58,6 @@ export function getMissingVerificationChannel(
     return "email";
   }
 
-  if (!REQUIRE_PHONE_VERIFICATION) {
-    return null;
-  }
-
-  if (!user.phone || !user.phoneVerifiedAt) {
-    return "sms";
-  }
-
   return null;
 }
 
@@ -61,7 +67,7 @@ export function isFullyVerified(user: VerificationUser) {
 
 export function getVerifyContactPath(
   user: VerificationUser,
-  options: { inviteToken?: string } = {},
+  options: { inviteToken?: string; returnTo?: string | null } = {},
 ) {
   const channel = getMissingVerificationChannel(user);
 
@@ -78,7 +84,21 @@ export function getVerifyContactPath(
     search.set("inviteToken", options.inviteToken);
   }
 
+  const returnTo = getSafeReturnTo(options.returnTo);
+  if (returnTo) search.set("returnTo", returnTo);
+
   return `/verify-contact?${search.toString()}`;
+}
+
+export function getPostAuthPath(input: {
+  inviteToken?: string | null;
+  returnTo?: string | null;
+  role: UserRole;
+}) {
+  const returnTo = getSafeReturnTo(input.returnTo);
+  if (returnTo) return returnTo;
+  if (input.inviteToken) return `/invite/cleaner/${encodeURIComponent(input.inviteToken)}`;
+  return getRoleHome(input.role);
 }
 
 export function normalizePhone(value: string) {
@@ -229,17 +249,20 @@ export async function requireSignedInIdentity() {
 
 export async function requireUser(role?: UserRole) {
   const user = await getCurrentUser();
+  const returnTo = getSafeReturnTo((await headers()).get("x-well-kept-return-to"));
 
   if (!user) {
-    redirect("/login");
+    redirect(returnTo ? `/login?returnTo=${encodeURIComponent(returnTo)}` : "/login");
   }
 
   if (!isFullyVerified(user)) {
-    redirect(getVerifyContactPath(user));
+    redirect(getVerifyContactPath(user, { returnTo }));
   }
 
   if (needsAccountSetup(user)) {
-    redirect(`/welcome?role=${user.role}`);
+    const search = new URLSearchParams({ role: user.role });
+    if (returnTo) search.set("returnTo", returnTo);
+    redirect(`/welcome?${search.toString()}`);
   }
 
   if (role && user.role !== role) {
@@ -251,17 +274,23 @@ export async function requireUser(role?: UserRole) {
 
 export async function requireApiUser(request: Request, role?: UserRole) {
   const user = await getCurrentUser();
+  const requestUrl = new URL(request.url);
+  const returnTo = getSafeReturnTo(`${requestUrl.pathname}${requestUrl.search}`);
 
   if (!user) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    const loginUrl = new URL("/login", request.url);
+    if (returnTo) loginUrl.searchParams.set("returnTo", returnTo);
+    return NextResponse.redirect(loginUrl);
   }
 
   if (!isFullyVerified(user)) {
-    return NextResponse.redirect(new URL(getVerifyContactPath(user), request.url));
+    return NextResponse.redirect(new URL(getVerifyContactPath(user, { returnTo }), request.url));
   }
 
   if (needsAccountSetup(user)) {
-    return NextResponse.redirect(new URL(`/welcome?role=${user.role}`, request.url));
+    const welcomeUrl = new URL(`/welcome?role=${user.role}`, request.url);
+    if (returnTo) welcomeUrl.searchParams.set("returnTo", returnTo);
+    return NextResponse.redirect(welcomeUrl);
   }
 
   if (role && user.role !== role) {

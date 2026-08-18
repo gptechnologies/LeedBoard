@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import {
   getCurrentUser,
   getMissingVerificationChannel,
-  getRoleHome,
+  getPostAuthPath,
   getVerifyContactPath,
 } from "@/lib/session";
 
@@ -17,43 +17,39 @@ type VerifyPageProps = {
     error?: string;
     devCode?: string;
     inviteToken?: string;
+    returnTo?: string;
   }>;
 };
 
 export default async function VerifyPage({ searchParams }: VerifyPageProps) {
   const [params, user] = await Promise.all([searchParams, getCurrentUser()]);
 
-  const channel = params.channel === "email" ? "email" : "sms";
-  const destination =
-    params.destination || (channel === "email" ? params.email : params.phone);
+  const channel = "email";
+  const destination = params.email || params.destination;
 
   if (!destination) {
-    redirect(user ? getVerifyContactPath(user, { inviteToken: params.inviteToken }) : "/login");
+    redirect(user ? getVerifyContactPath(user, { inviteToken: params.inviteToken, returnTo: params.returnTo }) : "/login");
   }
 
   if (user) {
     const missingChannel = getMissingVerificationChannel(user);
 
     if (!missingChannel) {
-      if (params.inviteToken) {
-        redirect(`/invite/cleaner/${params.inviteToken}`);
-      }
-
-      redirect(getRoleHome(user.role));
+      redirect(getPostAuthPath({ inviteToken: params.inviteToken, returnTo: params.returnTo, role: user.role }));
     }
 
     if (missingChannel !== channel) {
-      redirect(getVerifyContactPath(user, { inviteToken: params.inviteToken }));
+      redirect(getVerifyContactPath(user, { inviteToken: params.inviteToken, returnTo: params.returnTo }));
     }
   }
 
   const role = user?.role ?? (params.role === "CLEANER" ? "CLEANER" : "CUSTOMER");
-  const contactLabel = channel === "email" ? destination : params.phone || destination;
+  const contactLabel = destination;
 
   return (
     <section className="auth-shell stack">
       <div>
-        <div className="eyebrow">{channel === "email" ? "Check your email" : "Check your texts"}</div>
+        <div className="eyebrow">Check your email</div>
         <h1>Enter your one-time code.</h1>
         <p className="subtle">We sent a code to {contactLabel}.</p>
       </div>
@@ -66,12 +62,12 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
       <form action="/auth/otp/verify" method="post" className="stack">
         <input type="hidden" name="channel" value={channel} />
         <input type="hidden" name="destination" value={destination} />
-        {channel === "sms" ? <input type="hidden" name="phone" value={destination} /> : null}
-        {channel === "email" ? <input type="hidden" name="email" value={destination} /> : null}
+        <input type="hidden" name="email" value={destination} />
         <input type="hidden" name="role" value={role} />
         {params.inviteToken ? (
           <input type="hidden" name="inviteToken" value={params.inviteToken} />
         ) : null}
+        {params.returnTo ? <input type="hidden" name="returnTo" value={params.returnTo} /> : null}
         <div className="field">
           <label htmlFor="code">Code</label>
           <input
@@ -84,18 +80,18 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
             required
           />
         </div>
-        <button type="submit">{channel === "email" ? "Verify email" : "Verify phone"}</button>
+        <button type="submit">Verify email</button>
       </form>
 
       <form action="/auth/otp/start" method="post">
         <input type="hidden" name="mode" value={params.mode ?? "login"} />
         <input type="hidden" name="role" value={role} />
         <input type="hidden" name="channel" value={channel} />
-        {channel === "sms" ? <input type="hidden" name="phone" value={destination} /> : null}
-        {channel === "email" ? <input type="hidden" name="email" value={destination} /> : null}
+        <input type="hidden" name="email" value={destination} />
         {params.inviteToken ? (
           <input type="hidden" name="inviteToken" value={params.inviteToken} />
         ) : null}
+        {params.returnTo ? <input type="hidden" name="returnTo" value={params.returnTo} /> : null}
         <button type="submit" className="secondary-submit">
           Send a new code
         </button>

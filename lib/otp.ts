@@ -4,6 +4,7 @@ import {
   createEmailDelivery,
   markEmailDeliveryFailed,
   markEmailDeliverySent,
+  isEmailDeliveryConfigured,
   sendTransactionalEmail,
 } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
@@ -65,6 +66,14 @@ async function sendEmailOtp(rawEmail: string) {
       expiresAt: getEmailOtpExpiresAt(),
     },
   });
+
+  if (process.env.NODE_ENV !== "production" && !isEmailDeliveryConfigured()) {
+    return {
+      channel: "email" as const,
+      destination: email,
+      devCode: code,
+    };
+  }
 
   const delivery = await createEmailDelivery({
     toEmail: email,
@@ -164,14 +173,14 @@ export async function sendOtp(rawDestination: string, channel: OtpChannel = "sms
 
   const rawPhone = rawDestination;
   const phone = normalizePhone(rawPhone);
-  const config = getTwilioConfig();
 
-  if (!config) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("Phone verification is not configured.");
-    }
-
+  if (process.env.NODE_ENV !== "production") {
     return { channel: "sms" as const, destination: phone, phone, devCode: DEV_OTP_CODE };
+  }
+
+  const config = getTwilioConfig();
+  if (!config) {
+    throw new Error("Phone verification is not configured.");
   }
 
   const body = new URLSearchParams({
@@ -213,17 +222,12 @@ export async function verifyOtp(
   const rawPhone = rawDestination;
   const phone = normalizePhone(rawPhone);
   const code = rawCode.trim();
-  const config = getTwilioConfig();
 
   if (!/^\d{4,10}$/.test(code)) {
     throw new Error("Enter the code we sent to your phone.");
   }
 
-  if (!config) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("Phone verification is not configured.");
-    }
-
+  if (process.env.NODE_ENV !== "production") {
     if (code !== DEV_OTP_CODE) {
       throw new Error("That code did not match.");
     }
@@ -232,6 +236,11 @@ export async function verifyOtp(
       channel,
       destination: phone,
     };
+  }
+
+  const config = getTwilioConfig();
+  if (!config) {
+    throw new Error("Phone verification is not configured.");
   }
 
   const body = new URLSearchParams({

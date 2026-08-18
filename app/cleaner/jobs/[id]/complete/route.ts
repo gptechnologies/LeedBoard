@@ -1,6 +1,7 @@
 import { BidStatus, JobRequestStatus, UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { notifyHomeownerOfCompletion } from "@/lib/marketplace-notifications";
 import { requireApiUser } from "@/lib/session";
 
 type Params = Promise<{
@@ -28,7 +29,12 @@ export async function POST(request: Request, { params }: { params: Params }) {
         status: BidStatus.ACCEPTED,
       },
       include: {
-        jobRequest: true,
+        jobRequest: {
+          include: {
+            customer: true,
+            homeProfile: { select: { propertyType: true } },
+          },
+        },
       },
     });
 
@@ -44,11 +50,26 @@ export async function POST(request: Request, { params }: { params: Params }) {
       return redirectWithError(request, bid.id, "This job is not ready to be completed.");
     }
 
-    await prisma.jobRequest.update({
-      where: { id: bid.jobRequestId },
+    const completed = await prisma.jobRequest.updateMany({
+      where: {
+        id: bid.jobRequestId,
+        status: JobRequestStatus.AWARDED,
+        acceptedBidId: bid.id,
+      },
       data: {
         status: JobRequestStatus.COMPLETED,
+        completedAt: new Date(),
       },
+    });
+
+    if (completed.count !== 1) {
+      return redirectWithError(request, bid.id, "This job changed before it could be completed. Refresh and try again.");
+    }
+
+    await notifyHomeownerOfCompletion({
+      bidId: bid.id,
+      customer: bid.jobRequest.customer,
+      job: bid.jobRequest,
     });
 
     return NextResponse.redirect(new URL(`/cleaner/messages/${bid.id}?completed=1`, request.url));

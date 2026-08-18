@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
+import Link from "next/link";
 
 type AddressState = {
   addressLine1: string;
@@ -293,6 +294,11 @@ export function HomeownerOnboardingFlow({
           </div>
         </div>
 
+        <div className="onboarding-optional-note">
+          <span>Optional setup</span>
+          <Link href="/customer/jobs/new">Skip for now</Link>
+        </div>
+
         {error ? <div className="notice error">{error}</div> : null}
 
         <div className="onboarding-question-list">
@@ -349,6 +355,9 @@ export function HomeownerOnboardingFlow({
               </button>
             )}
           </div>
+          <Link className="onboarding-skip-link" href="/customer/jobs/new">
+            Skip and post a job
+          </Link>
         </div>
       </form>
     </section>

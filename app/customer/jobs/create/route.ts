@@ -5,7 +5,11 @@ import { createJobOutreachForJob } from "@/lib/outreach";
 import { prisma } from "@/lib/prisma";
 import { requireApiUser } from "@/lib/session";
 
-function redirectWithError(request: Request, message: string) {
+function respondWithError(request: Request, message: string) {
+  if (request.headers.get("X-Well-Kept-Client") === "1") {
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+
   return NextResponse.redirect(
     new URL(`/customer/jobs/new?error=${encodeURIComponent(message)}`, request.url),
   );
@@ -13,6 +17,10 @@ function redirectWithError(request: Request, message: string) {
 
 function getCleaningTitle(propertyType?: PropertyType | null) {
   return propertyType === PropertyType.APARTMENT ? "Apartment Cleaning" : "Home Cleaning";
+}
+
+function getJobTitle(inputTitle: string, propertyType?: PropertyType | null) {
+  return inputTitle === "Home Cleaning" ? getCleaningTitle(propertyType) : inputTitle;
 }
 
 export async function POST(request: Request) {
@@ -25,37 +33,56 @@ export async function POST(request: Request) {
 
   try {
     const input = parseJobRequestForm(formData);
-    const [homeProfile, priorCompletedJobs] = await Promise.all([
-      input.homeProfileId
-        ? prisma.homeProfile.findFirst({
-            where: {
-              id: input.homeProfileId,
-              customerId: user.id,
-            },
-          })
-        : Promise.resolve(null),
-      prisma.jobRequest.count({
+    const saveHome = formData.get("saveHome") === "true";
+    const homeProfile = input.homeProfileId
+      ? await prisma.homeProfile.findFirst({
+          where: {
+            id: input.homeProfileId,
+            customerId: user.id,
+          },
+        })
+      : null;
+
+    if (input.homeProfileId && !homeProfile) {
+      return respondWithError(request, "That saved home is no longer available. Choose another home and try again.");
+    }
+
+    const job = await prisma.$transaction(async (tx) => {
+      const priorCompletedJobs = await tx.jobRequest.count({
         where: {
           customerId: user.id,
           status: JobRequestStatus.COMPLETED,
         },
-      }),
-    ]);
+      });
+      const savedHome = !homeProfile && saveHome
+        ? await tx.homeProfile.create({
+            data: {
+              label: "My Home",
+              addressLine1: input.addressLine1,
+              addressLine2: input.addressLine2,
+              city: input.city,
+              state: input.state,
+              postalCode: input.postalCode,
+              entryMethod: input.entryMethod,
+              entryNotes: input.entryNotes,
+              customerId: user.id,
+              isDefault: true,
+            },
+          })
+        : null;
+      const linkedHome = homeProfile ?? savedHome;
 
-    if (input.homeProfileId && !homeProfile) {
-      return redirectWithError(request, "That home preset is no longer available.");
-    }
-
-    const job = await prisma.jobRequest.create({
-      data: {
-        ...input,
-        title: getCleaningTitle(homeProfile?.propertyType),
-        status: JobRequestStatus.OPEN,
-        customerId: user.id,
-        homeProfileId: homeProfile?.id ?? null,
-        customerCompletedJobsSnapshot: priorCompletedJobs,
-        customerMemberSinceSnapshot: user.createdAt,
-      },
+      return tx.jobRequest.create({
+        data: {
+          ...input,
+          title: getJobTitle(input.title, linkedHome?.propertyType),
+          status: JobRequestStatus.OPEN,
+          customerId: user.id,
+          homeProfileId: linkedHome?.id ?? null,
+          customerCompletedJobsSnapshot: priorCompletedJobs,
+          customerMemberSinceSnapshot: user.createdAt,
+        },
+      });
     });
 
     await createJobOutreachForJob({
@@ -66,10 +93,14 @@ export async function POST(request: Request) {
       state: job.state,
     });
 
+    if (request.headers.get("X-Well-Kept-Client") === "1") {
+      return NextResponse.json({ jobId: job.id });
+    }
+
     return NextResponse.redirect(new URL(`/customer/jobs/${job.id}/priority`, request.url));
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unable to post your job right now.";
-    return redirectWithError(request, message);
+    return respondWithError(request, message);
   }
 }

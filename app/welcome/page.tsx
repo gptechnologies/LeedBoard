@@ -1,12 +1,13 @@
 import { UserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
-import { getCurrentUser, getRoleHome, getVerifyContactPath, isFullyVerified } from "@/lib/session";
+import { getCurrentUser, getPostAuthPath, getSafeReturnTo, getVerifyContactPath, isFullyVerified } from "@/lib/session";
 
 type WelcomePageProps = {
   searchParams: Promise<{
     error?: string;
     inviteToken?: string;
     role?: string;
+    returnTo?: string;
   }>;
 };
 
@@ -14,6 +15,7 @@ export const dynamic = "force-dynamic";
 
 export default async function WelcomePage({ searchParams }: WelcomePageProps) {
   const params = await searchParams;
+  const returnTo = getSafeReturnTo(params.returnTo) ?? undefined;
   const user = await getCurrentUser();
 
   if (!user) {
@@ -21,15 +23,11 @@ export default async function WelcomePage({ searchParams }: WelcomePageProps) {
   }
 
   if (!isFullyVerified(user)) {
-    redirect(getVerifyContactPath(user, { inviteToken: params.inviteToken }));
-  }
-
-  if (user.firstName.trim() && user.lastName.trim() && params.inviteToken) {
-    redirect(`/invite/cleaner/${params.inviteToken}`);
+    redirect(getVerifyContactPath(user, { inviteToken: params.inviteToken, returnTo }));
   }
 
   if (user.firstName.trim() && user.lastName.trim()) {
-    redirect(getRoleHome(user.role));
+    redirect(getPostAuthPath({ inviteToken: params.inviteToken, returnTo, role: user.role }));
   }
 
   const selectedRole =
@@ -56,6 +54,7 @@ export default async function WelcomePage({ searchParams }: WelcomePageProps) {
         {params.inviteToken ? (
           <input type="hidden" name="inviteToken" value={params.inviteToken} />
         ) : null}
+        {returnTo ? <input type="hidden" name="returnTo" value={returnTo} /> : null}
 
         <div className="field-grid">
           <div className="field">
@@ -67,13 +66,6 @@ export default async function WelcomePage({ searchParams }: WelcomePageProps) {
             <input id="lastName" name="lastName" defaultValue={user.lastName} required />
           </div>
         </div>
-
-        {user.phone ? (
-          <div className="field">
-            <label htmlFor="phone">Phone</label>
-            <input id="phone" name="phone" value={user.phone} readOnly />
-          </div>
-        ) : null}
 
         <div className="field">
           <label htmlFor="email">Email</label>
@@ -118,7 +110,7 @@ export default async function WelcomePage({ searchParams }: WelcomePageProps) {
         ) : null}
 
         <button type="submit">
-          {isCleaner ? "Continue to cleaner account" : "Continue to homeowner setup"}
+          {isCleaner ? "Continue to cleaner account" : "Continue"}
         </button>
       </form>
     </section>

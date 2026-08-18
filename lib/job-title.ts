@@ -6,6 +6,17 @@ export function getCleaningJobTitle(job?: {
     propertyType?: PropertyType | null;
   } | null;
 }) {
+  const title = job?.title?.trim();
+  const legacyTitle = /cleaning request|kitchen and bathroom refresh|standard kitchen request/i;
+  const isSpecificNonCleaningTitle =
+    Boolean(title) &&
+    !legacyTitle.test(title!) &&
+    !/^home cleaning$|^apartment cleaning$/i.test(title!);
+
+  if (isSpecificNonCleaningTitle) {
+    return title!;
+  }
+
   if (job?.homeProfile?.propertyType === "APARTMENT") {
     return "Apartment Cleaning";
   }
@@ -14,10 +25,8 @@ export function getCleaningJobTitle(job?: {
     return "Home Cleaning";
   }
 
-  const title = job?.title?.trim();
   if (!title) return "Home Cleaning";
 
-  const legacyTitle = /cleaning request|kitchen and bathroom refresh|standard kitchen request/i;
   if (legacyTitle.test(title)) return "Home Cleaning";
 
   return title;

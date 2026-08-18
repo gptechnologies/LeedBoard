@@ -1,9 +1,12 @@
 import { BidStatus, JobRequestStatus, UserRole } from "@prisma/client";
 import { BidCard } from "@/components/marketplace/cards";
 import { HomeownerOpenJobDetailCard } from "@/components/marketplace";
+import { ProviderSelectionDrawer } from "@/components/marketplace/provider-selection-drawer";
 import Link from "next/link";
-import { Trash2 } from "lucide-react";
+import { ChevronLeft, Trash2 } from "lucide-react";
 import {
+  formatBidAmount,
+  formatBidTiming,
   getBidSelectionPriorityLabel,
   getPrimaryBidHighlight,
   rankVisibleBids,
@@ -78,8 +81,12 @@ export default async function CustomerJobBidsPage({
   const primaryHighlight = getPrimaryBidHighlight(job.selectionPriority);
 
   return (
-    <div className="market-shell market-shell--detail">
-      <section className="market-surface">
+    <div className="wk-app-screen wk-homeowner-detail-screen">
+      <main className="wk-screen-content">
+        <header className="wk-homeowner-detail-heading">
+          <Link href="/customer/jobs"><ChevronLeft aria-hidden="true" />Back to Activity</Link>
+          <div><h1>Compare bids</h1><p>Review price, timing, and trust details before choosing.</p></div>
+        </header>
         {query.error ? <div className="notice error">{query.error}</div> : null}
 
         <HomeownerOpenJobDetailCard
@@ -116,12 +123,19 @@ export default async function CustomerJobBidsPage({
                   action={
                     <div className="bid-card-actions">
                       <Link className="button-link secondary" href={`/customer/messages/${bid.id}`}>
-                        Coordinate
+                        View bid details
                       </Link>
-                      <form action={`/customer/jobs/${job.id}/accept-bid`} method="post">
-                        <input type="hidden" name="bidId" value={bid.id} />
-                        <button type="submit">Accept Bid</button>
-                      </form>
+                      <ProviderSelectionDrawer
+                        bidId={bid.id}
+                        jobId={job.id}
+                        jobTitle={job.title}
+                        price={formatBidAmount(bid)}
+                        providerName={
+                          bid.cleaner.cleanerProfile?.businessName ||
+                          `${bid.cleaner.firstName} ${bid.cleaner.lastName}`
+                        }
+                        timing={formatBidTiming(bid)}
+                      />
                     </div>
                   }
                 />
@@ -135,16 +149,8 @@ export default async function CustomerJobBidsPage({
           </div>
         ) : null}
 
-        {activeBids.length > 0 ? (
-          <aside className="market-bottom-action">
-            <div>
-              <strong>All cleaners are vetted</strong>
-              <span>Reviewed before bidding.</span>
-            </div>
-            <a href="#main-content" className="button-link">Compare Bids</a>
-          </aside>
-        ) : null}
-      </section>
+        {activeBids.length > 0 ? <p className="wk-homeowner-trust-note">Cleaners are reviewed before they can bid.</p> : null}
+      </main>
     </div>
   );
 }

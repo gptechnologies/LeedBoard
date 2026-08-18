@@ -1,4 +1,4 @@
-import { Mail, Phone } from "lucide-react";
+import { Mail } from "lucide-react";
 import { redirect } from "next/navigation";
 import {
   getCurrentUser,
@@ -11,6 +11,7 @@ type VerifyContactPageProps = {
     channel?: string;
     error?: string;
     inviteToken?: string;
+    returnTo?: string;
   }>;
 };
 
@@ -33,21 +34,14 @@ export default async function VerifyContactPage({ searchParams }: VerifyContactP
     redirect(getRoleHome(user.role));
   }
 
-  const channel = params.channel === missingChannel ? params.channel : missingChannel;
-  const isEmail = channel === "email";
-  const label = isEmail ? "Email address" : "Phone number";
-  const defaultValue = isEmail ? user.email ?? "" : user.phone ?? "";
+  const channel = "email";
 
   return (
     <section className="auth-shell auth-passcode-card">
       <div className="auth-intro">
         <div className="eyebrow">One more verification</div>
-        <h1>{isEmail ? "Verify your email." : "Verify your phone."}</h1>
-        <p>
-          {isEmail
-            ? "Add a verified email so we can reach you about jobs and account recovery."
-            : "Add a verified phone so we can reach you about jobs and account recovery."}
-        </p>
+        <h1>Add your email.</h1>
+        <p>Verify an email to keep access to your existing Well Kept account.</p>
       </div>
 
       {params.error ? <div className="notice error">{params.error}</div> : null}
@@ -59,27 +53,28 @@ export default async function VerifyContactPage({ searchParams }: VerifyContactP
         {params.inviteToken ? (
           <input type="hidden" name="inviteToken" value={params.inviteToken} />
         ) : null}
+        {params.returnTo ? <input type="hidden" name="returnTo" value={params.returnTo} /> : null}
 
         <label className="auth-contact-field" htmlFor="contact">
-          {isEmail ? (
-            <Mail aria-hidden="true" size={22} />
-          ) : (
-            <Phone aria-hidden="true" size={22} />
-          )}
+          <Mail aria-hidden="true" size={22} />
           <input
             id="contact"
-            aria-label={label}
-            name={isEmail ? "email" : "phone"}
-            autoComplete={isEmail ? "email" : "tel"}
-            defaultValue={defaultValue}
-            inputMode={isEmail ? "email" : "tel"}
-            placeholder={isEmail ? "Email address" : "Phone number"}
+            aria-label="Email address"
+            name="email"
+            autoComplete="email"
+            defaultValue={user.email ?? ""}
+            inputMode="email"
+            placeholder="Email address"
             required
-            type={isEmail ? "email" : "tel"}
+            type="email"
           />
         </label>
 
-        <p className="auth-helper">We'll send a one-time passcode to finish setup.</p>
+        <p className="auth-helper">
+          {process.env.NODE_ENV === "development"
+            ? "Use development code 000000 to finish setup."
+            : "We'll email a one-time passcode to finish setup."}
+        </p>
 
         <button type="submit" className="auth-send-button">
           Send code

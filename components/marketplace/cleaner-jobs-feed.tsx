@@ -1,9 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Filter } from "lucide-react";
 import { useRef, useState, type CSSProperties, type TouchEvent } from "react";
-import { Button } from "@/components/ui/button";
 import {
   NearbyJobSwipeCarousel,
   type NearbyJobSwipeItem,
@@ -72,14 +70,6 @@ export function CleanerJobsFeed({
       onTouchEnd={handleTouchEnd}
       style={{ "--pull-distance": `${pullDistance}px` } as CSSProperties}
     >
-      <div className="cleaner-section-header">
-        <h2>Nearby Jobs</h2>
-        <Button type="button" variant="ghost" size="sm" className="gap-1.5">
-          Filter
-          <Filter className="size-4" aria-hidden="true" />
-        </Button>
-      </div>
-
       <div className={refreshReady ? "cleaner-refresh-indicator ready" : "cleaner-refresh-indicator"}>
         {isRefreshing ? "Refreshing..." : refreshReady ? "Release to refresh" : "Pull down to refresh"}
       </div>

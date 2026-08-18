@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { JobCoordinationSummary } from "@/components/marketplace/job-coordination-summary";
+import { CompletionFeedback } from "@/components/marketplace/completion-feedback";
+import { ActivityReadMarker } from "@/components/marketplace/activity-read-marker";
 import { StatusPill } from "@/components/marketplace/status-pill";
 import { getCleaningJobTitle } from "@/lib/job-title";
 import {
@@ -62,9 +64,10 @@ export default async function CleanerMessageThreadPage({
 
   return (
     <div className="market-shell market-shell--detail">
+      <ActivityReadMarker bidId={bid.id} role="cleaner" />
       <section className="market-surface">
         <header className="market-topbar market-topbar--detail">
-          <Link href="/cleaner/messages" className="bid-screen__back" aria-label="Back to messages">
+          <Link href="/cleaner/messages" className="bid-screen__back" aria-label="Back to activity">
             <span aria-hidden="true">&larr;</span>
           </Link>
           <div>
@@ -75,7 +78,7 @@ export default async function CleanerMessageThreadPage({
         </header>
 
         {query.error ? <div className="notice error">{query.error}</div> : null}
-        {query.completed ? <div className="notice">Job marked complete.</div> : null}
+        {query.completed ? <><CompletionFeedback /><div className="notice" role="status">Job marked complete.</div></> : null}
 
         <div className="message-thread">
           <JobCoordinationSummary
@@ -108,8 +111,8 @@ export default async function CleanerMessageThreadPage({
               </strong>
               <p>
                 {isCompleted
-                  ? "The homeowner can now see the completed job state in this thread."
-                  : "This job is confirmed. Keep details and next steps in this thread."}
+                  ? "The homeowner can now see the completed job state in their activity."
+                  : "This job is confirmed. Review the address, timing, and access details here."}
               </p>
             </article>
           ) : null}

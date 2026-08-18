@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { JobCoordinationSummary } from "@/components/marketplace/job-coordination-summary";
+import { ActivityReadMarker } from "@/components/marketplace/activity-read-marker";
 import { StatusPill } from "@/components/marketplace/status-pill";
 import { getCleaningJobTitle } from "@/lib/job-title";
 import {
@@ -63,6 +64,7 @@ export default async function CustomerMessageThreadPage({
 
   return (
     <div className="market-shell market-shell--detail">
+      <ActivityReadMarker bidId={bid.id} role="customer" />
       <section className="market-surface">
         <header className="market-topbar market-topbar--detail">
           <Link
@@ -108,8 +110,8 @@ export default async function CustomerMessageThreadPage({
               <strong>{isCompleted ? "Cleaner marked this job complete." : "You accepted this bid."}</strong>
               <p>
                 {isCompleted
-                  ? "Payment is still ignored for testing, so this is the end state for now."
-                  : "The cleaner will see this confirmation in the same thread."}
+                  ? "The job is complete. You can keep this summary for your records."
+                  : "The cleaner can now review the confirmed address, timing, and access details."}
               </p>
             </article>
           ) : null}

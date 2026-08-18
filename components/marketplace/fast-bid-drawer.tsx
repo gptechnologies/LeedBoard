@@ -1,9 +1,10 @@
 "use client";
 
 import { BidPricingType, TimingPreference } from "@prisma/client";
-import type { ReactNode } from "react";
+import { Check, LoaderCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import type { FormEvent, ReactNode } from "react";
 import { useMemo, useState } from "react";
-import { useFormStatus } from "react-dom";
 
 import { CleanerUpNextJobCardContent, type CleanerUpNextJob } from "@/components/marketplace/cleaner-up-next-job-card";
 import { PulsatingPrimaryButton } from "@/components/marketplace/motion-buttons";
@@ -20,6 +21,7 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { timeWindowOptions } from "@/lib/marketplace-constants";
+import { triggerHaptic } from "@/lib/haptics";
 
 type FastBidDefaults = {
   standardHourlyRateCents: number | null;
@@ -49,6 +51,7 @@ export function FastBidDrawer({
   trigger?: ReactNode;
   triggerMode?: "card" | "button";
 }) {
+  const router = useRouter();
   const initialPricingType = defaults.standardFlatRateCents
     ? BidPricingType.FLAT
     : BidPricingType.HOURLY;
@@ -62,6 +65,8 @@ export function FastBidDrawer({
   const [etaMinutes, setEtaMinutes] = useState(String(defaults.defaultEtaMinutes ?? 60));
   const [timeConfirmed, setTimeConfirmed] = useState(false);
   const [message, setMessage] = useState("");
+  const [submitState, setSubmitState] = useState<"idle" | "submitting" | "success">("idle");
+  const [submitError, setSubmitError] = useState("");
 
   const priceValue = pricingType === BidPricingType.FLAT ? flatRate : hourlyRate;
   const priceNumber = Number(priceValue);
@@ -76,6 +81,45 @@ export function FastBidDrawer({
   );
   const arrivalDateValue = formatDateInputValue(job.requestedDate);
   const canSubmit = hasValidPrice && (isAsap ? Boolean(etaMinutes) : timeConfirmed && Boolean(arrivalDateValue));
+  const submitGuidance = !hasValidPrice
+    ? "Enter your price to continue."
+    : !isAsap && !timeConfirmed
+      ? "Confirm the requested time to continue."
+      : "Your bid is ready to send.";
+
+  function choosePricingType(value: BidPricingType) {
+    setPricingType(value);
+    triggerHaptic("selection");
+  }
+
+  async function submitBid(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!canSubmit || submitState !== "idle") return;
+
+    setSubmitError("");
+    setSubmitState("submitting");
+
+    try {
+      const response = await fetch(event.currentTarget.action, {
+        method: "POST",
+        body: new FormData(event.currentTarget),
+        headers: { "X-Well-Kept-Client": "1" },
+      });
+      const result = (await response.json()) as { bidId?: string; error?: string };
+
+      if (!response.ok || !result.bidId) {
+        throw new Error(result.error || "We couldn’t submit your bid. Try again.");
+      }
+
+      setSubmitState("success");
+      triggerHaptic("success");
+      window.setTimeout(() => router.push(`/cleaner/messages/${result.bidId}`), 650);
+    } catch (error) {
+      setSubmitState("idle");
+      setSubmitError(error instanceof Error ? error.message : "We couldn’t submit your bid. Try again.");
+      triggerHaptic("warning");
+    }
+  }
 
   return (
     <Drawer>
@@ -115,7 +159,7 @@ export function FastBidDrawer({
           </DrawerDescription>
         </DrawerHeader>
 
-        <form action={`/cleaner/jobs/${job.id}/bid`} method="post" className="fast-bid-form">
+        <form action={`/cleaner/jobs/${job.id}/bid`} method="post" className="fast-bid-form" onSubmit={submitBid}>
           <div className="fast-bid-form__body">
             <div className="market-segmented fast-bid-toggle">
               <label className={pricingType === BidPricingType.FLAT ? "market-segmented__option active" : "market-segmented__option"}>
@@ -124,7 +168,7 @@ export function FastBidDrawer({
                   name="pricingType"
                   value={BidPricingType.FLAT}
                   checked={pricingType === BidPricingType.FLAT}
-                  onChange={() => setPricingType(BidPricingType.FLAT)}
+                  onChange={() => choosePricingType(BidPricingType.FLAT)}
                 />
                 Total Price
               </label>
@@ -134,7 +178,7 @@ export function FastBidDrawer({
                   name="pricingType"
                   value={BidPricingType.HOURLY}
                   checked={pricingType === BidPricingType.HOURLY}
-                  onChange={() => setPricingType(BidPricingType.HOURLY)}
+                  onChange={() => choosePricingType(BidPricingType.HOURLY)}
                 />
                 Hourly Price
               </label>
@@ -161,9 +205,6 @@ export function FastBidDrawer({
                   onChange={(event) => setHourlyRate(event.target.value)}
                 />
               )}
-              <span className="fast-bid-net-line">
-                Net with referral fee: {formatNet(priceNumber, pricingType)}
-              </span>
             </div>
 
             {isAsap ? (
@@ -175,7 +216,10 @@ export function FastBidDrawer({
                       key={option.value}
                       type="button"
                       className={etaMinutes === String(option.value) ? "fast-bid-choice active" : "fast-bid-choice"}
-                      onClick={() => setEtaMinutes(String(option.value))}
+                      onClick={() => {
+                        setEtaMinutes(String(option.value));
+                        triggerHaptic("selection");
+                      }}
                     >
                       {option.label}
                     </button>
@@ -190,7 +234,10 @@ export function FastBidDrawer({
                 <button
                   type="button"
                   className={timeConfirmed ? "fast-bid-time-confirm active" : "fast-bid-time-confirm"}
-                  onClick={() => setTimeConfirmed((value) => !value)}
+                  onClick={() => {
+                    setTimeConfirmed((value) => !value);
+                    triggerHaptic("selection");
+                  }}
                 >
                   <strong>Confirm {formatRequestedDate(job.requestedDate)} works</strong>
                   <span>{formatWindow(job.requestedWindowStart, job.requestedWindowEnd)}</span>
@@ -218,9 +265,28 @@ export function FastBidDrawer({
           </div>
 
           <DrawerFooter className="fast-bid-drawer__footer">
-            <FastBidSubmit disabled={!canSubmit} />
+            {submitError ? <p className="wk-form-error" role="alert">{submitError}</p> : null}
+            {!submitError && submitState === "idle" ? (
+              <p className={canSubmit ? "fast-bid-guidance is-ready" : "fast-bid-guidance"} aria-live="polite">
+                {submitGuidance}
+              </p>
+            ) : null}
+            <Button
+              aria-busy={submitState === "submitting"}
+              type="submit"
+              disabled={!canSubmit || submitState !== "idle"}
+              className="fast-bid-submit"
+            >
+              {submitState === "submitting" ? (
+                <><LoaderCircle className="wk-button-spinner" aria-hidden="true" /> Sending bid</>
+              ) : submitState === "success" ? (
+                <><Check aria-hidden="true" /> Bid sent</>
+              ) : (
+                "Place bid"
+              )}
+            </Button>
             <DrawerClose asChild>
-              <Button type="button" variant="ghost" className="fast-bid-cancel">
+              <Button type="button" variant="ghost" className="fast-bid-cancel" disabled={submitState !== "idle"}>
                 Cancel
               </Button>
             </DrawerClose>
@@ -229,26 +295,6 @@ export function FastBidDrawer({
       </DrawerContent>
     </Drawer>
   );
-}
-
-function FastBidSubmit({ disabled }: { disabled: boolean }) {
-  const { pending } = useFormStatus();
-
-  return (
-    <Button type="submit" disabled={disabled || pending} className="fast-bid-submit">
-      {pending ? "Placing..." : "Place Bid"}
-    </Button>
-  );
-}
-
-function formatNet(price: number, pricingType: BidPricingType) {
-  if (!Number.isFinite(price) || price <= 0) {
-    return pricingType === BidPricingType.FLAT ? "$0" : "$0/hr";
-  }
-
-  const net = price * 0.9;
-  const amount = Number.isInteger(net) ? net.toFixed(0) : net.toFixed(2);
-  return pricingType === BidPricingType.FLAT ? `$${amount}` : `$${amount}/hr`;
 }
 
 function formatDateInputValue(value: Date | string | null) {

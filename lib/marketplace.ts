@@ -501,53 +501,76 @@ export async function getCleanerHomeData(cleanerId: string) {
     return {
       cleaner: null,
       openJobs: [],
+      passedJobs: [],
       bids: [],
     };
   }
 
   const profile = cleaner.cleanerProfile;
 
-  const openJobs = await prisma.jobRequest.findMany({
-    where: {
-      status: JobRequestStatus.OPEN,
-      bids: {
-        none: {
-          cleanerId,
-        },
-      },
-      OR: [
-        { postalCode: { in: profile.serviceAreaPostalCodes } },
-        { bids: { none: {} } },
-      ],
-    },
-    include: {
-      customer: {
-        include: {
-          customerJobRequests: {
-            where: {
-              status: JobRequestStatus.COMPLETED,
-            },
-            select: { id: true },
-          },
-        },
-      },
-      homeProfile: {
-        select: {
-          bedroomCount: true,
-          bathroomCount: true,
-          estimatedSquareFeet: true,
-          storyCount: true,
-          hasPets: true,
-          propertyType: true,
-        },
-      },
-      bids: {
-        where: { status: BidStatus.SUBMITTED },
+  const cleanerJobSelect = {
+    id: true,
+    title: true,
+    city: true,
+    state: true,
+    postalCode: true,
+    serviceNeeds: true,
+    roomTypes: true,
+    cleanLevel: true,
+    cleanType: true,
+    currentCondition: true,
+    suppliesSource: true,
+    timingPreference: true,
+    requestedDate: true,
+    requestedWindowStart: true,
+    requestedWindowEnd: true,
+    notes: true,
+    status: true,
+    createdAt: true,
+    homeProfile: {
+      select: {
+        bedroomCount: true,
+        bathroomCount: true,
+        estimatedSquareFeet: true,
+        storyCount: true,
+        hasPets: true,
+        propertyType: true,
       },
     },
-    orderBy: { createdAt: "desc" },
-    take: 20,
-  });
+    _count: {
+      select: {
+        bids: {
+          where: { status: BidStatus.SUBMITTED },
+        },
+      },
+    },
+  } as const;
+
+  const [openJobs, passedJobs] = await Promise.all([
+    prisma.jobRequest.findMany({
+      where: {
+        status: JobRequestStatus.OPEN,
+        bids: { none: { cleanerId } },
+        cleanerPasses: { none: { cleanerId } },
+        OR: [
+          { postalCode: { in: profile.serviceAreaPostalCodes } },
+          { bids: { none: {} } },
+        ],
+      },
+      select: cleanerJobSelect,
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    }),
+    prisma.jobRequest.findMany({
+      where: {
+        cleanerPasses: { some: { cleanerId } },
+        bids: { none: { cleanerId } },
+      },
+      select: cleanerJobSelect,
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    }),
+  ]);
 
   const matchingOpenJobs = openJobs.filter((job) => {
     const zipMatch =
@@ -591,6 +614,7 @@ export async function getCleanerHomeData(cleanerId: string) {
   return {
     cleaner,
     openJobs: matchingOpenJobs,
+    passedJobs,
     bids,
   };
 }

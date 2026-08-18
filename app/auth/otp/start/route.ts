@@ -1,6 +1,6 @@
 import { UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
-import { sendOtp, type OtpChannel } from "@/lib/otp";
+import { sendOtp } from "@/lib/otp";
 
 function getRole(value: FormDataEntryValue | null) {
   return value === UserRole.CLEANER ? UserRole.CLEANER : UserRole.CUSTOMER;
@@ -13,6 +13,7 @@ function toError(
   mode: string,
   channel: string,
   inviteToken?: string,
+  returnTo?: string,
 ) {
   const search = new URLSearchParams({
     channel,
@@ -23,6 +24,7 @@ function toError(
   if (inviteToken) {
     search.set("inviteToken", inviteToken);
   }
+  if (returnTo) search.set("returnTo", returnTo);
 
   const pathname =
     mode === "verify-contact" ? "/verify-contact" : mode === "signup" ? "/signup" : "/login";
@@ -32,14 +34,14 @@ function toError(
 export async function POST(request: Request) {
   const formData = await request.formData();
   const inviteToken = String(formData.get("inviteToken") || "").trim();
+  const returnTo = String(formData.get("returnTo") || "").trim();
   const role = getRole(formData.get("role"));
   const mode = String(formData.get("mode") || "login");
-  const channel = formData.get("channel") === "email" ? "email" : "sms";
-  const destinationField = channel === "email" ? "email" : "phone";
-  const destination = String(formData.get(destinationField) || "");
+  const channel = "email";
+  const destination = String(formData.get("email") || formData.get("destination") || "");
 
   try {
-    const result = await sendOtp(destination, channel as OtpChannel);
+    const result = await sendOtp(destination, channel);
     const search = new URLSearchParams({
       channel: result.channel,
       destination: result.destination,
@@ -51,13 +53,10 @@ export async function POST(request: Request) {
       search.set("phone", result.phone);
     }
 
-    if (result.channel === "email") {
-      search.set("email", result.destination);
-    }
-
     if (inviteToken) {
       search.set("inviteToken", inviteToken);
     }
+    if (returnTo) search.set("returnTo", returnTo);
 
     if (result.devCode) {
       search.set("devCode", result.devCode);
@@ -66,6 +65,6 @@ export async function POST(request: Request) {
     return NextResponse.redirect(new URL(`/verify?${search.toString()}`, request.url));
   } catch (error) {
     const message = error instanceof Error ? error.message : "We couldn't send that code.";
-    return toError(request, message, role, mode, channel, inviteToken);
+    return toError(request, message, role, mode, channel, inviteToken, returnTo);
   }
 }

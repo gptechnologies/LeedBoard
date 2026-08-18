@@ -2,7 +2,7 @@ import Link from "next/link";
 import { BidStatus, JobRequestStatus, UserRole } from "@prisma/client";
 import { BidCard } from "@/components/marketplace/cards";
 import { HomeownerOpenJobDetailCard } from "@/components/marketplace";
-import { Trash2 } from "lucide-react";
+import { ChevronLeft, Trash2 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { notFound } from "next/navigation";
@@ -65,8 +65,12 @@ export default async function CustomerJobDetailPage({
   }
 
   return (
-    <div className="market-shell market-shell--detail">
-      <section className="market-surface">
+    <div className="wk-app-screen wk-homeowner-detail-screen">
+      <main className="wk-screen-content">
+        <header className="wk-homeowner-detail-heading">
+          <Link href="/customer/jobs"><ChevronLeft aria-hidden="true" />Back to Activity</Link>
+          <div><h1>Job details</h1><p>Track responses and choose a cleaner when you are ready.</p></div>
+        </header>
         {query.error ? <div className="notice error">{query.error}</div> : null}
 
         <HomeownerOpenJobDetailCard
@@ -125,7 +129,7 @@ export default async function CustomerJobDetailPage({
             ) : null}
           </aside>
         ) : null}
-      </section>
+      </main>
     </div>
   );
 }

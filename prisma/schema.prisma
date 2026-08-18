@@ -202,31 +202,32 @@ enum BookingEventType {
 }
 
 model User {
-  id                             String          @id @default(cuid())
+  id                             String                 @id @default(cuid())
   role                           UserRole
   firstName                      String
   lastName                       String
-  email                          String?         @unique
+  email                          String?                @unique
   emailVerifiedAt                DateTime?
   phone                          String?
   phoneVerifiedAt                DateTime?
   homeownerOnboardingCompletedAt DateTime?
   pushNotificationsRequestedAt   DateTime?
-  pushNotificationsEnabled       Boolean         @default(false)
+  pushNotificationsEnabled       Boolean                @default(false)
   heardAboutUs                   String?
-  createdAt                      DateTime        @default(now())
-  updatedAt                      DateTime        @updatedAt
+  createdAt                      DateTime               @default(now())
+  updatedAt                      DateTime               @updatedAt
   cleanerProfile                 CleanerProfile?
   homeProfiles                   HomeProfile[]
-  customerBookings               Booking[]       @relation("CustomerBookings")
-  cleanerBookings                Booking[]       @relation("CleanerBookings")
-  customerJobRequests            JobRequest[]    @relation("CustomerJobRequests")
-  cleanerBids                    JobBid[]        @relation("CleanerBids")
+  customerBookings               Booking[]              @relation("CustomerBookings")
+  cleanerBookings                Booking[]              @relation("CleanerBookings")
+  customerJobRequests            JobRequest[]           @relation("CustomerJobRequests")
+  cleanerBids                    JobBid[]               @relation("CleanerBids")
+  cleanerJobPasses               CleanerJobPass[]
   bookingEvents                  BookingEvent[]
   sessions                       Session[]
   phoneIdentity                  PhoneIdentity?
-  linkedCleanerLeads             CleanerLead[]   @relation("LinkedCleanerLeadUser")
-  jobOutreaches                  JobOutreach[]   @relation("OutreachCleanerUser")
+  linkedCleanerLeads             CleanerLead[]          @relation("LinkedCleanerLeadUser")
+  jobOutreaches                  JobOutreach[]          @relation("OutreachCleanerUser")
   notificationDeliveries         NotificationDelivery[]
   pushSubscriptions              PushSubscription[]
 }
@@ -247,12 +248,14 @@ model OtpChallenge {
 
 model PhoneIdentity {
   id              String   @id @default(cuid())
-  phone           String   @unique
+  phone           String
   phoneVerifiedAt DateTime @default(now())
   userId          String   @unique
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([phone])
 }
 
 model Session {
@@ -330,7 +333,7 @@ enum PropertyType {
 }
 
 model JobRequest {
-  id                            String           @id @default(cuid())
+  id                            String               @id @default(cuid())
   title                         String
   addressLine1                  String
   addressLine2                  String?
@@ -338,37 +341,40 @@ model JobRequest {
   state                         String
   postalCode                    String
   serviceNeeds                  ServiceNeed[]
-  roomTypes                     RoomType[]       @default([])
-  cleanLevel                    CleanLevel       @default(MEDIUM)
-  roomCleanLevels               Json             @default("{}")
+  roomTypes                     RoomType[]           @default([])
+  cleanLevel                    CleanLevel           @default(MEDIUM)
+  roomCleanLevels               Json                 @default("{}")
   cleanType                     JobCleanType?
   currentCondition              HomeCondition?
-  matchingPriorityAreas         JobPriorityArea[] @default([])
-  priorityTypes                 PriorityType[]   @default([])
+  matchingPriorityAreas         JobPriorityArea[]    @default([])
+  priorityTypes                 PriorityType[]       @default([])
   selectionPriority             BidSelectionPriority @default(BEST_OVERALL)
-  entryMethod                   EntryMethod      @default(I_WILL_BE_HOME)
+  entryMethod                   EntryMethod          @default(I_WILL_BE_HOME)
   entryNotes                    String?
-  suppliesSource                SuppliesSource   @default(CLEANER_BRINGS_ALL)
+  suppliesSource                SuppliesSource       @default(CLEANER_BRINGS_ALL)
   timingPreference              TimingPreference
   requestedDate                 DateTime?
   requestedWindowStart          String?
   requestedWindowEnd            String?
   notes                         String?
-  customerCompletedJobsSnapshot Int              @default(0)
+  customerCompletedJobsSnapshot Int                  @default(0)
   customerMemberSinceSnapshot   DateTime?
-  cleanersNotifiedCount         Int              @default(0)
-  viewCount                     Int              @default(0)
-  status                        JobRequestStatus @default(OPEN)
-  createdAt                     DateTime         @default(now())
-  updatedAt                     DateTime         @updatedAt
+  cleanersNotifiedCount         Int                  @default(0)
+  viewCount                     Int                  @default(0)
+  status                        JobRequestStatus     @default(OPEN)
+  acceptedAt                    DateTime?
+  completedAt                   DateTime?
+  createdAt                     DateTime             @default(now())
+  updatedAt                     DateTime             @updatedAt
   customerId                    String
   homeProfileId                 String?
-  acceptedBidId                 String?          @unique
-  customer                      User             @relation("CustomerJobRequests", fields: [customerId], references: [id], onDelete: Cascade)
-  homeProfile                   HomeProfile?     @relation(fields: [homeProfileId], references: [id], onDelete: SetNull)
-  acceptedBid                   JobBid?          @relation("AcceptedJobBid", fields: [acceptedBidId], references: [id], onDelete: SetNull)
-  bids                          JobBid[]         @relation("JobRequestBids")
+  acceptedBidId                 String?              @unique
+  customer                      User                 @relation("CustomerJobRequests", fields: [customerId], references: [id], onDelete: Cascade)
+  homeProfile                   HomeProfile?         @relation(fields: [homeProfileId], references: [id], onDelete: SetNull)
+  acceptedBid                   JobBid?              @relation("AcceptedJobBid", fields: [acceptedBidId], references: [id], onDelete: SetNull)
+  bids                          JobBid[]             @relation("JobRequestBids")
   outreaches                    JobOutreach[]
+  cleanerPasses                 CleanerJobPass[]
 }
 
 model JobBid {
@@ -383,6 +389,8 @@ model JobBid {
   etaMinutes            Int?
   message               String?
   status                BidStatus      @default(SUBMITTED)
+  customerViewedAt      DateTime?
+  cleanerViewedAt       DateTime?
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
   jobRequestId          String
@@ -395,26 +403,38 @@ model JobBid {
   @@unique([jobRequestId, cleanerId])
 }
 
+model CleanerJobPass {
+  id           String     @id @default(cuid())
+  cleanerId    String
+  jobRequestId String
+  passedAt     DateTime   @default(now())
+  cleaner      User       @relation(fields: [cleanerId], references: [id], onDelete: Cascade)
+  jobRequest   JobRequest @relation(fields: [jobRequestId], references: [id], onDelete: Cascade)
+
+  @@unique([cleanerId, jobRequestId])
+  @@index([cleanerId, passedAt])
+}
+
 model CleanerLead {
-  id                     String            @id @default(cuid())
+  id                     String                 @id @default(cuid())
   name                   String?
   businessName           String?
   phone                  String
   website                String?
-  source                 CleanerLeadSource @default(MANUAL)
+  source                 CleanerLeadSource      @default(MANUAL)
   city                   String?
   state                  String?
   postalCode             String?
-  serviceAreaPostalCodes String[]          @default([])
+  serviceAreaPostalCodes String[]               @default([])
   googleRating           Float?
   googleReviewCount      Int?
   optedOutAt             DateTime?
   optOutReason           String?
   consentedAt            DateTime?
-  createdAt              DateTime          @default(now())
-  updatedAt              DateTime          @updatedAt
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
   linkedCleanerUserId    String?
-  linkedCleanerUser      User?             @relation("LinkedCleanerLeadUser", fields: [linkedCleanerUserId], references: [id], onDelete: SetNull)
+  linkedCleanerUser      User?                  @relation("LinkedCleanerLeadUser", fields: [linkedCleanerUserId], references: [id], onDelete: SetNull)
   outreaches             JobOutreach[]
   notificationDeliveries NotificationDelivery[]
 
@@ -423,27 +443,27 @@ model CleanerLead {
 }
 
 model JobOutreach {
-  id                     String             @id @default(cuid())
+  id                     String                 @id @default(cuid())
   channel                OutreachChannel
-  status                 JobOutreachStatus  @default(PENDING)
-  interestToken          String             @unique
+  status                 JobOutreachStatus      @default(PENDING)
+  interestToken          String                 @unique
   interestTokenExpiresAt DateTime
   lastAttemptAt          DateTime?
-  attemptCount           Int                @default(0)
+  attemptCount           Int                    @default(0)
   providerCallId         String?
   providerMessageId      String?
   failureReason          String?
   notes                  String?
-  createdAt              DateTime           @default(now())
-  updatedAt              DateTime           @updatedAt
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
   jobRequestId           String
   cleanerUserId          String?
   cleanerLeadId          String?
-  bidId                  String?            @unique
-  jobRequest             JobRequest         @relation(fields: [jobRequestId], references: [id], onDelete: Cascade)
-  cleanerUser            User?              @relation("OutreachCleanerUser", fields: [cleanerUserId], references: [id], onDelete: SetNull)
-  cleanerLead            CleanerLead?       @relation(fields: [cleanerLeadId], references: [id], onDelete: SetNull)
-  bid                    JobBid?            @relation(fields: [bidId], references: [id], onDelete: SetNull)
+  bidId                  String?                @unique
+  jobRequest             JobRequest             @relation(fields: [jobRequestId], references: [id], onDelete: Cascade)
+  cleanerUser            User?                  @relation("OutreachCleanerUser", fields: [cleanerUserId], references: [id], onDelete: SetNull)
+  cleanerLead            CleanerLead?           @relation(fields: [cleanerLeadId], references: [id], onDelete: SetNull)
+  bid                    JobBid?                @relation(fields: [bidId], references: [id], onDelete: SetNull)
   events                 OutreachEvent[]
   notificationDeliveries NotificationDelivery[]
 
@@ -462,29 +482,32 @@ model OutreachEvent {
 }
 
 model NotificationDelivery {
-  id                String             @id @default(cuid())
+  id                String              @id @default(cuid())
+  dedupeKey         String?             @unique
   channel           NotificationChannel
-  status            NotificationStatus @default(PENDING)
+  status            NotificationStatus  @default(PENDING)
   toEmail           String?
   toPhone           String?
   providerMessageId String?
-  payload           Json               @default("{}")
+  payload           Json                @default("{}")
   failureReason     String?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
   sentAt            DateTime?
   deliveredAt       DateTime?
   jobOutreachId     String?
   jobRequestId      String?
   userId            String?
   cleanerLeadId     String?
-  jobOutreach       JobOutreach?       @relation(fields: [jobOutreachId], references: [id], onDelete: SetNull)
-  user              User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
-  cleanerLead       CleanerLead?       @relation(fields: [cleanerLeadId], references: [id], onDelete: SetNull)
+  jobOutreach       JobOutreach?        @relation(fields: [jobOutreachId], references: [id], onDelete: SetNull)
+  user              User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  cleanerLead       CleanerLead?        @relation(fields: [cleanerLeadId], references: [id], onDelete: SetNull)
 
   @@index([providerMessageId])
   @@index([jobOutreachId])
   @@index([cleanerLeadId])
+  @@index([jobRequestId])
+  @@index([userId])
 }
 
 model PushSubscription {

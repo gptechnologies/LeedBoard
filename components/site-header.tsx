@@ -8,11 +8,15 @@ export async function SiteHeader() {
 
   const brandHref = user
     ? user.role === UserRole.CUSTOMER
-      ? "/customer"
+      ? "/customer/jobs/new"
       : user.role === UserRole.CLEANER
         ? "/cleaner"
         : "/"
     : "/";
+
+  if (user && !needsAccountSetup(user)) {
+    return null;
+  }
 
   return (
     <header className="site-header">

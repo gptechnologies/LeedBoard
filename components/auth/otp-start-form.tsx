@@ -1,21 +1,18 @@
 "use client";
 
-import { useId, useState } from "react";
-import { LockKeyhole, Mail, Phone } from "lucide-react";
-
-type OtpChannel = "sms" | "email";
+import { useId } from "react";
+import { LockKeyhole, Mail } from "lucide-react";
 
 type OtpStartFormProps = {
   error?: string;
   inviteToken?: string;
   mode: "login" | "signup";
   role: "CUSTOMER" | "CLEANER";
+  returnTo?: string;
 };
 
-export function OtpStartForm({ error, inviteToken, mode, role }: OtpStartFormProps) {
-  const [channel, setChannel] = useState<OtpChannel>("sms");
+export function OtpStartForm({ error, inviteToken, mode, returnTo, role }: OtpStartFormProps) {
   const inputId = useId();
-  const isEmail = channel === "email";
 
   return (
     <section className="auth-shell auth-passcode-card">
@@ -29,52 +26,31 @@ export function OtpStartForm({ error, inviteToken, mode, role }: OtpStartFormPro
       <form action="/auth/otp/start" method="post" className="auth-passcode-form">
         <input type="hidden" name="mode" value={mode} />
         <input type="hidden" name="role" value={role} />
-        <input type="hidden" name="channel" value={channel} />
+        <input type="hidden" name="channel" value="email" />
         {inviteToken ? <input type="hidden" name="inviteToken" value={inviteToken} /> : null}
-
-        <div className="auth-channel-toggle" aria-label="Choose passcode delivery method">
-          <button
-            type="button"
-            className={channel === "sms" ? "is-selected" : ""}
-            aria-pressed={channel === "sms"}
-            onClick={() => setChannel("sms")}
-          >
-            <Phone aria-hidden="true" size={18} />
-            <span>Phone</span>
-          </button>
-          <button
-            type="button"
-            className={channel === "email" ? "is-selected" : ""}
-            aria-pressed={channel === "email"}
-            onClick={() => setChannel("email")}
-          >
-            <Mail aria-hidden="true" size={18} />
-            <span>Email</span>
-          </button>
-        </div>
+        {returnTo ? <input type="hidden" name="returnTo" value={returnTo} /> : null}
 
         <label className="auth-contact-field" htmlFor={inputId}>
-          {isEmail ? (
-            <Mail aria-hidden="true" size={22} />
-          ) : (
-            <Phone aria-hidden="true" size={22} />
-          )}
+          <Mail aria-hidden="true" size={22} />
           <input
             id={inputId}
-            key={channel}
-            name={isEmail ? "email" : "phone"}
-            autoComplete={isEmail ? "email" : "tel"}
-            inputMode={isEmail ? "email" : "tel"}
-            placeholder={isEmail ? "Enter your email address" : "Enter your phone number"}
+            name="email"
+            autoComplete="email"
+            inputMode="email"
+            placeholder="Enter your email address"
             required
-            type={isEmail ? "email" : "tel"}
+            type="email"
           />
         </label>
 
-        <p className="auth-helper">We'll send you a one-time passcode (OTP).</p>
+        <p className="auth-helper">
+          {process.env.NODE_ENV === "development"
+            ? "Use development code 000000 to continue."
+            : "We'll email you a one-time passcode."}
+        </p>
 
         <button type="submit" className="auth-send-button">
-          Send code
+          Email me a code
         </button>
 
         <div className="auth-password-note">

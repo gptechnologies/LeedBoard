@@ -30,6 +30,10 @@ function getResendConfig() {
   };
 }
 
+export function isEmailDeliveryConfigured() {
+  return Boolean(getResendConfig());
+}
+
 export function getAppBaseUrl() {
   return (
     process.env.NEXT_PUBLIC_APP_URL ||
@@ -91,6 +95,7 @@ export async function sendTransactionalEmail(input: SendEmailInput): Promise<Ema
 }
 
 export async function createEmailDelivery(input: {
+  dedupeKey?: string | null;
   jobOutreachId?: string | null;
   jobRequestId?: string | null;
   payload: Prisma.InputJsonObject;
@@ -99,6 +104,7 @@ export async function createEmailDelivery(input: {
 }) {
   return prisma.notificationDelivery.create({
     data: {
+      dedupeKey: input.dedupeKey ?? null,
       channel: NotificationChannel.EMAIL,
       status: NotificationStatus.PENDING,
       toEmail: input.toEmail,
@@ -172,6 +178,61 @@ export function buildCleanerJobPostedEmail(input: {
   return {
     subject: `New cleaning job near ${input.city}, ${input.state}`,
     text,
+  };
+}
+
+export function buildHomeownerBidReceivedEmail(input: {
+  bidUrl: string;
+  cleanerName: string;
+  jobTitle: string;
+  price: string;
+  timing: string;
+}) {
+  return {
+    subject: `New bid for ${input.jobTitle}`,
+    text: [
+      `${input.cleanerName} submitted a bid for ${input.jobTitle}.`,
+      "",
+      `Price: ${input.price}`,
+      `Timing: ${input.timing}`,
+      "",
+      `Review the bid: ${input.bidUrl}`,
+    ].join("\n"),
+  };
+}
+
+export function buildCleanerBidAcceptedEmail(input: {
+  activityUrl: string;
+  jobTitle: string;
+  timing: string;
+}) {
+  return {
+    subject: `Your bid was accepted for ${input.jobTitle}`,
+    text: [
+      `The homeowner accepted your bid for ${input.jobTitle}.`,
+      "",
+      `Timing: ${input.timing}`,
+      "",
+      "The exact address and access details are now available in Well Kept.",
+      `View the active job: ${input.activityUrl}`,
+    ].join("\n"),
+  };
+}
+
+export function buildJobCompletedEmail(input: {
+  activityUrl: string;
+  jobTitle: string;
+  recipientName: string;
+}) {
+  return {
+    subject: `${input.jobTitle} was marked complete`,
+    text: [
+      `Hi ${input.recipientName},`,
+      "",
+      `${input.jobTitle} was marked complete.`,
+      "",
+      `Review the job: ${input.activityUrl}`,
+    ].join("\n"),
   };
 }
 

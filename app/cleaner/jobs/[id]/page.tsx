@@ -1,31 +1,19 @@
-import { JobRequestStatus, UserRole } from "@prisma/client";
-import { FastBidDrawer } from "@/components/marketplace/fast-bid-drawer";
-import {
-  formatRoomTypes,
-  formatTimingSummary,
-  getCleanLevelLabel,
-  getCustomerHistorySummary,
-  getEntryMethodLabel,
-  getHomeConditionLabel,
-  getJobCleanTypeLabel,
-  getJobPriorityAreaLabel,
-  getBidSelectionPriorityLabel,
-} from "@/lib/marketplace";
-import { getCleaningJobTitle } from "@/lib/job-title";
-import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/session";
+import { BidStatus, JobRequestStatus, UserRole } from "@prisma/client";
+import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { FastBidDrawer } from "@/components/marketplace/fast-bid-drawer";
+import { ProviderJobOverview, type NearbyJobSwipeItem } from "@/components/marketplace/nearby-job-swipe-carousel";
+import { PassJobAction } from "@/components/marketplace/pass-job-action";
+import { formatTimingSummary } from "@/lib/marketplace";
+import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/session";
+
 export const dynamic = "force-dynamic";
 
-type Params = Promise<{
-  id: string;
-}>;
-
-type SearchParams = Promise<{
-  error?: string;
-}>;
+type Params = Promise<{ id: string }>;
+type SearchParams = Promise<{ error?: string }>;
 
 export default async function CleanerJobDetailPage({
   params,
@@ -38,132 +26,78 @@ export default async function CleanerJobDetailPage({
   const { id } = await params;
   const query = await searchParams;
   const job = await prisma.jobRequest.findFirst({
-    where: {
-      id,
-    },
-    include: {
-      customer: {
-        include: {
-          customerJobRequests: {
-            where: {
-              status: JobRequestStatus.COMPLETED,
-            },
-            select: { id: true },
-          },
+    where: { id },
+    select: {
+      id: true,
+      title: true,
+      city: true,
+      state: true,
+      postalCode: true,
+      serviceNeeds: true,
+      roomTypes: true,
+      cleanLevel: true,
+      cleanType: true,
+      currentCondition: true,
+      suppliesSource: true,
+      timingPreference: true,
+      requestedDate: true,
+      requestedWindowStart: true,
+      requestedWindowEnd: true,
+      notes: true,
+      status: true,
+      createdAt: true,
+      homeProfile: {
+        select: {
+          bedroomCount: true,
+          bathroomCount: true,
+          estimatedSquareFeet: true,
+          storyCount: true,
+          hasPets: true,
+          propertyType: true,
         },
       },
-      homeProfile: true,
       bids: {
-        where: {
-          cleanerId: user.id,
-        },
+        where: { cleanerId: user.id },
+        select: { id: true },
+      },
+      _count: {
+        select: { bids: { where: { status: BidStatus.SUBMITTED } } },
       },
     },
   });
 
-  if (!job || (job.status !== JobRequestStatus.OPEN && job.bids.length === 0)) {
-    notFound();
-  }
-
+  if (!job || (job.status !== JobRequestStatus.OPEN && job.bids.length === 0)) notFound();
   const existingBid = job.bids[0] ?? null;
-  if (existingBid) {
-    redirect(`/cleaner/messages/${existingBid.id}`);
-  }
+  if (existingBid) redirect(`/cleaner/messages/${existingBid.id}`);
 
-  const bedroomCount = job.homeProfile?.bedroomCount;
-  const bathroomCount = job.homeProfile?.bathroomCount;
-  const bathroomLabel = bathroomCount
-    ? `${Number.isInteger(bathroomCount) ? bathroomCount.toFixed(0) : bathroomCount} bath`
-    : null;
-  const homeDetails = [
-    bedroomCount ? `${bedroomCount} bed` : null,
-    bathroomLabel,
-  ].filter(Boolean);
-  const petsChip =
-    job.homeProfile == null
-      ? null
-      : job.homeProfile.hasPets
-        ? "Pets"
-        : "No pets";
-  const matchingDetails = [
-    job.cleanType ? { label: "Clean type", value: getJobCleanTypeLabel(job.cleanType) } : null,
-    job.currentCondition
-      ? { label: "Condition", value: getHomeConditionLabel(job.currentCondition) }
-      : null,
-    job.matchingPriorityAreas.length > 0
-      ? {
-          label: "Priority areas",
-          value: job.matchingPriorityAreas.map(getJobPriorityAreaLabel).join(", "),
-        }
-      : null,
-    job.selectionPriority
-      ? { label: "Most important", value: getBidSelectionPriorityLabel(job.selectionPriority) }
-      : null,
-  ].filter((detail): detail is { label: string; value: string } => Boolean(detail));
+  const timingLabel = formatTimingSummary(job);
+  const item: NearbyJobSwipeItem = {
+    areaLabel: `${job.city}, ${job.state}`,
+    bathroomCount: job.homeProfile?.bathroomCount ?? null,
+    bedroomCount: job.homeProfile?.bedroomCount ?? null,
+    bidCount: job._count.bids,
+    estimatedSquareFeet: job.homeProfile?.estimatedSquareFeet ?? null,
+    id: job.id,
+    job,
+    timingLabel,
+    title: job.title,
+  };
 
   return (
-    <div className="market-shell market-shell--detail bid-screen">
-      <section className="market-surface">
-        <header className="bid-screen__header">
-          <Link href="/cleaner" className="bid-screen__back" aria-label="Back to cleaner jobs">
-            <span aria-hidden="true">&larr;</span>
-          </Link>
+    <div className="wk-app-screen wk-job-detail-screen">
+      <main className="wk-screen-content">
+        <header className="wk-detail-page-heading">
+          <Link href="/cleaner"><ChevronLeft aria-hidden="true" />Back to Open Jobs</Link>
           <h1>Job Details</h1>
-          <span className="bid-screen__header-spacer" aria-hidden="true" />
         </header>
 
         {query.error ? <div className="notice error">{query.error}</div> : null}
 
-        <article className="market-card bid-job-card">
-          <div className="bid-job-card__media" aria-hidden="true">
-            <span>Wk</span>
-          </div>
-          <div className="bid-job-card__body">
-            <div className="bid-job-card__title-row">
-              <div>
-                <h2>{getCleaningJobTitle(job)}</h2>
-                <p>{homeDetails.length > 0 ? homeDetails.join(" · ") : formatRoomTypes(job.roomTypes)}</p>
-              </div>
-              <span className="bid-job-card__badge">{getCleanLevelLabel(job.cleanLevel)}</span>
-            </div>
-            <div className="bid-job-card__meta">
-              <span>{formatTimingSummary(job)}</span>
-              <span>{job.city}, {job.state}</span>
-              <span>{getEntryMethodLabel(job.entryMethod)}</span>
-            </div>
-            <div className="bid-job-card__chips">
-              <span>{formatRoomTypes(job.roomTypes)}</span>
-              <span>
-                {getCustomerHistorySummary({
-                  completedJobs: job.customerCompletedJobsSnapshot,
-                  customerCreatedAt: job.customerMemberSinceSnapshot ?? job.customer.createdAt,
-                })}
-              </span>
-              {petsChip ? <span>{petsChip}</span> : null}
-            </div>
-          </div>
-          {job.notes ? (
-            <div className="cleaner-detail-note">
-              <strong>Job notes</strong>
-              <p>{job.notes}</p>
-            </div>
-          ) : null}
-          {matchingDetails.length > 0 ? (
-            <div className="cleaner-detail-note cleaner-detail-matching">
-              <strong>Matching details</strong>
-              <dl>
-                {matchingDetails.map((detail) => (
-                  <div key={detail.label}>
-                    <dt>{detail.label}</dt>
-                    <dd>{detail.value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          ) : null}
+        <article className="wk-provider-job-card wk-provider-job-card--detail">
+          <ProviderJobOverview detail item={item} />
         </article>
 
-        <div className="cleaner-detail-bid-action">
+        <div className="wk-detail-job-actions">
           <FastBidDrawer
             defaults={{
               standardHourlyRateCents: user.cleanerProfile?.standardHourlyRateCents ?? null,
@@ -171,11 +105,12 @@ export default async function CleanerJobDetailPage({
               defaultEtaMinutes: user.cleanerProfile?.defaultEtaMinutes ?? null,
             }}
             job={job}
-            timingLabel={formatTimingSummary(job)}
-            triggerMode="button"
+            timingLabel={timingLabel}
+            trigger={<button className="wk-detail-bid" type="button">Bid on Job</button>}
           />
+          <PassJobAction jobId={job.id} />
         </div>
-      </section>
+      </main>
     </div>
   );
 }
