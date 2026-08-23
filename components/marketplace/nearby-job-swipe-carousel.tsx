@@ -73,6 +73,8 @@ export type NearbyJobSwipeItem = {
   title: string;
 };
 
+const expandSwipeThreshold = 96;
+
 export function NearbyJobSwipeCarousel({
   index,
   jobs,
@@ -109,7 +111,10 @@ export function NearbyJobSwipeCarousel({
     const horizontalDistance = touch.clientX - start.x;
     const verticalDistance = touch.clientY - start.y;
 
-    if (verticalDistance <= -48 && Math.abs(verticalDistance) > Math.abs(horizontalDistance)) {
+    if (
+      verticalDistance <= -expandSwipeThreshold
+      && Math.abs(verticalDistance) > Math.abs(horizontalDistance)
+    ) {
       if (!expanded) {
         setExpanded(true);
         triggerHaptic("selection");
