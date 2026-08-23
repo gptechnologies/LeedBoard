@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Bell, Settings, X } from "lucide-react";
+import type { ReactNode } from "react";
 import { AppAccountMenu } from "@/components/marketplace/app-account-menu";
 
 export function AppScreenHeader({
@@ -9,6 +10,7 @@ export function AppScreenHeader({
   accountMenu,
   centeredTitle,
   initials,
+  middle,
   title,
 }: {
   actionHref?: string;
@@ -17,11 +19,12 @@ export function AppScreenHeader({
   accountMenu?: boolean;
   centeredTitle?: boolean;
   initials?: string;
+  middle?: ReactNode;
   title?: string;
 }) {
   if (accountMenu && initials) {
     return (
-      <header className={`wk-screen-header${centeredTitle ? " wk-screen-header--centered" : ""}`}>
+      <header className={`wk-screen-header${centeredTitle ? " wk-screen-header--centered" : ""}${middle ? " wk-screen-header--with-middle" : ""}`}>
         {centeredTitle ? (
           <>
             <span aria-hidden="true" className="wk-screen-header__spacer" />
@@ -32,6 +35,7 @@ export function AppScreenHeader({
             Well Kept<span aria-hidden="true">✦</span>
           </Link>
         )}
+        {middle}
         <AppAccountMenu initials={initials} />
       </header>
     );

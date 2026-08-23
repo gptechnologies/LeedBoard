@@ -6,7 +6,7 @@ import { useState } from "react";
 
 import { triggerHaptic } from "@/lib/haptics";
 
-export function PassJobAction({ jobId }: { jobId: string }) {
+export function PassJobAction({ jobId, label = "Pass on this job" }: { jobId: string; label?: string }) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState(false);
@@ -37,7 +37,7 @@ export function PassJobAction({ jobId }: { jobId: string }) {
         setConfirming(true);
         triggerHaptic("selection");
       }} type="button">
-        Pass on this job
+        {label}
       </button>
     );
   }

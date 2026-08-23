@@ -1,5 +1,4 @@
 import { UserRole } from "@prisma/client";
-import { AppScreenHeader } from "@/components/marketplace/app-screen-header";
 import { CleanerJobsFeed } from "@/components/marketplace/cleaner-jobs-feed";
 import {
   formatTimingSummary,
@@ -49,19 +48,13 @@ export default async function CleanerDashboard({ searchParams }: CleanerDashboar
 
   return (
     <div className="wk-app-screen wk-jobs-screen">
-      <AppScreenHeader accountMenu initials={initials} />
-      <div className="wk-screen-content">
-        <header className="wk-provider-jobs-heading">
-          <h1>Open Jobs</h1>
-          <p>Browse nearby cleaning jobs</p>
-        </header>
-        {params.error ? <div className="notice error">{params.error}</div> : null}
-        {params.passed === "1" ? <div className="wk-provider-toast" role="status">Job moved to Passed.</div> : null}
-        <CleanerJobsFeed
-          bidDefaults={bidDefaults}
-          jobs={feedJobs}
-        />
-      </div>
+      <CleanerJobsFeed
+        bidDefaults={bidDefaults}
+        error={params.error}
+        initials={initials}
+        jobs={feedJobs}
+        passed={params.passed === "1"}
+      />
     </div>
   );
 }

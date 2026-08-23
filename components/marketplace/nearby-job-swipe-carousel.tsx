@@ -16,21 +16,17 @@ import {
   BedDouble,
   CalendarDays,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
   CircleGauge,
+  CircleCheck,
   Home,
   MapPin,
-  Navigation,
   PawPrint,
+  Ruler,
   Sparkles,
 } from "lucide-react";
 import { useRef, useState, type TouchEvent } from "react";
 
 import { EmptyState } from "@/components/marketplace/empty-state";
-import { FastBidDrawer } from "@/components/marketplace/fast-bid-drawer";
-import { PassJobAction } from "@/components/marketplace/pass-job-action";
 import { getCleaningJobTitle } from "@/lib/job-title";
 import { triggerHaptic } from "@/lib/haptics";
 
@@ -78,17 +74,14 @@ export type NearbyJobSwipeItem = {
 };
 
 export function NearbyJobSwipeCarousel({
-  defaults,
+  index,
   jobs,
+  onIndexChange,
 }: {
-  defaults: {
-    standardHourlyRateCents: number | null;
-    standardFlatRateCents: number | null;
-    defaultEtaMinutes: number | null;
-  };
+  index: number;
   jobs: NearbyJobSwipeItem[];
+  onIndexChange: (index: number) => void;
 }) {
-  const [index, setIndex] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const current = jobs[index] ?? null;
@@ -96,7 +89,7 @@ export function NearbyJobSwipeCarousel({
   function move(direction: -1 | 1) {
     const next = Math.min(Math.max(index + direction, 0), Math.max(jobs.length - 1, 0));
     if (next !== index) {
-      setIndex(next);
+      onIndexChange(next);
       setExpanded(false);
       triggerHaptic("light");
     }
@@ -115,6 +108,15 @@ export function NearbyJobSwipeCarousel({
 
     const horizontalDistance = touch.clientX - start.x;
     const verticalDistance = touch.clientY - start.y;
+
+    if (verticalDistance <= -48 && Math.abs(verticalDistance) > Math.abs(horizontalDistance)) {
+      if (!expanded) {
+        setExpanded(true);
+        triggerHaptic("selection");
+      }
+      return;
+    }
+
     if (Math.abs(horizontalDistance) < 64 || Math.abs(horizontalDistance) <= Math.abs(verticalDistance)) return;
     move(horizontalDistance < 0 ? 1 : -1);
   }
@@ -135,8 +137,6 @@ export function NearbyJobSwipeCarousel({
 
   return (
     <div className="wk-provider-deck">
-      <JobPager count={jobs.length} index={index} onMove={move} />
-
       <article
         aria-label={`${getCleaningJobTitle(current.job)}, job ${index + 1} of ${jobs.length}`}
         className={`wk-provider-job-card${expanded ? " is-expanded" : ""}`}
@@ -150,30 +150,18 @@ export function NearbyJobSwipeCarousel({
         tabIndex={0}
       >
         <ProviderJobOverview detail={expanded} item={current} />
-        <div className="wk-provider-job-card__actions">
-          <FastBidDrawer
-            defaults={defaults}
-            job={current.job}
-            timingLabel={current.timingLabel}
-            trigger={<button className="wk-provider-primary-action wk-pressable" type="button">Bid on Job</button>}
-          />
-          <button
-            aria-controls={`provider-job-details-${current.id}`}
-            aria-expanded={expanded}
-            className="wk-provider-secondary-action wk-pressable"
-            onClick={toggleDetails}
-            type="button"
-          >
-            {expanded ? "Hide Details" : "View Details"}
-            {expanded ? <ChevronUp aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}
-          </button>
-          {expanded ? (
-            <div className="wk-provider-expanded-actions">
-              <PassJobAction jobId={current.id} />
-            </div>
-          ) : null}
-        </div>
+        <button
+          aria-controls={`provider-job-details-${current.id}`}
+          aria-expanded={expanded}
+          className="wk-provider-details-toggle wk-pressable"
+          onClick={toggleDetails}
+          type="button"
+        >
+          <span>{expanded ? "Press here to hide all details" : "Press here to show all details"}</span>
+          <ChevronDown aria-hidden="true" />
+        </button>
       </article>
+
     </div>
   );
 }
@@ -181,21 +169,19 @@ export function NearbyJobSwipeCarousel({
 export function ProviderJobOverview({ detail = false, item }: { detail?: boolean; item: NearbyJobSwipeItem }) {
   return (
     <>
-      <div className="wk-provider-job-card__topline">
-        <span>{formatPostedDate(item.job.createdAt)} · {item.bidCount} {item.bidCount === 1 ? "bid" : "bids"}</span>
-        <span className="wk-provider-job-condition">
-          <CircleGauge aria-hidden="true" />
-          {formatCondition(item.job.currentCondition, item.job.cleanLevel)}
-        </span>
+      <div className="wk-provider-job-card__strip">
+        <Sparkles aria-hidden="true" />
+        <span>{getCleaningJobTitle(item.job)} - Posted <time dateTime={new Date(item.job.createdAt).toISOString()}>{formatPostedAge(item.job.createdAt)}</time></span>
       </div>
-      <ApproximateAreaMap job={item.job} />
+      <ApproximateAreaMap item={item} />
       <JobCardIntro item={item} />
       <JobCardDetails detail={detail} item={item} />
     </>
   );
 }
 
-export function ApproximateAreaMap({ job }: { job: NearbyJobDeckJob }) {
+export function ApproximateAreaMap({ item }: { item: NearbyJobSwipeItem }) {
+  const { job } = item;
   const hash = Array.from(`${job.city}${job.postalCode}`).reduce((total, character) => total + character.charCodeAt(0), 0);
   const markerX = 42 + (hash % 17);
   const markerY = 43 + (hash % 13);
@@ -212,9 +198,10 @@ export function ApproximateAreaMap({ job }: { job: NearbyJobDeckJob }) {
         <circle className="wk-provider-map__marker-ring" cx={`${markerX}%`} cy={`${markerY}%`} r="13" />
         <circle className="wk-provider-map__marker" cx={`${markerX}%`} cy={`${markerY}%`} r="7" />
       </svg>
-      <span className="wk-provider-map__city">{formatCity(job.city)}</span>
+      <span className="wk-provider-map__price">$140–$170</span>
+      <span className="wk-provider-map__timing"><CalendarDays aria-hidden="true" />{item.timingLabel}</span>
       <figcaption>
-        <Navigation aria-hidden="true" />
+        <MapPin aria-hidden="true" />
         <span><strong>{formatCity(job.city)}, {job.state.toUpperCase()} {job.postalCode}</strong>Approx. area · within 5 mi</span>
       </figcaption>
     </figure>
@@ -227,32 +214,40 @@ function JobCardIntro({ item }: { item: NearbyJobSwipeItem }) {
 
   return (
     <div className="wk-provider-job-card__summary">
-      <h2>{getCleaningJobTitle(job)}</h2>
-      <div className="wk-provider-job-card__meta" aria-label="Job timing and general location">
-        <span><CalendarDays aria-hidden="true" />{item.timingLabel}</span>
-        <span><MapPin aria-hidden="true" />{formatCity(job.city)}, {job.state.toUpperCase()} {job.postalCode}</span>
+      <div className="wk-provider-job-card__heading">
+        <h2>{formatCity(job.city)}, {job.state.toUpperCase()} {job.postalCode}</h2>
+        <span className="wk-provider-job-condition">
+          <CircleCheck aria-hidden="true" />
+          {formatCondition(job.currentCondition, job.cleanLevel)}
+        </span>
       </div>
       <p className="wk-provider-job-card__description">
-        {job.notes?.trim() || `${formatServices(job.serviceNeeds)} for a ${home?.propertyType === "APARTMENT" ? "nearby apartment" : "nearby home"}. ${formatSupplies(job.suppliesSource)}.`}
+        {job.notes?.trim() || formatSummaryDescription(job.serviceNeeds)}
       </p>
+      <div className="wk-provider-job-card__chips" aria-label="Job summary">
+        <span><BedDouble aria-hidden="true" />{formatCount(home?.bedroomCount, "Beds", "- Beds")}</span>
+        <span><Bath aria-hidden="true" />{formatCount(home?.bathroomCount, "Baths", "- Baths")}</span>
+        <span><Ruler aria-hidden="true" />{home?.estimatedSquareFeet ? `${home.estimatedSquareFeet.toLocaleString()} ft²` : "- ft²"}</span>
+        <span><PawPrint aria-hidden="true" />{home ? (home.hasPets ? "Pets" : "No pets") : "- Pets"}</span>
+      </div>
     </div>
   );
 }
 
 function JobCardDetails({ detail, item }: { detail: boolean; item: NearbyJobSwipeItem }) {
+  if (!detail) return null;
+
   const { job } = item;
   const home = job.homeProfile;
   const details = [
     { Icon: Sparkles, label: "Service", value: formatServiceDetail(job.serviceNeeds) },
     { Icon: Home, label: "Home type", value: formatHomeSummary(home) },
     { Icon: PawPrint, label: "Pets", value: home?.hasPets ? "Pets in home" : "No pets noted" },
-    ...(detail ? [
-      { Icon: BedDouble, label: "Bedrooms", value: home?.bedroomCount != null ? String(home.bedroomCount) : "Not provided" },
-      { Icon: Bath, label: "Bathrooms", value: home?.bathroomCount != null ? formatNumber(home.bathroomCount) : "Not provided" },
-      { Icon: CircleGauge, label: "Home size", value: home?.estimatedSquareFeet ? `${home.estimatedSquareFeet.toLocaleString()} ft²` : "Not provided" },
-      { Icon: Home, label: "Stories", value: home?.storyCount != null ? String(home.storyCount) : "Not provided" },
-      { Icon: Sparkles, label: "Supplies", value: formatSupplies(job.suppliesSource) },
-    ] : []),
+    { Icon: BedDouble, label: "Bedrooms", value: home?.bedroomCount != null ? String(home.bedroomCount) : "Not provided" },
+    { Icon: Bath, label: "Bathrooms", value: home?.bathroomCount != null ? formatNumber(home.bathroomCount) : "Not provided" },
+    { Icon: CircleGauge, label: "Home size", value: home?.estimatedSquareFeet ? `${home.estimatedSquareFeet.toLocaleString()} ft²` : "Not provided" },
+    { Icon: Home, label: "Stories", value: home?.storyCount != null ? String(home.storyCount) : "Not provided" },
+    { Icon: Sparkles, label: "Supplies", value: formatSupplies(job.suppliesSource) },
   ];
 
   return (
@@ -267,27 +262,6 @@ function JobCardDetails({ detail, item }: { detail: boolean; item: NearbyJobSwip
         ))}
       </dl>
     </div>
-  );
-}
-
-function JobPager({ count, index, onMove }: { count: number; index: number; onMove: (direction: -1 | 1) => void }) {
-  return (
-    <nav className="wk-provider-pager" aria-label="Browse open jobs">
-      <button aria-label="Previous job" disabled={index === 0} onClick={() => onMove(-1)} type="button">
-        <ChevronLeft aria-hidden="true" />
-      </button>
-      <div aria-live="polite">
-        <span>{index + 1} of {count}</span>
-        <div className="wk-provider-pager__dots" aria-hidden="true">
-          {Array.from({ length: Math.min(count, 7) }, (_, dot) => (
-            <i className={dot === Math.min(index, 6) ? "is-active" : ""} key={dot} />
-          ))}
-        </div>
-      </div>
-      <button aria-label="Next job" disabled={index === count - 1} onClick={() => onMove(1)} type="button">
-        <ChevronRight aria-hidden="true" />
-      </button>
-    </nav>
   );
 }
 
@@ -310,6 +284,29 @@ function formatServiceDetail(needs: ServiceNeed[]) {
   if (needs.length <= 1) return formatServices(needs);
   const remaining = needs.length - 1;
   return `${formatServices(needs.slice(0, 1))} +${remaining} ${remaining === 1 ? "area" : "areas"}`;
+}
+
+function formatSummaryDescription(needs: ServiceNeed[]) {
+  if (!needs.length) return "Home cleaning details provided by the homeowner.";
+  const labels: Record<ServiceNeed, string> = {
+    GENERAL_CLEANING: "general cleaning",
+    DEEP_CLEAN: "deep cleaning",
+    KITCHEN: "kitchen",
+    BATHROOMS: "bathrooms",
+    FLOORS: "floors",
+    DUSTING: "dusting",
+    MOVE_OUT: "move-out cleaning",
+    WINDOWS: "windows",
+    LAUNDRY: "laundry",
+  };
+  const summary = formatNaturalList(needs.slice(0, 4).map((need) => labels[need]));
+  return `${summary}. Est. 2–3 hours.`.replace(/^./, (character) => character.toLocaleUpperCase("en-US"));
+}
+
+function formatNaturalList(values: string[]) {
+  if (values.length <= 1) return values[0] ?? "";
+  if (values.length === 2) return values.join(" and ");
+  return `${values.slice(0, -1).join(", ")}, and ${values.at(-1)}`;
 }
 
 function formatSupplies(value: SuppliesSource) {
@@ -335,9 +332,31 @@ function formatHomeSummary(home: HomeSnapshot) {
   return parts.join(", ");
 }
 
-function formatPostedDate(value: Date | string) {
-  const date = value instanceof Date ? value : new Date(value);
-  return `Posted ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+function formatCount(value: number | null | undefined, unit: string, fallback: string) {
+  if (value == null) return fallback;
+  return `${formatNumber(value)} ${unit}`;
+}
+
+function formatPostedAge(value: Date | string) {
+  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
+  if (elapsedSeconds < 60) return "just now";
+
+  const minutes = Math.floor(elapsedSeconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return `${weeks}w ago`;
+
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo ago`;
+
+  return `${Math.floor(days / 365)}y ago`;
 }
 
 function formatCity(value: string) {
