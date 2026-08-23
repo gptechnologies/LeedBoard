@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BriefcaseBusiness, Home, MessageCircle, Plus, UserRound } from "lucide-react";
+import { BriefcaseBusiness, MessageCircle, Plus, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { triggerHaptic } from "@/lib/haptics";
 
@@ -10,7 +10,7 @@ type AppRole = "customer" | "cleaner";
 
 const roleTabs = {
   customer: [
-    { href: "/customer/account", label: "Home", Icon: Home },
+    { href: "/customer/account", label: "Account", Icon: UserRound },
     { href: "/customer/jobs/new", label: "Post", Icon: Plus, primary: true },
     { href: "/customer/jobs", label: "Activity", Icon: MessageCircle },
   ],
@@ -50,9 +50,7 @@ export function RoleSwipeShell({
 
   return (
     <div className="wk-role-shell" data-role={role} data-ui="calm">
-      <div className="wk-route-transition" key={pathname}>
-        {children}
-      </div>
+      {children}
 
       <nav className="wk-app-nav" aria-label={`${role} navigation`}>
         {tabs.map((tab, index) => {

@@ -8,13 +8,13 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "New York Home Cleaning Marketplace | Well Kept",
   description:
-    "Well Kept connects New York homeowners and apartment renters with professional cleaners on demand, while helping cleaners win hot local cleaning leads.",
+    "Well Kept connects New York homeowners and apartment renters with professional cleaners who bid on local cleaning jobs.",
   keywords: [
     "New York home cleaning",
     "NYC apartment cleaning",
     "home cleaners New York",
     "cleaning marketplace",
-    "on demand cleaners",
+    "cleaner bids",
     "professional cleaners NYC",
   ],
 };
@@ -31,7 +31,7 @@ export default async function HomePage() {
       <section className="hero hero-premium landing-hero">
         <div className="landing-hero__copy stack">
           <div className="eyebrow">New York home cleaning marketplace</div>
-          <h1>Book trusted home cleaners in New York on demand.</h1>
+          <h1>Post your cleaning job. Compare bids from trusted New York cleaners.</h1>
           <p>
             Well Kept connects people who need a clean home or apartment with
             professional cleaners ready to bid on the job. Post what you need,

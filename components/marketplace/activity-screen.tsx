@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { CalendarDays, ChevronDown, ChevronRight, Home, MessageCircle, Sparkles } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 
 import { CompleteJobAction } from "@/components/marketplace/complete-job-action";
 import { triggerHaptic } from "@/lib/haptics";
@@ -80,6 +80,33 @@ export function ActivityScreen({
     });
   }
 
+  function selectSegment(nextSegment: "updates" | "jobs") {
+    setSegment(nextSegment);
+    setExpandedId(null);
+    triggerHaptic("selection");
+  }
+
+  function handleTabKey(event: KeyboardEvent<HTMLButtonElement>) {
+    let nextSegment: "updates" | "jobs" | null = null;
+
+    if (event.key === "End") {
+      nextSegment = "jobs";
+    }
+    if (event.key === "Home") {
+      nextSegment = "updates";
+    }
+    if (["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(event.key)) {
+      nextSegment = segment === "updates" ? "jobs" : "updates";
+    }
+    if (!nextSegment) return;
+
+    event.preventDefault();
+    selectSegment(nextSegment);
+    window.requestAnimationFrame(() => {
+      document.getElementById(`activity-${nextSegment}-tab`)?.focus();
+    });
+  }
+
   return (
     <>
       <div className="wk-segmented" role="tablist" aria-label="Activity type">
@@ -88,12 +115,10 @@ export function ActivityScreen({
           id="activity-updates-tab"
           aria-selected={segment === "updates"}
           className={segment === "updates" ? "is-active" : ""}
-          onClick={() => {
-            setSegment("updates");
-            setExpandedId(null);
-            triggerHaptic("selection");
-          }}
+          onClick={() => selectSegment("updates")}
+          onKeyDown={handleTabKey}
           role="tab"
+          tabIndex={segment === "updates" ? 0 : -1}
           type="button"
         >
           Updates
@@ -103,12 +128,10 @@ export function ActivityScreen({
           id="activity-jobs-tab"
           aria-selected={segment === "jobs"}
           className={segment === "jobs" ? "is-active" : ""}
-          onClick={() => {
-            setSegment("jobs");
-            setExpandedId(null);
-            triggerHaptic("selection");
-          }}
+          onClick={() => selectSegment("jobs")}
+          onKeyDown={handleTabKey}
           role="tab"
+          tabIndex={segment === "jobs" ? 0 : -1}
           type="button"
         >
           Jobs

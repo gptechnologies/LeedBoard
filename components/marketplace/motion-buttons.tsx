@@ -20,45 +20,26 @@ const rippleBase =
 
 type PulsatingPrimaryButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   children: ReactNode;
-  pulseColor?: string;
-  pulseDistance?: string;
 };
 
 type PulsatingPrimaryLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
   children: ReactNode;
   href: string;
-  pulseColor?: string;
-  pulseDistance?: string;
 };
 
 export function PulsatingPrimaryButton({
   children,
   className,
-  pulseColor = "oklch(68% 0.08 145 / 0.42)",
-  pulseDistance = "10px",
-  style,
   ...props
 }: PulsatingPrimaryButtonProps) {
   return (
     <button
       className={cn(pulseBase, className)}
-      style={
-        {
-          "--pulse-color": pulseColor,
-          "--duration": "1.8s",
-          "--distance": pulseDistance,
-          ...style,
-        } as CSSProperties
-      }
       {...props}
     >
       <span className="relative z-10 inline-flex min-w-0 items-center justify-center gap-2">
         {children}
       </span>
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 rounded-[inherit] bg-inherit animate-pulse-ripple motion-reduce:hidden"
-      />
     </button>
   );
 }
@@ -67,32 +48,17 @@ export function PulsatingPrimaryLink({
   children,
   className,
   href,
-  pulseColor = "oklch(68% 0.08 145 / 0.42)",
-  pulseDistance = "10px",
-  style,
   ...props
 }: PulsatingPrimaryLinkProps) {
   return (
     <Link
       className={cn(pulseBase, className)}
       href={href}
-      style={
-        {
-          "--pulse-color": pulseColor,
-          "--duration": "1.8s",
-          "--distance": pulseDistance,
-          ...style,
-        } as CSSProperties
-      }
       {...props}
     >
       <span className="relative z-10 inline-flex min-w-0 items-center justify-center gap-2">
         {children}
       </span>
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 rounded-[inherit] bg-inherit animate-pulse-ripple motion-reduce:hidden"
-      />
     </Link>
   );
 }

@@ -31,6 +31,7 @@ export function OtpStartForm({ error, inviteToken, mode, returnTo, role }: OtpSt
         {returnTo ? <input type="hidden" name="returnTo" value={returnTo} /> : null}
 
         <label className="auth-contact-field" htmlFor={inputId}>
+          <span className="sr-only">Email address</span>
           <Mail aria-hidden="true" size={22} />
           <input
             id={inputId}
@@ -60,8 +61,7 @@ export function OtpStartForm({ error, inviteToken, mode, returnTo, role }: OtpSt
       </form>
 
       <p className="auth-legal">
-        By continuing, you agree to our <strong>Terms</strong> &amp;{" "}
-        <strong>Privacy Policy</strong>.
+        We use your email to verify your account and send important job updates.
       </p>
     </section>
   );

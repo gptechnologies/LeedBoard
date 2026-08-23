@@ -168,7 +168,8 @@ export function FastBidDrawer({
 
         <form action={`/cleaner/jobs/${job.id}/bid`} method="post" className="fast-bid-form" onSubmit={submitBid}>
           <div className="fast-bid-form__body">
-            <div className="market-segmented fast-bid-toggle">
+            <fieldset className="market-segmented fast-bid-toggle">
+              <legend className="sr-only">Bid pricing type</legend>
               <label className={pricingType === BidPricingType.FLAT ? "market-segmented__option active" : "market-segmented__option"}>
                 <input
                   type="radio"
@@ -189,7 +190,7 @@ export function FastBidDrawer({
                 />
                 Hourly Price
               </label>
-            </div>
+            </fieldset>
 
             <div className="field fast-bid-price-field">
               <label htmlFor={`fast-bid-price-${job.id}`}>Your price</label>
@@ -217,12 +218,13 @@ export function FastBidDrawer({
             {isAsap ? (
               <section className="fast-bid-section">
                 <h3>How soon can you arrive?</h3>
-                <div className="fast-bid-eta-grid">
+                <div className="fast-bid-eta-grid" role="group" aria-label="Arrival estimate">
                   {etaOptions.map((option) => (
                     <button
                       key={option.value}
                       type="button"
                       className={etaMinutes === String(option.value) ? "fast-bid-choice active" : "fast-bid-choice"}
+                      aria-pressed={etaMinutes === String(option.value)}
                       onClick={() => {
                         setEtaMinutes(String(option.value));
                         triggerHaptic("selection");
@@ -241,6 +243,7 @@ export function FastBidDrawer({
                 <button
                   type="button"
                   className={timeConfirmed ? "fast-bid-time-confirm active" : "fast-bid-time-confirm"}
+                  aria-pressed={timeConfirmed}
                   onClick={() => {
                     setTimeConfirmed((value) => !value);
                     triggerHaptic("selection");

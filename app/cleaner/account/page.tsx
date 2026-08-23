@@ -1,12 +1,8 @@
 import {
-  Bell,
   CalendarDays,
-  CircleDollarSign,
   MapPin,
-  MessageSquareText,
   ShieldCheck,
   Sparkles,
-  Star,
 } from "lucide-react";
 import { JobRequestStatus, NotificationChannel, UserRole } from "@prisma/client";
 import { AppScreenHeader } from "@/components/marketplace/app-screen-header";
@@ -71,6 +67,7 @@ export default async function CleanerAccountPage({ searchParams }: CleanerAccoun
   const primaryService = profile?.serviceNeeds[0]
     ? getServiceNeedLabel(profile.serviceNeeds[0])
     : "Home cleaning";
+  const serviceAreaLabel = formatServiceArea(profile?.serviceAreaPostalCodes ?? []);
 
   return (
     <div className="wk-app-screen wk-profile-screen">
@@ -86,7 +83,7 @@ export default async function CleanerAccountPage({ searchParams }: CleanerAccoun
           <div>
             <h1>{businessName}</h1>
             <strong>Cleaning Business</strong>
-            <p><MapPin aria-hidden="true" /> Watervliet, NY</p>
+            <p><MapPin aria-hidden="true" /> {serviceAreaLabel}</p>
           </div>
         </section>
 
@@ -95,7 +92,7 @@ export default async function CleanerAccountPage({ searchParams }: CleanerAccoun
             <h2>Business profile</h2>
           </div>
           <div className="wk-home-grid">
-            <BusinessMetric Icon={MapPin} label={`${Math.max(5, profile?.serviceAreaPostalCodes.length ?? 0)} mi radius`} sublabel="Service area" />
+            <BusinessMetric Icon={MapPin} label={serviceAreaLabel} sublabel="Service area" />
             <BusinessMetric Icon={CalendarDays} label={profile?.isAvailable ? "Available" : "Paused"} sublabel="Job availability" />
             <BusinessMetric Icon={ShieldCheck} label={profile?.licensedAndInsured ? "Licensed & insured" : "Insurance not added"} sublabel="Coverage" />
             <BusinessMetric Icon={Sparkles} label={primaryService} sublabel="Main service" />
@@ -103,7 +100,7 @@ export default async function CleanerAccountPage({ searchParams }: CleanerAccoun
         </section>
 
         <section className="wk-profile-section">
-          <h2>Your account</h2>
+          <h2>Job history</h2>
           <div>
             <PassedJobsDisclosure jobs={passedJobs.map(({ jobRequest: job, passedAt }) => ({
               id: job.id,
@@ -113,15 +110,11 @@ export default async function CleanerAccountPage({ searchParams }: CleanerAccoun
               timing: formatTimingSummary(job),
               title: getCleaningJobTitle(job),
             }))} />
-            <BusinessRow Icon={CircleDollarSign} label="Rates & bidding defaults" value="Edit below" />
-            <BusinessRow Icon={Star} label="Reviews" value={profile?.googleRating?.toFixed(1) || "New"} />
-            <BusinessRow Icon={MessageSquareText} label="Contact information" />
-            <BusinessRow Icon={Bell} label="Notifications" value={user.pushNotificationsEnabled ? "On" : "Off"} />
           </div>
         </section>
 
-        <details className="wk-settings-details">
-          <summary>Advanced business settings</summary>
+        <details className="wk-settings-details" id="business-settings">
+          <summary>Business settings</summary>
           <div className="wk-settings-details__content">
             <form action="/cleaner/availability" method="post">
               <input type="hidden" name="isAvailable" value={profile?.isAvailable ? "false" : "true"} />
@@ -176,22 +169,8 @@ function BusinessMetric({
   );
 }
 
-function BusinessRow({
-  Icon,
-  label,
-  value,
-}: {
-  Icon: React.ComponentType<{ "aria-hidden"?: boolean }>;
-  label: string;
-  value?: string;
-}) {
-  return (
-    <div className="wk-profile-row">
-      <>
-        <Icon />
-        <span>{label}</span>
-        {value ? <strong>{value}</strong> : null}
-      </>
-    </div>
-  );
+function formatServiceArea(postalCodes: string[]) {
+  if (postalCodes.length === 0) return "Service area not set";
+  if (postalCodes.length === 1) return `ZIP ${postalCodes[0]}`;
+  return `${postalCodes.length} service ZIPs`;
 }

@@ -190,10 +190,10 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
 
         {homeProfiles.length ? (
           <div className="wk-location-toggle" role="group" aria-label="Choose an address source">
-            <button className={`wk-pressable${locationMode === "saved" ? " is-selected" : ""}`} onClick={() => chooseLocationMode("saved")} type="button">
+            <button aria-pressed={locationMode === "saved"} className={`wk-pressable${locationMode === "saved" ? " is-selected" : ""}`} onClick={() => chooseLocationMode("saved")} type="button">
               <Home aria-hidden="true" /> Saved home
             </button>
-            <button className={`wk-pressable${locationMode === "manual" ? " is-selected" : ""}`} onClick={() => chooseLocationMode("manual")} type="button">
+            <button aria-pressed={locationMode === "manual"} className={`wk-pressable${locationMode === "manual" ? " is-selected" : ""}`} onClick={() => chooseLocationMode("manual")} type="button">
               <MapPin aria-hidden="true" /> Another address
             </button>
           </div>
