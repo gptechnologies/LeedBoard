@@ -51,7 +51,7 @@
 }
 
 .wk-role-shell[data-role="cleaner"][data-ui="calm"] .wk-jobs-screen {
-  padding-bottom: calc(156px + env(safe-area-inset-bottom));
+  padding-bottom: calc(112px + env(safe-area-inset-bottom));
 }
 
 .wk-role-shell[data-role="cleaner"][data-ui="calm"] .wk-jobs-screen .wk-screen-header {
@@ -201,7 +201,7 @@
 .wk-provider-map {
   position: relative;
   width: 100%;
-  height: clamp(158px, 43vw, 188px);
+  height: clamp(164px, 45vw, 196px);
   overflow: hidden;
   margin: 0;
   border-bottom: 1px solid var(--provider-line);
@@ -414,18 +414,18 @@
 
 .wk-provider-expanded-details {
   display: grid;
-  gap: 12px;
-  padding: 14px 16px 16px;
+  gap: 0;
+  padding: 0 8px;
 }
 
 .wk-provider-detail-section {
   display: grid;
-  gap: 10px;
-  padding-top: 0;
+  gap: 12px;
+  padding: 16px 0 18px;
 }
 
 .wk-provider-detail-section + .wk-provider-detail-section {
-  padding-top: 12px;
+  padding-top: 16px;
   border-top: 1px solid var(--provider-line);
 }
 
@@ -462,34 +462,30 @@
 
 .wk-provider-home-details {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0;
   margin: 0;
 }
 
 .wk-provider-home-details > div {
-  grid-column: span 2;
   min-width: 0;
-  min-height: 82px;
-  display: flex;
-  flex-direction: column;
+  min-height: 66px;
+  display: grid;
+  grid-template-rows: 22px auto auto;
   align-items: center;
   justify-content: center;
-  padding: 8px 5px;
-  border: 1px solid var(--provider-line);
-  border-radius: 14px;
-  background: var(--provider-surface);
-  box-shadow: 0 4px 12px oklch(30% 0.025 130 / 0.055);
+  padding: 2px 4px;
   text-align: center;
 }
 
-.wk-provider-home-details > div:nth-child(4) { grid-column: 2 / span 2; }
-.wk-provider-home-details > div:nth-child(5) { grid-column: 4 / span 2; }
+.wk-provider-home-details > div + div { border-left: 1px solid var(--provider-line); }
 
 .wk-provider-home-detail__icon {
-  width: 32px;
-  height: 32px;
-  margin-bottom: 5px;
+  width: 24px;
+  height: 22px;
+  margin-bottom: 3px;
+  border-radius: 0;
+  background: transparent;
 }
 
 .wk-provider-home-detail__icon svg {
@@ -500,7 +496,7 @@
 .wk-provider-home-details dt,
 .wk-provider-home-details dd {
   margin: 0;
-  font-size: 0.72rem;
+  font-size: 0.73rem;
   line-height: 1.25;
 }
 
@@ -510,11 +506,47 @@
 }
 
 .wk-provider-home-details dd {
-  margin-top: 2px;
+  margin: 1px 0 2px;
+  grid-row: 2;
   color: var(--provider-ink);
+  font-size: 0.96rem;
   font-weight: 760;
   overflow-wrap: anywhere;
 }
+
+.wk-provider-home-details dt { grid-row: 3; }
+.wk-provider-home-detail__icon { grid-row: 1; }
+
+.wk-provider-schedule-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.wk-provider-schedule-details > div {
+  min-width: 0;
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border: 1px solid var(--provider-line);
+  border-radius: 12px;
+}
+
+.wk-provider-schedule-details > div > svg {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  color: var(--provider-green);
+}
+
+.wk-provider-schedule-details span { min-width: 0; }
+.wk-provider-schedule-details dt,
+.wk-provider-schedule-details dd { margin: 0; line-height: 1.25; }
+.wk-provider-schedule-details dt { color: var(--provider-muted); font-size: 0.72rem; }
+.wk-provider-schedule-details dd { color: var(--provider-ink); font-size: 0.8rem; font-weight: 760; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 .wk-provider-detail-empty,
 .wk-provider-notes > p {
@@ -536,10 +568,10 @@
   padding: 10px 12px;
 }
 
-.wk-provider-fixed-actions [data-slot="drawer-trigger"],
-.wk-provider-fixed-actions [data-slot="drawer-trigger"] > button,
+.wk-provider-card-actions [data-slot="drawer-trigger"],
+.wk-provider-card-actions [data-slot="drawer-trigger"] > button,
 .wk-provider-primary-action,
-.wk-provider-fixed-actions .wk-detail-pass-trigger {
+.wk-provider-card-actions .wk-detail-pass-trigger {
   width: 100%;
   min-height: 54px;
   display: inline-flex;
@@ -557,35 +589,31 @@
   box-shadow: 0 9px 22px oklch(35% 0.09 145 / 0.2);
 }
 
-.wk-provider-fixed-actions .wk-detail-pass-trigger {
+.wk-provider-card-actions .wk-detail-pass-trigger {
   border: 1px solid oklch(74% 0.06 27);
   background: transparent;
   color: oklch(48% 0.16 27);
   box-shadow: none;
 }
 
-.wk-provider-fixed-actions {
-  position: fixed;
-  z-index: 38;
-  left: 50%;
-  bottom: calc(90px + env(safe-area-inset-bottom));
-  width: min(calc(100% - 32px), 488px);
+.wk-provider-card-actions {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
   gap: 12px;
-  background: var(--provider-bg);
-  transform: translateX(-50%);
+  padding: 0 8px 12px;
 }
 
-.wk-provider-fixed-actions > [data-slot="drawer-trigger"] {
+.wk-provider-card-actions > [data-slot="drawer-trigger"] {
   min-width: 0;
 }
 
-.wk-provider-fixed-actions .wk-pass-confirmation {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 10px);
-  left: 0;
+.wk-provider-card-actions .wk-pass-confirmation {
+  position: fixed;
+  z-index: 41;
+  right: 16px;
+  bottom: calc(156px + env(safe-area-inset-bottom));
+  left: 16px;
   box-shadow: 0 12px 34px oklch(30% 0.04 27 / 0.16);
 }
 
@@ -920,17 +948,9 @@
   .wk-provider-map__price { left: 10px; padding-inline: 12px; font-size: 1.2rem; }
   .wk-provider-map__timing { right: 8px; padding-inline: 9px; }
   .wk-provider-map figcaption { bottom: 10px; min-height: 48px; }
-  .wk-provider-expanded-details { padding: 12px; }
-  .wk-provider-home-details > div { min-height: 76px; }
-  .wk-provider-fixed-actions,
   .wk-role-shell[data-role="cleaner"][data-ui="calm"] .wk-app-nav { width: calc(100% - 24px); }
-  .wk-provider-fixed-actions {
-    position: sticky;
-    left: auto;
-    bottom: calc(90px + env(safe-area-inset-bottom));
-    margin: 18px auto 0;
-    transform: none;
-  }
+  .wk-provider-detail-section { padding-block: 13px 14px; }
+  .wk-provider-home-details > div { min-height: 60px; }
   .wk-pass-confirmation__actions { grid-template-columns: 1fr; }
 }
 

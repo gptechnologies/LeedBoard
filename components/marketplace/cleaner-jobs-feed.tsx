@@ -98,6 +98,17 @@ export function CleanerJobsFeed({
           </div>
 
           <NearbyJobSwipeCarousel
+            footer={current ? (
+              <div className="wk-provider-card-actions" aria-label="Job actions">
+                <PassJobAction jobId={current.id} label="Pass" />
+                <FastBidDrawer
+                  defaults={bidDefaults}
+                  job={current.job}
+                  timingLabel={current.timingLabel}
+                  trigger={<button className="wk-provider-primary-action wk-pressable" type="button">Bid</button>}
+                />
+              </div>
+            ) : null}
             index={index}
             jobs={jobs}
             onIndexChange={setIndex}
@@ -105,17 +116,6 @@ export function CleanerJobsFeed({
           {jobs.length > 1 ? <JobCounter count={jobs.length} index={index} /> : null}
         </section>
       </div>
-      {current ? (
-        <div className="wk-provider-fixed-actions" aria-label="Job actions">
-          <PassJobAction jobId={current.id} label="Pass" />
-          <FastBidDrawer
-            defaults={bidDefaults}
-            job={current.job}
-            timingLabel={current.timingLabel}
-            trigger={<button className="wk-provider-primary-action wk-pressable" type="button">Bid</button>}
-          />
-        </div>
-      ) : null}
     </>
   );
 }

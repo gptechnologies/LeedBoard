@@ -15,14 +15,14 @@ import {
   Bath,
   BedDouble,
   CalendarDays,
+  Clock3,
   Home,
   MapPin,
   NotepadText,
   PawPrint,
   Ruler,
-  Sparkles,
 } from "lucide-react";
-import { useRef, type TouchEvent } from "react";
+import { useRef, type ReactNode, type TouchEvent } from "react";
 
 import { EmptyState } from "@/components/marketplace/empty-state";
 import { getCleaningJobTitle } from "@/lib/job-title";
@@ -72,10 +72,12 @@ export type NearbyJobSwipeItem = {
 };
 
 export function NearbyJobSwipeCarousel({
+  footer,
   index,
   jobs,
   onIndexChange,
 }: {
+  footer?: ReactNode;
   index: number;
   jobs: NearbyJobSwipeItem[];
   onIndexChange: (index: number) => void;
@@ -133,6 +135,7 @@ export function NearbyJobSwipeCarousel({
         tabIndex={0}
       >
         <ProviderJobOverview item={current} />
+        {footer}
       </article>
 
     </div>
@@ -142,10 +145,6 @@ export function NearbyJobSwipeCarousel({
 export function ProviderJobOverview({ item }: { item: NearbyJobSwipeItem }) {
   return (
     <>
-      <div className="wk-provider-job-card__strip">
-        <Sparkles aria-hidden="true" />
-        <span>{getCleaningJobTitle(item.job)} - Posted <time dateTime={new Date(item.job.createdAt).toISOString()}>{formatPostedAge(item.job.createdAt)}</time></span>
-      </div>
       <ApproximateAreaMap item={item} />
       <JobCardDetails item={item} />
     </>
@@ -184,14 +183,17 @@ function JobCardDetails({ item }: { item: NearbyJobSwipeItem }) {
   const { job } = item;
   const home = job.homeProfile;
   const homeDetails = home ? [
-    { Icon: BedDouble, label: "Bedrooms", value: home.bedroomCount != null ? formatNumber(home.bedroomCount) : "Not listed" },
-    { Icon: Bath, label: "Bathrooms", value: home.bathroomCount != null ? formatNumber(home.bathroomCount) : "Not listed" },
-    { Icon: Ruler, label: "Home size", value: home.estimatedSquareFeet != null ? `${home.estimatedSquareFeet.toLocaleString()} sq ft` : "Not listed" },
-    { Icon: Home, label: "Stories", value: home.storyCount != null ? formatNumber(home.storyCount) : "Not listed" },
-    { Icon: PawPrint, label: "Pets", value: home.hasPets ? "Pets" : "No pets" },
+    { Icon: BedDouble, label: "Beds", value: home.bedroomCount != null ? formatNumber(home.bedroomCount) : "—" },
+    { Icon: Bath, label: "Baths", value: home.bathroomCount != null ? formatNumber(home.bathroomCount) : "—" },
+    { Icon: Ruler, label: "sq ft", value: home.estimatedSquareFeet != null ? home.estimatedSquareFeet.toLocaleString() : "—" },
+    { Icon: Home, label: "Stories", value: home.storyCount != null ? formatNumber(home.storyCount) : "—" },
+    { Icon: PawPrint, label: "Pets", value: home.hasPets ? "Yes" : "No" },
   ] : [];
   const homeDetailsHeadingId = `provider-home-details-${item.id}`;
+  const scheduleHeadingId = `provider-date-time-${item.id}`;
   const notesHeadingId = `provider-homeowner-notes-${item.id}`;
+  const requestedDateLabel = formatRequestedDate(job.requestedDate, job.timingPreference);
+  const requestedTimeLabel = formatRequestedTime(job.requestedWindowStart, job.timingPreference);
 
   return (
     <div className="wk-provider-expanded-details">
@@ -214,6 +216,22 @@ function JobCardDetails({ item }: { item: NearbyJobSwipeItem }) {
           <p className="wk-provider-detail-empty">No home details were provided.</p>
         )}
       </section>
+      <section aria-labelledby={scheduleHeadingId} className="wk-provider-detail-section wk-provider-schedule">
+        <h3 id={scheduleHeadingId}>
+          <span><CalendarDays aria-hidden="true" /></span>
+          Date &amp; time
+        </h3>
+        <dl className="wk-provider-schedule-details">
+          <div>
+            <CalendarDays aria-hidden="true" />
+            <span><dt>Date</dt><dd>{requestedDateLabel}</dd></span>
+          </div>
+          <div>
+            <Clock3 aria-hidden="true" />
+            <span><dt>Time</dt><dd>{requestedTimeLabel}</dd></span>
+          </div>
+        </dl>
+      </section>
       <section aria-labelledby={notesHeadingId} className="wk-provider-detail-section wk-provider-notes">
         <h3 id={notesHeadingId}>
           <span><NotepadText aria-hidden="true" /></span>
@@ -229,26 +247,22 @@ function formatNumber(value: number) {
   return Number.isInteger(value) ? value.toFixed(0) : value.toString();
 }
 
-function formatPostedAge(value: Date | string) {
-  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
-  if (elapsedSeconds < 60) return "just now";
+function formatRequestedDate(value: Date | string | null, timingPreference: TimingPreference) {
+  if (!value) return timingPreference === "ASAP" ? "Today" : "Flexible";
+  return new Date(value).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
 
-  const minutes = Math.floor(elapsedSeconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-
-  const weeks = Math.floor(days / 7);
-  if (weeks < 5) return `${weeks}w ago`;
-
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months}mo ago`;
-
-  return `${Math.floor(days / 365)}y ago`;
+function formatRequestedTime(value: string | null, timingPreference: TimingPreference) {
+  if (!value) return timingPreference === "ASAP" ? "ASAP" : "Flexible";
+  const [hourValue = "0", minute = "00"] = value.split(":");
+  const hour = Number(hourValue);
+  const suffix = hour >= 12 ? "PM" : "AM";
+  const displayHour = hour % 12 || 12;
+  return `${displayHour}:${minute} ${suffix}`;
 }
 
 function formatCity(value: string) {
