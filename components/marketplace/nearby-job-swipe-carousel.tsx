@@ -15,8 +15,6 @@ import {
   Bath,
   BedDouble,
   CalendarDays,
-  ChevronDown,
-  CircleCheck,
   Home,
   MapPin,
   NotepadText,
@@ -24,7 +22,7 @@ import {
   Ruler,
   Sparkles,
 } from "lucide-react";
-import { useRef, useState, type TouchEvent } from "react";
+import { useRef, type TouchEvent } from "react";
 
 import { EmptyState } from "@/components/marketplace/empty-state";
 import { getCleaningJobTitle } from "@/lib/job-title";
@@ -73,8 +71,6 @@ export type NearbyJobSwipeItem = {
   title: string;
 };
 
-const expandSwipeThreshold = 96;
-
 export function NearbyJobSwipeCarousel({
   index,
   jobs,
@@ -84,7 +80,6 @@ export function NearbyJobSwipeCarousel({
   jobs: NearbyJobSwipeItem[];
   onIndexChange: (index: number) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const current = jobs[index] ?? null;
 
@@ -92,7 +87,6 @@ export function NearbyJobSwipeCarousel({
     const next = Math.min(Math.max(index + direction, 0), Math.max(jobs.length - 1, 0));
     if (next !== index) {
       onIndexChange(next);
-      setExpanded(false);
       triggerHaptic("light");
     }
   }
@@ -111,24 +105,8 @@ export function NearbyJobSwipeCarousel({
     const horizontalDistance = touch.clientX - start.x;
     const verticalDistance = touch.clientY - start.y;
 
-    if (
-      verticalDistance <= -expandSwipeThreshold
-      && Math.abs(verticalDistance) > Math.abs(horizontalDistance)
-    ) {
-      if (!expanded) {
-        setExpanded(true);
-        triggerHaptic("selection");
-      }
-      return;
-    }
-
     if (Math.abs(horizontalDistance) < 64 || Math.abs(horizontalDistance) <= Math.abs(verticalDistance)) return;
     move(horizontalDistance < 0 ? 1 : -1);
-  }
-
-  function toggleDetails() {
-    setExpanded((value) => !value);
-    triggerHaptic("selection");
   }
 
   if (!current) {
@@ -144,7 +122,7 @@ export function NearbyJobSwipeCarousel({
     <div className="wk-provider-deck">
       <article
         aria-label={`${getCleaningJobTitle(current.job)}, job ${index + 1} of ${jobs.length}`}
-        className={`wk-provider-job-card${expanded ? " is-expanded" : ""}`}
+        className="wk-provider-job-card"
         key={current.id}
         onKeyDown={(event) => {
           if (event.key === "ArrowLeft") move(-1);
@@ -154,24 +132,14 @@ export function NearbyJobSwipeCarousel({
         onTouchStart={handleTouchStart}
         tabIndex={0}
       >
-        <ProviderJobOverview detail={expanded} item={current} />
-        <button
-          aria-controls={`provider-job-details-${current.id}`}
-          aria-expanded={expanded}
-          className="wk-provider-details-toggle wk-pressable"
-          onClick={toggleDetails}
-          type="button"
-        >
-          <span>{expanded ? "Hide details" : "Show details"}</span>
-          <ChevronDown aria-hidden="true" />
-        </button>
+        <ProviderJobOverview item={current} />
       </article>
 
     </div>
   );
 }
 
-export function ProviderJobOverview({ detail = false, item }: { detail?: boolean; item: NearbyJobSwipeItem }) {
+export function ProviderJobOverview({ item }: { item: NearbyJobSwipeItem }) {
   return (
     <>
       <div className="wk-provider-job-card__strip">
@@ -179,8 +147,7 @@ export function ProviderJobOverview({ detail = false, item }: { detail?: boolean
         <span>{getCleaningJobTitle(item.job)} - Posted <time dateTime={new Date(item.job.createdAt).toISOString()}>{formatPostedAge(item.job.createdAt)}</time></span>
       </div>
       <ApproximateAreaMap item={item} />
-      <JobCardIntro item={item} />
-      <JobCardDetails detail={detail} item={item} />
+      <JobCardDetails item={item} />
     </>
   );
 }
@@ -213,74 +180,21 @@ export function ApproximateAreaMap({ item }: { item: NearbyJobSwipeItem }) {
   );
 }
 
-function JobCardIntro({ item }: { item: NearbyJobSwipeItem }) {
+function JobCardDetails({ item }: { item: NearbyJobSwipeItem }) {
   const { job } = item;
   const home = job.homeProfile;
-  const facts = [
-    home?.bedroomCount != null
-      ? { Icon: BedDouble, label: formatCount(home.bedroomCount, "Beds") }
-      : null,
-    home?.bathroomCount != null
-      ? { Icon: Bath, label: formatCount(home.bathroomCount, "Baths") }
-      : null,
-    home?.estimatedSquareFeet
-      ? { Icon: Ruler, label: `${home.estimatedSquareFeet.toLocaleString()} ft²` }
-      : null,
-    home ? { Icon: PawPrint, label: home.hasPets ? "Pets" : "No pets" } : null,
-  ].filter((fact): fact is { Icon: typeof BedDouble; label: string } => fact !== null);
-
-  return (
-    <div className="wk-provider-job-card__summary">
-      <div className="wk-provider-job-card__heading">
-        <h2>{formatCity(job.city)}, {job.state.toUpperCase()} {job.postalCode}</h2>
-        <span className="wk-provider-job-condition">
-          <CircleCheck aria-hidden="true" />
-          {formatCondition(job.currentCondition, job.cleanLevel)}
-        </span>
-      </div>
-      <p className="wk-provider-job-card__description">
-        {formatSummaryDescription(job.serviceNeeds)}
-      </p>
-      {facts.length ? (
-        <div className="wk-provider-job-card__chips" aria-label="Job summary">
-          {facts.map(({ Icon, label }) => (
-            <span key={label}><Icon aria-hidden="true" />{label}</span>
-          ))}
-        </div>
-      ) : (
-        <p className="wk-provider-job-card__missing-details">Home details were not provided.</p>
-      )}
-    </div>
-  );
-}
-
-function JobCardDetails({ detail, item }: { detail: boolean; item: NearbyJobSwipeItem }) {
-  if (!detail) return null;
-
-  const { job } = item;
-  const home = job.homeProfile;
-  const homeDetails = [
-    home?.bedroomCount != null
-      ? { Icon: BedDouble, label: "Bedrooms", value: formatNumber(home.bedroomCount) }
-      : null,
-    home?.bathroomCount != null
-      ? { Icon: Bath, label: "Bathrooms", value: formatNumber(home.bathroomCount) }
-      : null,
-    home?.estimatedSquareFeet != null
-      ? { Icon: Ruler, label: "Home size", value: `${home.estimatedSquareFeet.toLocaleString()} sq ft` }
-      : null,
-    home?.storyCount != null
-      ? { Icon: Home, label: "Stories", value: formatNumber(home.storyCount) }
-      : null,
-    home
-      ? { Icon: PawPrint, label: "Pets", value: home.hasPets ? "Pets" : "No pets" }
-      : null,
-  ].filter((entry): entry is { Icon: typeof BedDouble; label: string; value: string } => entry !== null);
+  const homeDetails = home ? [
+    { Icon: BedDouble, label: "Bedrooms", value: home.bedroomCount != null ? formatNumber(home.bedroomCount) : "Not listed" },
+    { Icon: Bath, label: "Bathrooms", value: home.bathroomCount != null ? formatNumber(home.bathroomCount) : "Not listed" },
+    { Icon: Ruler, label: "Home size", value: home.estimatedSquareFeet != null ? `${home.estimatedSquareFeet.toLocaleString()} sq ft` : "Not listed" },
+    { Icon: Home, label: "Stories", value: home.storyCount != null ? formatNumber(home.storyCount) : "Not listed" },
+    { Icon: PawPrint, label: "Pets", value: home.hasPets ? "Pets" : "No pets" },
+  ] : [];
   const homeDetailsHeadingId = `provider-home-details-${item.id}`;
   const notesHeadingId = `provider-homeowner-notes-${item.id}`;
 
   return (
-    <div className="wk-provider-expanded-details" id={`provider-job-details-${item.id}`}>
+    <div className="wk-provider-expanded-details">
       <section aria-labelledby={homeDetailsHeadingId} className="wk-provider-detail-section">
         <h3 id={homeDetailsHeadingId}>
           <span><Home aria-hidden="true" /></span>
@@ -311,41 +225,8 @@ function JobCardDetails({ detail, item }: { detail: boolean; item: NearbyJobSwip
   );
 }
 
-function formatSummaryDescription(needs: ServiceNeed[]) {
-  if (!needs.length) return "Home cleaning details provided by the homeowner.";
-  const labels: Record<ServiceNeed, string> = {
-    GENERAL_CLEANING: "general cleaning",
-    DEEP_CLEAN: "deep cleaning",
-    KITCHEN: "kitchen",
-    BATHROOMS: "bathrooms",
-    FLOORS: "floors",
-    DUSTING: "dusting",
-    MOVE_OUT: "move-out cleaning",
-    WINDOWS: "windows",
-    LAUNDRY: "laundry",
-  };
-  const summary = formatNaturalList(needs.slice(0, 4).map((need) => labels[need]));
-  return `${summary}.`.replace(/^./, (character) => character.toLocaleUpperCase("en-US"));
-}
-
-function formatNaturalList(values: string[]) {
-  if (values.length <= 1) return values[0] ?? "";
-  if (values.length === 2) return values.join(" and ");
-  return `${values.slice(0, -1).join(", ")}, and ${values.at(-1)}`;
-}
-
-function formatCondition(condition: HomeCondition | null, level: CleanLevel) {
-  if (condition === "NEEDS_EXTRA_ATTENTION" || level === "DEEP") return "Deep clean";
-  if (condition === "LIGHT_TOUCH_UP" || level === "LIGHT") return "Light clean";
-  return "Standard clean";
-}
-
 function formatNumber(value: number) {
   return Number.isInteger(value) ? value.toFixed(0) : value.toString();
-}
-
-function formatCount(value: number, unit: string) {
-  return `${formatNumber(value)} ${unit}`;
 }
 
 function formatPostedAge(value: Date | string) {

@@ -94,7 +94,7 @@ export default async function CleanerJobDetailPage({
         {query.error ? <div className="notice error">{query.error}</div> : null}
 
         <article className="wk-provider-job-card wk-provider-job-card--detail">
-          <ProviderJobOverview detail item={item} />
+          <ProviderJobOverview item={item} />
         </article>
 
         <div className="wk-detail-job-actions">

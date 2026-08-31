@@ -102,7 +102,7 @@ export function CleanerJobsFeed({
             jobs={jobs}
             onIndexChange={setIndex}
           />
-          {jobs.length ? <JobCounter count={jobs.length} index={index} /> : null}
+          {jobs.length > 1 ? <JobCounter count={jobs.length} index={index} /> : null}
         </section>
       </div>
       {current ? (
