@@ -4,6 +4,7 @@ import { getRequiredString } from "@/lib/auth";
 import { notifyCleanerOfAcceptance } from "@/lib/marketplace-notifications";
 import { prisma } from "@/lib/prisma";
 import { requireApiUser } from "@/lib/session";
+import { sendProviderAcceptanceSms } from "@/lib/sms";
 
 function respondWithError(request: Request, jobId: string, message: string) {
   if (request.headers.get("X-Well-Kept-Client") === "1") {
@@ -100,6 +101,9 @@ export async function POST(request: Request, { params }: { params: Params }) {
       bidId: match.acceptedBid.id,
       cleaner: match.acceptedBid.cleaner,
       job: match,
+    });
+    await sendProviderAcceptanceSms(match.acceptedBid.id).catch((error) => {
+      console.error("Unable to send provider acceptance SMS", error);
     });
 
     if (request.headers.get("X-Well-Kept-Client") === "1") {

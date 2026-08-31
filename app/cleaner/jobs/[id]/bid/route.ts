@@ -93,7 +93,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
 
     await notifyHomeownerOfBid({
       bid,
-      cleaner: bid.cleaner,
+      providerName: `${bid.cleaner?.firstName ?? ""} ${bid.cleaner?.lastName ?? ""}`.trim() || "A cleaner",
       job: bid.jobRequest,
     });
 

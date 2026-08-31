@@ -37,6 +37,21 @@ enum BidPricingType {
   FLAT
 }
 
+enum OfferType {
+  FIXED_PRICE
+  ESTIMATE
+  FREE_QUOTE
+  HOURLY
+  NEEDS_DETAILS
+}
+
+enum OfferSource {
+  PROVIDER_FORM
+  SMS
+  CLEANER_APP
+  ADMIN
+}
+
 enum ServiceNeed {
   GENERAL_CLEANING
   DEEP_CLEAN
@@ -334,6 +349,7 @@ enum PropertyType {
 
 model JobRequest {
   id                            String               @id @default(cuid())
+  publicReference               String?              @unique
   title                         String
   addressLine1                  String
   addressLine2                  String?
@@ -388,19 +404,30 @@ model JobBid {
   arrivalWindowEnd      String?
   etaMinutes            Int?
   message               String?
+  offerType             OfferType?
+  source                OfferSource?
+  priceMinCents         Int?
+  priceMaxCents         Int?
+  requestedScheduleAccepted Boolean?
+  providerQuestion      String?
+  submittedAt           DateTime?
   status                BidStatus      @default(SUBMITTED)
   customerViewedAt      DateTime?
   cleanerViewedAt       DateTime?
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
   jobRequestId          String
-  cleanerId             String
+  cleanerId             String?
+  cleanerLeadId         String?
   jobRequest            JobRequest     @relation("JobRequestBids", fields: [jobRequestId], references: [id], onDelete: Cascade)
-  cleaner               User           @relation("CleanerBids", fields: [cleanerId], references: [id], onDelete: Cascade)
+  cleaner               User?          @relation("CleanerBids", fields: [cleanerId], references: [id], onDelete: Cascade)
+  cleanerLead           CleanerLead?   @relation("CleanerLeadBids", fields: [cleanerLeadId], references: [id], onDelete: SetNull)
   acceptedForJobRequest JobRequest?    @relation("AcceptedJobBid")
   outreach              JobOutreach?
 
   @@unique([jobRequestId, cleanerId])
+  @@unique([jobRequestId, cleanerLeadId])
+  @@index([cleanerLeadId])
 }
 
 model CleanerJobPass {
@@ -420,6 +447,7 @@ model CleanerLead {
   name                   String?
   businessName           String?
   phone                  String
+  email                  String?
   website                String?
   source                 CleanerLeadSource      @default(MANUAL)
   city                   String?
@@ -437,6 +465,7 @@ model CleanerLead {
   linkedCleanerUser      User?                  @relation("LinkedCleanerLeadUser", fields: [linkedCleanerUserId], references: [id], onDelete: SetNull)
   outreaches             JobOutreach[]
   notificationDeliveries NotificationDelivery[]
+  bids                   JobBid[]               @relation("CleanerLeadBids")
 
   @@unique([phone])
   @@index([postalCode])

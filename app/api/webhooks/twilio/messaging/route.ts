@@ -4,6 +4,7 @@ import {
   OutreachEventType,
 } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { normalizePhone } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
@@ -49,7 +50,14 @@ function isNotInterested(body: string) {
 }
 
 export async function POST(request: Request) {
+  if (process.env.ENABLE_SMS_OUTREACH !== "true") {
+    return NextResponse.json({ disabled: true, received: false }, { status: 202 });
+  }
+
   const formData = await request.formData();
+  if (!isValidTwilioRequest(request, formData)) {
+    return NextResponse.json({ error: "Invalid Twilio signature." }, { status: 401 });
+  }
   const messageSid = String(formData.get("MessageSid") || formData.get("SmsSid") || "").trim();
   const messageStatus = String(
     formData.get("MessageStatus") || formData.get("SmsStatus") || "",
@@ -66,6 +74,22 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ received: true });
+}
+
+function isValidTwilioRequest(request: Request, formData: FormData) {
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const suppliedSignature = request.headers.get("x-twilio-signature");
+  if (!authToken || !suppliedSignature) return false;
+
+  const webhookUrl = process.env.TWILIO_MESSAGING_WEBHOOK_URL || request.url;
+  const payload = Array.from(formData.entries())
+    .filter((entry): entry is [string, string] => typeof entry[1] === "string")
+    .sort(([a], [b]) => a.localeCompare(b))
+    .reduce((value, [key, item]) => `${value}${key}${item}`, webhookUrl);
+  const expectedSignature = createHmac("sha1", authToken).update(payload).digest("base64");
+  const expected = Buffer.from(expectedSignature);
+  const supplied = Buffer.from(suppliedSignature);
+  return expected.length === supplied.length && timingSafeEqual(expected, supplied);
 }
 
 async function handleDeliveryStatus(messageSid: string, messageStatus: string) {

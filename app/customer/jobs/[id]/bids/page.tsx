@@ -43,6 +43,7 @@ export default async function CustomerJobBidsPage({
     include: {
       bids: {
         include: {
+          cleanerLead: true,
           cleaner: {
             include: {
               cleanerProfile: true,
@@ -131,8 +132,12 @@ export default async function CustomerJobBidsPage({
                         jobTitle={job.title}
                         price={formatBidAmount(bid)}
                         providerName={
-                          bid.cleaner.cleanerProfile?.businessName ||
-                          `${bid.cleaner.firstName} ${bid.cleaner.lastName}`
+                          bid.cleanerLead?.businessName ||
+                          bid.cleanerLead?.name ||
+                          bid.cleaner?.cleanerProfile?.businessName ||
+                          (bid.cleaner
+                            ? `${bid.cleaner.firstName} ${bid.cleaner.lastName}`
+                            : "Local cleaning provider")
                         }
                         timing={formatBidTiming(bid)}
                       />

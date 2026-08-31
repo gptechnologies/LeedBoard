@@ -35,6 +35,7 @@ export default async function CustomerJobDetailPage({
     include: {
       acceptedBid: {
         include: {
+          cleanerLead: true,
           cleaner: {
             include: {
               cleanerProfile: true,

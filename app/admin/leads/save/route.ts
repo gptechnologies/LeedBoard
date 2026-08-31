@@ -48,6 +48,7 @@ export async function POST(request: Request) {
       name: optionalString(formData.get("name")),
       businessName: optionalString(formData.get("businessName")),
       phone,
+      email: optionalString(formData.get("email")),
       website: optionalString(formData.get("website")),
       source: parseSource(formData.get("source")),
       city: optionalString(formData.get("city")),

@@ -1,6 +1,6 @@
 "use client";
 
-import { Children, type ReactNode, useEffect, useState } from "react";
+import { Children, type ReactNode, useEffect, useRef, useState } from "react";
 import {
   Carousel,
   CarouselApi,
@@ -14,21 +14,35 @@ import { cn } from "@/lib/utils";
 export function HomeownerOpenJobsCarousel({
   children,
   className,
+  initialIndex = 0,
+  onSelectionChange,
 }: {
   children: ReactNode;
   className?: string;
+  initialIndex?: number;
+  onSelectionChange?: (index: number) => void;
 }) {
   const slides = Children.toArray(children).filter(Boolean);
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
+  const onSelectionChangeRef = useRef(onSelectionChange);
+
+  useEffect(() => {
+    onSelectionChangeRef.current = onSelectionChange;
+  }, [onSelectionChange]);
 
   useEffect(() => {
     if (!api) return;
 
-    setCurrent(api.selectedScrollSnap());
+    const startingIndex = Math.min(Math.max(initialIndex, 0), Math.max(slides.length - 1, 0));
+    api.scrollTo(startingIndex, true);
+    setCurrent(startingIndex);
+    onSelectionChangeRef.current?.(startingIndex);
 
     const updateCurrent = () => {
-      setCurrent(api.selectedScrollSnap());
+      const nextIndex = api.selectedScrollSnap();
+      setCurrent(nextIndex);
+      onSelectionChangeRef.current?.(nextIndex);
     };
 
     api.on("select", updateCurrent);
@@ -38,7 +52,7 @@ export function HomeownerOpenJobsCarousel({
       api.off("select", updateCurrent);
       api.off("reInit", updateCurrent);
     };
-  }, [api]);
+  }, [api, initialIndex, slides.length]);
 
   if (slides.length === 0) return null;
 

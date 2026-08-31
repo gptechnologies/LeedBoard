@@ -28,7 +28,7 @@ type BidForNotification = {
 
 export async function notifyHomeownerOfBid(input: {
   bid: BidForNotification;
-  cleaner: Pick<User, "firstName" | "lastName">;
+  providerName: string;
   job: {
     id: string;
     title: string;
@@ -39,7 +39,7 @@ export async function notifyHomeownerOfBid(input: {
   if (!input.job.customer.email) return;
   const content = buildHomeownerBidReceivedEmail({
     bidUrl: buildAppUrl(`/customer/jobs/${input.job.id}/bids`),
-    cleanerName: `${input.cleaner.firstName} ${input.cleaner.lastName}`.trim() || "A cleaner",
+    cleanerName: input.providerName,
     jobTitle: getCleaningJobTitle(input.job),
     price: formatBidAmount(input.bid),
     timing: formatBidTiming(input.bid),
@@ -57,14 +57,14 @@ export async function notifyHomeownerOfBid(input: {
 
 export async function notifyCleanerOfAcceptance(input: {
   bidId: string;
-  cleaner: Pick<User, "email" | "id">;
+  cleaner: Pick<User, "email" | "id"> | null;
   job: Parameters<typeof formatTimingSummary>[0] & {
     id: string;
     title: string;
     homeProfile?: { propertyType: "HOUSE" | "APARTMENT" } | null;
   };
 }) {
-  if (!input.cleaner.email) return;
+  if (!input.cleaner?.email) return;
   const content = buildCleanerBidAcceptedEmail({
     activityUrl: buildAppUrl(`/cleaner/messages/${input.bidId}`),
     jobTitle: getCleaningJobTitle(input.job),

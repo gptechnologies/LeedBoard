@@ -13,6 +13,7 @@ import {
 } from "@/lib/marketplace";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
+import { getProviderName, getProviderPhone } from "@/lib/providers";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,7 @@ export default async function CustomerMessageThreadPage({
       },
     },
     include: {
+      cleanerLead: true,
       cleaner: {
         include: {
           cleanerProfile: true,
@@ -56,7 +58,8 @@ export default async function CustomerMessageThreadPage({
     notFound();
   }
 
-  const cleanerName = `${bid.cleaner.firstName} ${bid.cleaner.lastName}`;
+  const cleanerName = getProviderName(bid);
+  const providerPhone = getProviderPhone(bid);
   const customerName = `${user.firstName} ${user.lastName}`;
   const isCompleted = bid.jobRequest.status === JobRequestStatus.COMPLETED;
   const statusTone = bid.status === BidStatus.ACCEPTED ? "success" : "default";
@@ -113,6 +116,11 @@ export default async function CustomerMessageThreadPage({
                   ? "The job is complete. You can keep this summary for your records."
                   : "The cleaner can now review the confirmed address, timing, and access details."}
               </p>
+              {providerPhone ? (
+                <p>
+                  Provider contact: <a href={`tel:${providerPhone}`}>{providerPhone}</a>
+                </p>
+              ) : null}
             </article>
           ) : null}
         </div>

@@ -9,6 +9,7 @@ import {
   JobCleanType,
   JobPriorityArea,
   JobRequestStatus,
+  OfferType,
   RoomType,
   ServiceNeed,
   TimingPreference,
@@ -135,7 +136,20 @@ export function formatBidAmount(bid: {
   hourlyRateCents: number | null;
   flatRateCents: number | null;
   estimatedHours?: number | null;
+  offerType?: OfferType | null;
+  priceMinCents?: number | null;
+  priceMaxCents?: number | null;
 }) {
+  if (bid.offerType === OfferType.FREE_QUOTE) return "Free in-person quote";
+  if (bid.offerType === OfferType.NEEDS_DETAILS) return "Needs more details";
+  if (bid.offerType === OfferType.ESTIMATE) {
+    if (bid.priceMinCents && bid.priceMaxCents && bid.priceMinCents !== bid.priceMaxCents) {
+      return `${formatWholeCurrency(bid.priceMinCents)}–${formatWholeCurrency(bid.priceMaxCents)} estimate`;
+    }
+    const estimate = bid.priceMinCents ?? bid.priceMaxCents ?? bid.flatRateCents;
+    return estimate ? `${formatWholeCurrency(estimate)} estimate` : "Estimate";
+  }
+
   if (bid.pricingType === BidPricingType.HOURLY) {
     const rate = `$${((bid.hourlyRateCents ?? 0) / 100).toFixed(0)}/hr`;
     const estimatedTotalCents = getBidEstimatedTotalCents(bid);
@@ -186,8 +200,15 @@ export function formatBidTiming(bid: {
     return `Can arrive in ${bid.etaMinutes} min`;
   }
 
-  if (!bid.arrivalDate || !bid.arrivalWindowStart || !bid.arrivalWindowEnd) {
+  if (!bid.arrivalDate || !bid.arrivalWindowStart) {
     return "Timing shared in message";
+  }
+
+  if (!bid.arrivalWindowEnd || bid.arrivalWindowEnd === bid.arrivalWindowStart) {
+    return `${bid.arrivalDate.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    })} · around ${formatClock(bid.arrivalWindowStart)}`;
   }
 
   return `${bid.arrivalDate.toLocaleDateString("en-US", {
@@ -251,7 +272,11 @@ export function rankVisibleBids<T extends {
       googleRating: number | null;
       googleReviewCount: number | null;
     } | null;
-  };
+  } | null;
+  cleanerLead?: {
+    googleRating: number | null;
+    googleReviewCount: number | null;
+  } | null;
 }>(bids: T[], priority: BidSelectionPriority = BidSelectionPriority.BEST_OVERALL) {
   return [...bids].sort((a, b) => {
     if (priority === BidSelectionPriority.CHEAPEST) {
@@ -276,16 +301,20 @@ function compareByQuality<T extends {
       googleRating: number | null;
       googleReviewCount: number | null;
     } | null;
-  };
+  } | null;
+  cleanerLead?: {
+    googleRating: number | null;
+    googleReviewCount: number | null;
+  } | null;
 }>(a: T, b: T) {
-  const aRating = a.cleaner.cleanerProfile?.googleRating ?? 0;
-  const bRating = b.cleaner.cleanerProfile?.googleRating ?? 0;
+  const aRating = a.cleanerLead?.googleRating ?? a.cleaner?.cleanerProfile?.googleRating ?? 0;
+  const bRating = b.cleanerLead?.googleRating ?? b.cleaner?.cleanerProfile?.googleRating ?? 0;
   if (bRating !== aRating) {
     return bRating - aRating;
   }
 
-  const aReviews = a.cleaner.cleanerProfile?.googleReviewCount ?? 0;
-  const bReviews = b.cleaner.cleanerProfile?.googleReviewCount ?? 0;
+  const aReviews = a.cleanerLead?.googleReviewCount ?? a.cleaner?.cleanerProfile?.googleReviewCount ?? 0;
+  const bReviews = b.cleanerLead?.googleReviewCount ?? b.cleaner?.cleanerProfile?.googleReviewCount ?? 0;
   if (bReviews !== aReviews) {
     return bReviews - aReviews;
   }
@@ -449,6 +478,7 @@ export async function getCustomerHomeData(customerId: string) {
         bids: {
           where: { status: BidStatus.SUBMITTED },
           include: {
+            cleanerLead: true,
             cleaner: {
               include: {
                 cleanerProfile: true,
@@ -459,6 +489,7 @@ export async function getCustomerHomeData(customerId: string) {
         },
         acceptedBid: {
           include: {
+            cleanerLead: true,
             cleaner: {
               include: {
                 cleanerProfile: true,

@@ -4,6 +4,7 @@ import {
   CleanLevel,
   EntryMethod,
   JobRequestStatus,
+  OfferType,
   PropertyType,
   RoomType,
   ServiceNeed,
@@ -31,6 +32,13 @@ import { BidCard as AppBidCard } from "@/components/marketplace/bid-card";
 import { JobCard as AppJobCard } from "@/components/marketplace/job-card";
 import { PrimaryActionLink } from "@/components/marketplace/primary-actions";
 import type { JobStatus } from "@/components/marketplace/job-status-badge";
+import {
+  getProviderHeadline,
+  getProviderName,
+  getProviderRating,
+  getProviderReviewCount,
+  isProviderInsured,
+} from "@/lib/providers";
 
 export function JobRequestCard({
   job,
@@ -55,7 +63,9 @@ export function JobRequestCard({
       cleaner: {
         firstName: string;
         lastName: string;
-      };
+        cleanerProfile?: { businessName?: string | null } | null;
+      } | null;
+      cleanerLead?: { businessName?: string | null; name?: string | null } | null;
     } | null;
     homeProfile?: {
       propertyType?: PropertyType | null;
@@ -77,7 +87,7 @@ export function JobRequestCard({
         formatRoomTypes(job.roomTypes),
         getCleanLevelLabel(job.cleanLevel),
         showAcceptedCleaner && job.acceptedBid
-          ? `Accepted: ${job.acceptedBid.cleaner.firstName} ${job.acceptedBid.cleaner.lastName}`
+          ? `Accepted: ${getProviderName(job.acceptedBid)}`
           : "Tap to review",
       ].filter(Boolean)}
     />
@@ -151,6 +161,9 @@ export function BidCard({
     arrivalWindowStart: string | null;
     arrivalWindowEnd: string | null;
     message: string | null;
+    offerType?: OfferType | null;
+    priceMinCents?: number | null;
+    priceMaxCents?: number | null;
     status: BidStatus;
     cleaner: {
       firstName: string;
@@ -161,7 +174,13 @@ export function BidCard({
         googleReviewCount: number | null;
         licensedAndInsured: boolean;
       } | null;
-    };
+    } | null;
+    cleanerLead?: {
+      businessName: string | null;
+      name: string | null;
+      googleRating: number | null;
+      googleReviewCount: number | null;
+    } | null;
     jobRequest?: {
       title: string;
       city: string;
@@ -174,21 +193,21 @@ export function BidCard({
   action?: React.ReactNode;
   compact?: boolean;
 }) {
-  const rating = bid.cleaner.cleanerProfile?.googleRating;
-  const reviewCount = bid.cleaner.cleanerProfile?.googleReviewCount;
+  const rating = getProviderRating(bid);
+  const reviewCount = getProviderReviewCount(bid);
 
   return (
     <AppBidCard
       className={compact ? "compact" : undefined}
-      cleanerName={`${bid.cleaner.firstName} ${bid.cleaner.lastName}`}
+      cleanerName={getProviderName(bid)}
       headline={
         bid.jobRequest
           ? `${getCleaningJobTitle(bid.jobRequest)} · ${bid.jobRequest.city}, ${bid.jobRequest.state}`
-          : bid.cleaner.cleanerProfile?.headline ?? "Available cleaner"
+          : getProviderHeadline(bid)
       }
       rating={rating ? `Rating ${rating.toFixed(1)}` : "New"}
       reviewCount={reviewCount ? `${reviewCount}+ reviews` : "No reviews yet"}
-      insured={bid.cleaner.cleanerProfile?.licensedAndInsured ?? false}
+      insured={isProviderInsured(bid)}
       message={bid.message ?? undefined}
       timing={`${formatBidTiming(bid)} · ${formatEstimatedHours(bid.estimatedHours)}`}
       amount={formatBidAmount(bid)}

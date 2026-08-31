@@ -8,6 +8,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { formatTimingSummary } from "@/lib/marketplace";
 import { getCleaningJobTitle } from "@/lib/job-title";
+import { getJobReference } from "@/lib/providers";
 
 const TWILIO_MESSAGES_URL = "https://api.twilio.com/2010-04-01/Accounts";
 
@@ -64,21 +65,25 @@ export function buildCleanerInviteSms(input: {
   timing: string;
   postalCode: string;
   inviteUrl: string;
+  jobReference: string;
 }) {
   return [
-    `New Well Kept cleaning job near ${input.city}, ${input.state} ${input.postalCode}`,
+    `New Well Kept cleaning job ${input.jobReference}`,
     "",
+    `${input.city}, ${input.state} ${input.postalCode}`,
     `When: ${input.timing}`,
     `Home: ${formatHomeFacts(input)}`,
     `Notes: ${input.notes?.trim() || "Cleaning details are in the job link."}`,
     "",
-    `Bid here-> ${input.inviteUrl}`,
+    `Send your price + availability: ${input.inviteUrl}`,
     "",
     "Reply STOP to opt out.",
   ].join("\n");
 }
 
 export async function sendCleanerInviteSms(jobOutreachId: string) {
+  if (process.env.ENABLE_SMS_OUTREACH !== "true") return null;
+
   const outreach = await prisma.jobOutreach.findUnique({
     where: { id: jobOutreachId },
     include: {
@@ -114,6 +119,7 @@ export async function sendCleanerInviteSms(jobOutreachId: string) {
     timing: formatSmsTiming(outreach.jobRequest),
     postalCode: outreach.jobRequest.postalCode,
     inviteUrl,
+    jobReference: getJobReference(outreach.jobRequest),
   });
   const payload: Prisma.InputJsonObject = {
     body,
@@ -228,6 +234,96 @@ export async function sendCleanerInviteSms(jobOutreachId: string) {
   });
 
   return delivery;
+}
+
+export async function sendProviderAcceptanceSms(bidId: string) {
+  if (process.env.ENABLE_SMS_OUTREACH !== "true") return null;
+
+  const bid = await prisma.jobBid.findUnique({
+    where: { id: bidId },
+    include: {
+      cleanerLead: true,
+      jobRequest: {
+        include: {
+          customer: { select: { firstName: true, lastName: true, phone: true, email: true } },
+        },
+      },
+      outreach: true,
+    },
+  });
+
+  if (!bid?.cleanerLead || bid.cleanerLead.optedOutAt) return null;
+
+  const customerName = `${bid.jobRequest.customer.firstName} ${bid.jobRequest.customer.lastName}`.trim();
+  const customerContact = bid.jobRequest.customer.phone || bid.jobRequest.customer.email;
+  const reference = getJobReference(bid.jobRequest);
+  const body = [
+    `You're connected for Well Kept job ${reference}.`,
+    "",
+    `The homeowner accepted your offer.`,
+    customerName ? `Homeowner: ${customerName}` : null,
+    customerContact ? `Contact: ${customerContact}` : null,
+    `Address: ${bid.jobRequest.addressLine1}, ${bid.jobRequest.city}, ${bid.jobRequest.state} ${bid.jobRequest.postalCode}`,
+    "",
+    "Contact the homeowner directly to confirm final details.",
+  ].filter(Boolean).join("\n");
+
+  const delivery = await prisma.notificationDelivery.create({
+    data: {
+      channel: NotificationChannel.SMS,
+      status: NotificationStatus.PENDING,
+      toPhone: bid.cleanerLead.phone,
+      payload: { body, purpose: "provider_offer_accepted" },
+      jobOutreachId: bid.outreach?.id ?? null,
+      jobRequestId: bid.jobRequestId,
+      cleanerLeadId: bid.cleanerLead.id,
+    },
+  });
+  const config = getTwilioMessagingConfig();
+  if (!config) {
+    return prisma.notificationDelivery.update({
+      where: { id: delivery.id },
+      data: {
+        status: NotificationStatus.SKIPPED,
+        failureReason: "Twilio messaging is not configured.",
+      },
+    });
+  }
+
+  const bodyParams = new URLSearchParams({ To: bid.cleanerLead.phone, Body: body });
+  if (config.messagingServiceSid) bodyParams.set("MessagingServiceSid", config.messagingServiceSid);
+  else if (config.fromPhoneNumber) bodyParams.set("From", config.fromPhoneNumber);
+  const statusCallback = getTwilioStatusCallbackUrl();
+  if (statusCallback) bodyParams.set("StatusCallback", statusCallback);
+
+  const response = await fetch(`${TWILIO_MESSAGES_URL}/${config.accountSid}/Messages.json`, {
+    method: "POST",
+    headers: {
+      Authorization: getAuthorizationHeader(config.accountSid, config.authToken),
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: bodyParams,
+  });
+
+  if (!response.ok) {
+    return prisma.notificationDelivery.update({
+      where: { id: delivery.id },
+      data: {
+        status: NotificationStatus.FAILED,
+        failureReason: `Twilio SMS failed with ${response.status}.`,
+      },
+    });
+  }
+
+  const result = (await response.json()) as { sid?: string };
+  return prisma.notificationDelivery.update({
+    where: { id: delivery.id },
+    data: {
+      providerMessageId: result.sid ?? null,
+      sentAt: new Date(),
+      status: NotificationStatus.SENT,
+    },
+  });
 }
 
 function formatHomeFacts(input: {

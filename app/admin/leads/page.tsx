@@ -58,6 +58,10 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
               <input id="website" name="website" inputMode="url" placeholder="https://example.com" />
             </div>
           </div>
+          <div className="field">
+            <label htmlFor="email">Email</label>
+            <input id="email" name="email" type="email" placeholder="quotes@cleaningbusiness.com" />
+          </div>
           <div className="field-grid">
             <div className="field">
               <label htmlFor="city">City</label>
@@ -101,7 +105,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
                   <div className="stack small">
                     <strong>{lead.businessName || lead.name || lead.phone}</strong>
                     <span className="market-card__meta">
-                      {lead.phone} · {lead.city ? `${lead.city}, ` : ""}
+                      {lead.phone}{lead.email ? ` · ${lead.email}` : ""} · {lead.city ? `${lead.city}, ` : ""}
                       {lead.state ?? ""} {lead.postalCode ?? ""}
                     </span>
                   </div>
