@@ -15,10 +15,8 @@ import {
   Bath,
   BedDouble,
   CalendarDays,
-  Clock3,
   Home,
   MapPin,
-  NotepadText,
   PawPrint,
   Ruler,
 } from "lucide-react";
@@ -198,10 +196,7 @@ function JobCardDetails({ item }: { item: NearbyJobSwipeItem }) {
   return (
     <div className="wk-provider-expanded-details">
       <section aria-labelledby={homeDetailsHeadingId} className="wk-provider-detail-section">
-        <h3 id={homeDetailsHeadingId}>
-          <span><Home aria-hidden="true" /></span>
-          Home details
-        </h3>
+        <h3 id={homeDetailsHeadingId}>Home details</h3>
         {homeDetails.length ? (
           <dl className="wk-provider-home-details">
             {homeDetails.map(({ Icon, label, value }) => (
@@ -217,26 +212,16 @@ function JobCardDetails({ item }: { item: NearbyJobSwipeItem }) {
         )}
       </section>
       <section aria-labelledby={scheduleHeadingId} className="wk-provider-detail-section wk-provider-schedule">
-        <h3 id={scheduleHeadingId}>
-          <span><CalendarDays aria-hidden="true" /></span>
-          Date &amp; time
+        <h3 className="wk-provider-schedule-line" id={scheduleHeadingId}>
+          <span>Date &amp; time</span>
+          <i aria-hidden="true">—</i>
+          <time dateTime={job.requestedDate ? new Date(job.requestedDate).toISOString() : undefined}>{requestedDateLabel}</time>
+          <b aria-hidden="true">•</b>
+          <time>{requestedTimeLabel}</time>
         </h3>
-        <dl className="wk-provider-schedule-details">
-          <div>
-            <CalendarDays aria-hidden="true" />
-            <span><dt>Date</dt><dd>{requestedDateLabel}</dd></span>
-          </div>
-          <div>
-            <Clock3 aria-hidden="true" />
-            <span><dt>Time</dt><dd>{requestedTimeLabel}</dd></span>
-          </div>
-        </dl>
       </section>
       <section aria-labelledby={notesHeadingId} className="wk-provider-detail-section wk-provider-notes">
-        <h3 id={notesHeadingId}>
-          <span><NotepadText aria-hidden="true" /></span>
-          Homeowner notes
-        </h3>
+        <h3 id={notesHeadingId}>Homeowner notes</h3>
         <p>{job.notes?.trim() || "No additional notes provided."}</p>
       </section>
     </div>
