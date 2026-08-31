@@ -412,51 +412,123 @@
   color: var(--provider-green);
 }
 
-.wk-provider-job-card__facts {
-  padding: 0 20px 12px;
+.wk-provider-expanded-details {
+  display: grid;
+  gap: 22px;
+  padding: 0 20px 18px;
   animation: wk-provider-reveal 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.wk-provider-job-card__facts dl {
-  margin: 0;
+.wk-provider-detail-section {
+  display: grid;
+  gap: 16px;
+  padding-top: 18px;
   border-top: 1px solid var(--provider-line);
 }
 
-.wk-provider-job-card__facts dl > div {
-  min-height: 44px;
-  display: grid;
-  grid-template-columns: 28px minmax(88px, 0.7fr) minmax(0, 1.3fr);
+.wk-provider-detail-section h3 {
+  display: flex;
   align-items: center;
-  gap: 8px;
-  border-bottom: 1px solid var(--provider-line);
+  gap: 10px;
+  margin: 0;
+  color: var(--provider-ink);
+  font-size: 0.98rem;
+  font-weight: 760;
+  line-height: 1.2;
 }
 
-.wk-provider-job-card__facts svg {
-  width: 21px;
-  height: 21px;
-  padding: 3px;
+.wk-provider-detail-section h3 > span,
+.wk-provider-home-detail__icon {
+  display: grid;
+  place-items: center;
   border-radius: 50%;
   background: var(--provider-green-soft);
   color: var(--provider-green);
 }
 
-.wk-provider-job-card__facts dt,
-.wk-provider-job-card__facts dd {
+.wk-provider-detail-section h3 > span {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+}
+
+.wk-provider-detail-section h3 svg {
+  width: 18px;
+  height: 18px;
+}
+
+.wk-provider-home-details {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
   margin: 0;
-  font-size: 0.84rem;
+}
+
+.wk-provider-home-details > div {
+  width: calc((100% - 24px) / 3);
+  max-width: 116px;
+  min-height: 118px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 8px;
+  border: 1px solid var(--provider-line);
+  border-radius: 14px;
+  background: var(--provider-surface);
+  box-shadow: 0 6px 16px oklch(30% 0.025 130 / 0.07);
+  text-align: center;
+}
+
+.wk-provider-home-detail__icon {
+  width: 42px;
+  height: 42px;
+  margin-bottom: 8px;
+}
+
+.wk-provider-home-detail__icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.wk-provider-home-details dt,
+.wk-provider-home-details dd {
+  margin: 0;
+  font-size: 0.78rem;
   line-height: 1.25;
 }
 
-.wk-provider-job-card__facts dt {
+.wk-provider-home-details dt {
   color: var(--provider-muted);
   font-weight: 580;
 }
 
-.wk-provider-job-card__facts dd {
+.wk-provider-home-details dd {
+  margin-top: 4px;
   color: var(--provider-ink);
-  font-weight: 680;
-  text-align: right;
+  font-weight: 760;
   overflow-wrap: anywhere;
+}
+
+.wk-provider-detail-empty,
+.wk-provider-notes > p {
+  margin: 0;
+  border: 1px solid var(--provider-line);
+  border-radius: 14px;
+  background: var(--provider-surface);
+  color: var(--provider-ink);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.wk-provider-detail-empty {
+  padding: 14px;
+  color: var(--provider-muted);
+}
+
+.wk-provider-notes > p {
+  padding: 13px 15px;
 }
 
 .wk-provider-fixed-actions [data-slot="drawer-trigger"],
@@ -888,6 +960,7 @@
 
 @media (max-width: 360px) {
   .wk-provider-job-card__chips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .wk-provider-home-details > div { width: calc((100% - 12px) / 2); }
 }
 
 @media (min-width: 760px) {

@@ -16,10 +16,10 @@ import {
   BedDouble,
   CalendarDays,
   ChevronDown,
-  CircleGauge,
   CircleCheck,
   Home,
   MapPin,
+  NotepadText,
   PawPrint,
   Ruler,
   Sparkles,
@@ -239,7 +239,7 @@ function JobCardIntro({ item }: { item: NearbyJobSwipeItem }) {
         </span>
       </div>
       <p className="wk-provider-job-card__description">
-        {job.notes?.trim() || formatSummaryDescription(job.serviceNeeds)}
+        {formatSummaryDescription(job.serviceNeeds)}
       </p>
       {facts.length ? (
         <div className="wk-provider-job-card__chips" aria-label="Job summary">
@@ -259,51 +259,56 @@ function JobCardDetails({ detail, item }: { detail: boolean; item: NearbyJobSwip
 
   const { job } = item;
   const home = job.homeProfile;
-  const details = [
-    { Icon: Sparkles, label: "Service", value: formatServiceDetail(job.serviceNeeds) },
-    { Icon: Home, label: "Home type", value: formatHomeSummary(home) },
-    { Icon: PawPrint, label: "Pets", value: home?.hasPets ? "Pets in home" : "No pets noted" },
-    { Icon: BedDouble, label: "Bedrooms", value: home?.bedroomCount != null ? String(home.bedroomCount) : "Not provided" },
-    { Icon: Bath, label: "Bathrooms", value: home?.bathroomCount != null ? formatNumber(home.bathroomCount) : "Not provided" },
-    { Icon: CircleGauge, label: "Home size", value: home?.estimatedSquareFeet ? `${home.estimatedSquareFeet.toLocaleString()} ft²` : "Not provided" },
-    { Icon: Home, label: "Stories", value: home?.storyCount != null ? String(home.storyCount) : "Not provided" },
-    { Icon: Sparkles, label: "Supplies", value: formatSupplies(job.suppliesSource) },
-  ];
+  const homeDetails = [
+    home?.bedroomCount != null
+      ? { Icon: BedDouble, label: "Bedrooms", value: formatNumber(home.bedroomCount) }
+      : null,
+    home?.bathroomCount != null
+      ? { Icon: Bath, label: "Bathrooms", value: formatNumber(home.bathroomCount) }
+      : null,
+    home?.estimatedSquareFeet != null
+      ? { Icon: Ruler, label: "Home size", value: `${home.estimatedSquareFeet.toLocaleString()} sq ft` }
+      : null,
+    home?.storyCount != null
+      ? { Icon: Home, label: "Stories", value: formatNumber(home.storyCount) }
+      : null,
+    home
+      ? { Icon: PawPrint, label: "Pets", value: home.hasPets ? "Pets" : "No pets" }
+      : null,
+  ].filter((entry): entry is { Icon: typeof BedDouble; label: string; value: string } => entry !== null);
+  const homeDetailsHeadingId = `provider-home-details-${item.id}`;
+  const notesHeadingId = `provider-homeowner-notes-${item.id}`;
 
   return (
-    <div className="wk-provider-job-card__facts" id={`provider-job-details-${item.id}`}>
-      <dl>
-        {details.map(({ Icon, label, value }) => (
-          <div key={label}>
-            <Icon aria-hidden="true" />
-            <dt>{label}</dt>
-            <dd>{value}</dd>
-          </div>
-        ))}
-      </dl>
+    <div className="wk-provider-expanded-details" id={`provider-job-details-${item.id}`}>
+      <section aria-labelledby={homeDetailsHeadingId} className="wk-provider-detail-section">
+        <h3 id={homeDetailsHeadingId}>
+          <span><Home aria-hidden="true" /></span>
+          Home details
+        </h3>
+        {homeDetails.length ? (
+          <dl className="wk-provider-home-details">
+            {homeDetails.map(({ Icon, label, value }) => (
+              <div key={label}>
+                <span className="wk-provider-home-detail__icon"><Icon aria-hidden="true" /></span>
+                <dt>{label}</dt>
+                <dd>{value}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <p className="wk-provider-detail-empty">No home details were provided.</p>
+        )}
+      </section>
+      <section aria-labelledby={notesHeadingId} className="wk-provider-detail-section wk-provider-notes">
+        <h3 id={notesHeadingId}>
+          <span><NotepadText aria-hidden="true" /></span>
+          Homeowner notes
+        </h3>
+        <p>{job.notes?.trim() || "No additional notes provided."}</p>
+      </section>
     </div>
   );
-}
-
-function formatServices(needs: ServiceNeed[]) {
-  const labels: Record<ServiceNeed, string> = {
-    GENERAL_CLEANING: "General cleaning",
-    DEEP_CLEAN: "Deep cleaning",
-    KITCHEN: "Kitchen cleaning",
-    BATHROOMS: "Bathroom cleaning",
-    FLOORS: "Floor cleaning",
-    DUSTING: "Dusting",
-    MOVE_OUT: "Move-out cleaning",
-    WINDOWS: "Window cleaning",
-    LAUNDRY: "Laundry",
-  };
-  return needs.length ? needs.map((need) => labels[need]).join(", ") : "Home cleaning";
-}
-
-function formatServiceDetail(needs: ServiceNeed[]) {
-  if (needs.length <= 1) return formatServices(needs);
-  const remaining = needs.length - 1;
-  return `${formatServices(needs.slice(0, 1))} +${remaining} ${remaining === 1 ? "area" : "areas"}`;
 }
 
 function formatSummaryDescription(needs: ServiceNeed[]) {
@@ -329,12 +334,6 @@ function formatNaturalList(values: string[]) {
   return `${values.slice(0, -1).join(", ")}, and ${values.at(-1)}`;
 }
 
-function formatSupplies(value: SuppliesSource) {
-  if (value === "HOMEOWNER_PROVIDES") return "Homeowner provides supplies";
-  if (value === "MIXED") return "Supplies are shared";
-  return "Cleaner brings supplies";
-}
-
 function formatCondition(condition: HomeCondition | null, level: CleanLevel) {
   if (condition === "NEEDS_EXTRA_ATTENTION" || level === "DEEP") return "Deep clean";
   if (condition === "LIGHT_TOUCH_UP" || level === "LIGHT") return "Light clean";
@@ -343,13 +342,6 @@ function formatCondition(condition: HomeCondition | null, level: CleanLevel) {
 
 function formatNumber(value: number) {
   return Number.isInteger(value) ? value.toFixed(0) : value.toString();
-}
-
-function formatHomeSummary(home: HomeSnapshot) {
-  if (!home) return "Not provided";
-  const parts = [home.propertyType === "APARTMENT" ? "Apartment" : "Single family"];
-  if (home.estimatedSquareFeet) parts.push(`${home.estimatedSquareFeet.toLocaleString()} ft²`);
-  return parts.join(", ");
 }
 
 function formatCount(value: number, unit: string) {
