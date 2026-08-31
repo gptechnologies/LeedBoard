@@ -178,34 +178,38 @@ export function ProviderJobOverview({ detail = false, item }: { detail?: boolean
         <Sparkles aria-hidden="true" />
         <span>{getCleaningJobTitle(item.job)} - Posted <time dateTime={new Date(item.job.createdAt).toISOString()}>{formatPostedAge(item.job.createdAt)}</time></span>
       </div>
-      <JobAreaSummary item={item} />
+      <ApproximateAreaMap item={item} />
       <JobCardIntro item={item} />
       <JobCardDetails detail={detail} item={item} />
     </>
   );
 }
 
-export function JobAreaSummary({ item }: { item: NearbyJobSwipeItem }) {
+export function ApproximateAreaMap({ item }: { item: NearbyJobSwipeItem }) {
   const { job } = item;
+  const hash = Array.from(`${job.city}${job.postalCode}`).reduce((total, character) => total + character.charCodeAt(0), 0);
+  const markerX = 42 + (hash % 17);
+  const markerY = 43 + (hash % 13);
 
   return (
-    <section
-      className="wk-provider-area-summary"
-      aria-label={`Job area: ${formatCity(job.city)}, ${job.state.toUpperCase()} ${job.postalCode}`}
-    >
-      <div className="wk-provider-area-summary__location">
+    <figure className="wk-provider-map" aria-label={`Approximate service area near ${formatCity(job.city)}, ${job.state.toUpperCase()} ${job.postalCode}, within five miles`}>
+      <svg aria-hidden="true" preserveAspectRatio="none" viewBox="0 0 520 230">
+        <rect className="wk-provider-map__land" height="230" width="520" />
+        <path className="wk-provider-map__park" d="M326 -10c42 40 101 20 128 62 31 49 4 93 56 121v67H331c-24-34-18-67 1-94 20-31 1-52-18-78-14-20-8-55 12-78Z" />
+        <path className="wk-provider-map__water" d="M79-12c-5 41-28 57-22 98 7 48 43 67 31 144" />
+        <path className="wk-provider-map__road-major" d="M-18 167C78 132 129 153 214 125c84-27 127-63 226-55 39 3 68 14 99 28" />
+        <path className="wk-provider-map__road" d="M18 33c91 16 165 5 252 29 70 19 130 6 237-7M28 211c86-59 142-65 219-56 94 11 135 54 267 23M141-10c-8 75 11 120 2 250M270-10c15 51-5 102 10 158 7 27 29 54 33 92M433-8c-28 51-30 101-10 147 15 34 4 69-4 101" />
+        <circle className="wk-provider-map__radius" cx={`${markerX}%`} cy={`${markerY}%`} r="64" />
+        <circle className="wk-provider-map__marker-ring" cx={`${markerX}%`} cy={`${markerY}%`} r="13" />
+        <circle className="wk-provider-map__marker" cx={`${markerX}%`} cy={`${markerY}%`} r="7" />
+      </svg>
+      <span className="wk-provider-map__price">$140–$170</span>
+      <span className="wk-provider-map__timing"><CalendarDays aria-hidden="true" />{item.timingLabel}</span>
+      <figcaption>
         <MapPin aria-hidden="true" />
-        <span>
-          <small>Job area</small>
-          <strong>{formatCity(job.city)}, {job.state.toUpperCase()} {job.postalCode}</strong>
-        </span>
-      </div>
-      <div className="wk-provider-area-summary__timing">
-        <CalendarDays aria-hidden="true" />
-        <span><small>Requested</small><strong>{item.timingLabel}</strong></span>
-      </div>
-      <span className="wk-provider-area-summary__status">Open for bids</span>
-    </section>
+        <span><strong>{formatCity(job.city)}, {job.state.toUpperCase()} {job.postalCode}</strong>Approx. area · within 5 mi</span>
+      </figcaption>
+    </figure>
   );
 }
 

@@ -198,57 +198,124 @@
   height: 17px;
 }
 
-.wk-provider-area-summary {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 16px;
-  padding: 20px;
+.wk-provider-map {
+  position: relative;
+  width: 100%;
+  height: clamp(208px, 57vw, 268px);
+  overflow: hidden;
+  margin: 0;
   border-bottom: 1px solid var(--provider-line);
-  background: var(--provider-cream);
+  background: oklch(95.5% 0.016 145);
 }
 
-.wk-provider-area-summary__location,
-.wk-provider-area-summary__timing {
-  min-width: 0;
-  display: flex;
+.wk-provider-job-card--detail .wk-provider-map {
+  height: 188px;
+}
+
+.wk-provider-map svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.wk-provider-map__land { fill: oklch(97% 0.009 110); }
+.wk-provider-map__park { fill: oklch(91% 0.045 140); }
+.wk-provider-map__water {
+  fill: none;
+  stroke: oklch(78% 0.07 225);
+  stroke-linecap: round;
+  stroke-width: 15;
+}
+.wk-provider-map__road-major,
+.wk-provider-map__road {
+  fill: none;
+  stroke-linecap: round;
+}
+.wk-provider-map__road-major { stroke: oklch(83% 0.04 83); stroke-width: 7; }
+.wk-provider-map__road { stroke: oklch(89% 0.01 120); stroke-width: 3; }
+.wk-provider-map__radius {
+  fill: oklch(65% 0.12 245 / 0.12);
+  stroke: oklch(58% 0.16 245 / 0.72);
+  stroke-width: 2;
+}
+.wk-provider-map__marker-ring { fill: var(--provider-surface); }
+.wk-provider-map__marker { fill: oklch(52% 0.2 250); }
+
+.wk-provider-map__price,
+.wk-provider-map__timing {
+  position: absolute;
+  z-index: 2;
+  top: 16px;
+  min-height: 42px;
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  border-radius: 14px;
+  box-shadow: 0 8px 20px oklch(28% 0.025 130 / 0.13);
+  font-weight: 760;
+  white-space: nowrap;
 }
 
-.wk-provider-area-summary__location > svg,
-.wk-provider-area-summary__timing > svg {
+.wk-provider-map__price {
+  left: 14px;
+  min-height: 42px;
+  padding: 8px 14px;
+  background: var(--provider-green-dark);
+  color: var(--provider-surface);
+  font-size: clamp(1.1rem, 5vw, 1.35rem);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.035em;
+}
+
+.wk-provider-map__timing {
+  right: 12px;
+  gap: 7px;
+  padding: 8px 12px;
+  background: oklch(99.4% 0.008 98 / 0.96);
+  color: var(--provider-green-dark);
+  font-size: 0.79rem;
+}
+
+.wk-provider-map__timing svg {
+  width: 17px;
+  height: 17px;
+}
+
+.wk-provider-map figcaption {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  min-height: 54px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 13px;
+  border: 1px solid var(--provider-line);
+  border-radius: 14px;
+  background: oklch(99.4% 0.008 98 / 0.96);
+  color: var(--provider-ink);
+  box-shadow: 0 7px 20px oklch(28% 0.025 130 / 0.1);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.wk-provider-map figcaption > span {
+  display: grid;
+  gap: 1px;
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+.wk-provider-map figcaption strong {
+  font-size: 0.86rem;
+}
+
+.wk-provider-map figcaption svg {
   width: 22px;
   height: 22px;
-  flex: 0 0 auto;
   color: var(--provider-green);
-}
-
-.wk-provider-area-summary span:not(.wk-provider-area-summary__status) {
-  min-width: 0;
-  display: grid;
-  gap: 2px;
-}
-
-.wk-provider-area-summary small {
-  color: var(--provider-muted);
-  font-size: 0.72rem;
-  font-weight: 650;
-}
-
-.wk-provider-area-summary strong {
-  overflow-wrap: anywhere;
-  color: var(--provider-green-dark);
-  font-size: 0.9rem;
-  line-height: 1.25;
-}
-
-.wk-provider-area-summary__status {
-  grid-column: 1 / -1;
-  width: max-content;
-  color: var(--provider-green-dark);
-  font-size: 0.78rem;
-  font-weight: 760;
+  fill: var(--provider-green);
+  stroke: var(--provider-surface);
 }
 
 .wk-provider-job-card__summary {
@@ -796,8 +863,10 @@
 
 @media (max-width: 360px), (max-width: 430px) and (max-height: 760px) {
   .wk-role-shell[data-role="cleaner"][data-ui="calm"] .wk-app-screen { padding-inline: 12px; }
-  .wk-provider-area-summary { grid-template-columns: 1fr; gap: 12px; padding: 16px; }
-  .wk-provider-area-summary__status { grid-column: auto; }
+  .wk-provider-map { height: 180px; }
+  .wk-provider-map__price { left: 10px; padding-inline: 12px; font-size: 1.2rem; }
+  .wk-provider-map__timing { right: 8px; padding-inline: 9px; }
+  .wk-provider-map figcaption { bottom: 10px; min-height: 48px; }
   .wk-provider-job-card__summary { padding: 18px 16px 14px; }
   .wk-provider-job-card__summary h2 { font-size: 1.25rem; }
   .wk-provider-job-condition { min-height: 32px; gap: 5px; padding-inline: 9px; font-size: 0.7rem; }
