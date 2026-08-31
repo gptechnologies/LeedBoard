@@ -17,11 +17,9 @@ export { JobStackScroll } from "@/components/marketplace/job-stack-scroll";
 export { JobCard } from "@/components/marketplace/job-card";
 export { JobStatusBadge, type JobStatus } from "@/components/marketplace/job-status-badge";
 export {
-  PulsatingPrimaryButton,
-  PulsatingPrimaryLink,
-  RippleActionButton,
-  RippleActionLink,
-} from "@/components/marketplace/motion-buttons";
+  PrimaryActionButton,
+  PrimaryActionLink,
+} from "@/components/marketplace/primary-actions";
 export {
   NearbyJobSwipeCarousel,
   type NearbyJobSwipeItem,

@@ -14,7 +14,7 @@ import type { ReactNode } from "react";
 import {
   entryMethodOptions,
 } from "@/lib/marketplace-constants";
-import { PulsatingPrimaryButton } from "@/components/marketplace/motion-buttons";
+import { PrimaryActionButton } from "@/components/marketplace/primary-actions";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -773,11 +773,11 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
               </button>
             ) : null}
             {flowView === "compose" ? (
-              <PulsatingPrimaryButton type="button" className="flex-1" onClick={goReview}>
+              <PrimaryActionButton type="button" className="flex-1" onClick={goReview}>
                 Continue <ArrowRight aria-hidden="true" />
-              </PulsatingPrimaryButton>
+              </PrimaryActionButton>
             ) : (
-              <PulsatingPrimaryButton
+              <PrimaryActionButton
                 type="submit"
                 className="flex-1"
                 onClick={() => {
@@ -785,7 +785,7 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
                 }}
               >
                 Post Job for Bids
-              </PulsatingPrimaryButton>
+              </PrimaryActionButton>
             )}
           </div>
           <Link href="/customer" className="market-cancel-link">
@@ -1242,11 +1242,11 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
             </button>
           ) : null}
           {step < steps.length - 1 ? (
-            <PulsatingPrimaryButton type="button" className="flex-1" onClick={goNext}>
+            <PrimaryActionButton type="button" className="flex-1" onClick={goNext}>
               Continue
-            </PulsatingPrimaryButton>
+            </PrimaryActionButton>
           ) : (
-            <PulsatingPrimaryButton
+            <PrimaryActionButton
               type="submit"
               className="flex-1"
               onClick={() => {
@@ -1258,7 +1258,7 @@ export function JobRequestForm({ homeProfiles }: { homeProfiles: WizardHomeProfi
               }
             >
               Post Job for Bids
-            </PulsatingPrimaryButton>
+            </PrimaryActionButton>
           )}
         </div>
         <Link href="/customer" className="market-cancel-link">

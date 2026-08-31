@@ -7,7 +7,7 @@ import type { FormEvent, ReactNode } from "react";
 import { useMemo, useState } from "react";
 
 import { CleanerUpNextJobCardContent, type CleanerUpNextJob } from "@/components/marketplace/cleaner-up-next-job-card";
-import { PulsatingPrimaryButton } from "@/components/marketplace/motion-buttons";
+import { PrimaryActionButton } from "@/components/marketplace/primary-actions";
 import { PriceInput } from "@/components/marketplace/price-input";
 import { Button } from "@/components/ui/button";
 import {
@@ -133,9 +133,9 @@ export function FastBidDrawer({
       <DrawerTrigger asChild>
         {trigger ?? (
           triggerMode === "button" ? (
-            <PulsatingPrimaryButton type="button" className="cleaner-detail-place-bid-button">
+            <PrimaryActionButton type="button" className="cleaner-detail-place-bid-button">
               Place Bid
-            </PulsatingPrimaryButton>
+            </PrimaryActionButton>
           ) : (
             <div
               role="button"

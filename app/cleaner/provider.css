@@ -414,10 +414,10 @@
 }
 
 .wk-provider-fixed-actions .wk-detail-pass-trigger {
-  border: 1px solid oklch(90% 0.045 27);
-  background: var(--provider-danger-soft);
+  border: 1px solid oklch(74% 0.06 27);
+  background: transparent;
   color: oklch(48% 0.16 27);
-  box-shadow: 0 9px 22px oklch(48% 0.08 27 / 0.08);
+  box-shadow: none;
 }
 
 .wk-provider-details-toggle {
@@ -451,7 +451,7 @@
   bottom: calc(90px + env(safe-area-inset-bottom));
   width: min(calc(100% - 32px), 488px);
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
   gap: 12px;
   background: var(--provider-bg);
   transform: translateX(-50%);

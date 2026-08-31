@@ -4,7 +4,7 @@ import { BidPricingType, ServiceNeed, TimingPreference } from "@prisma/client";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { etaOptions, timeWindowOptions } from "@/lib/marketplace-constants";
-import { PulsatingPrimaryButton } from "@/components/marketplace/motion-buttons";
+import { PrimaryActionButton } from "@/components/marketplace/primary-actions";
 import { PriceInput } from "@/components/marketplace/price-input";
 
 type BidFormProps = {
@@ -305,7 +305,7 @@ export function BidForm({
         )}
 
         <div className="market-sticky-submit">
-          <PulsatingPrimaryButton
+          <PrimaryActionButton
             type="submit"
             className="w-full"
             disabled={
@@ -314,7 +314,7 @@ export function BidForm({
             }
           >
             {hasExistingBid ? "Update Bid" : "Send Bid"}
-          </PulsatingPrimaryButton>
+          </PrimaryActionButton>
           <Link href="/cleaner" className="bid-cancel-link">
             Cancel
           </Link>

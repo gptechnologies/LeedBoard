@@ -162,7 +162,7 @@ export function NearbyJobSwipeCarousel({
           onClick={toggleDetails}
           type="button"
         >
-          <span>{expanded ? "Press here to hide all details" : "Press here to show all details"}</span>
+          <span>{expanded ? "Hide details" : "Show details"}</span>
           <ChevronDown aria-hidden="true" />
         </button>
       </article>

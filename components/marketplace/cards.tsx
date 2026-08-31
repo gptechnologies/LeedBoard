@@ -29,7 +29,7 @@ import { StatusPill } from "@/components/marketplace/status-pill";
 import { Card, CardContent } from "@/components/ui/card";
 import { BidCard as AppBidCard } from "@/components/marketplace/bid-card";
 import { JobCard as AppJobCard } from "@/components/marketplace/job-card";
-import { RippleActionLink } from "@/components/marketplace/motion-buttons";
+import { PrimaryActionLink } from "@/components/marketplace/primary-actions";
 import type { JobStatus } from "@/components/marketplace/job-status-badge";
 
 export function JobRequestCard({
@@ -282,9 +282,9 @@ export function CleanerNearbyJobCard({
       details={[formatRoomTypes(job.roomTypes)]}
       variant="cleaner"
       action={
-        <RippleActionLink href={`/cleaner/jobs/${job.id}`}>
+        <PrimaryActionLink href={`/cleaner/jobs/${job.id}`}>
           Bid
-        </RippleActionLink>
+        </PrimaryActionLink>
       }
     />
   );

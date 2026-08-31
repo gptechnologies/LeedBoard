@@ -4555,7 +4555,7 @@ button[type="submit"]:disabled {
   width: 100%;
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .market-preset-card--button:hover,
   .market-home-preset-summary:hover,
   .market-home-preset-choice:hover,
@@ -5319,7 +5319,7 @@ button:active,
     transform 180ms ease;
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .market-card:hover {
     border-color: oklch(70% 0.045 145);
     box-shadow: 0 18px 36px oklch(42% 0.04 112 / 0.16);
@@ -6350,7 +6350,7 @@ button:active,
   box-shadow: none;
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .coordination-quick-replies__grid button:hover {
     border-color: var(--accent);
     background: var(--accent-soft);
@@ -7177,7 +7177,7 @@ button:active,
     transform 160ms ease;
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .market-cancel-link:hover {
     border-color: var(--accent);
     color: var(--accent-strong);
@@ -7548,7 +7548,7 @@ button:active,
   filter: saturate(0.65);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .market-date-card:hover,
   .market-window-card:hover {
     border-color: oklch(70% 0.045 145);
@@ -8121,7 +8121,7 @@ button:active,
   opacity: 0.48;
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .onboarding-option:hover,
   .onboarding-choice:hover,
   .onboarding-number:hover {
@@ -8524,7 +8524,7 @@ button:active,
   box-shadow: inset 0 0 0 1px var(--accent), 0 12px 26px oklch(39% 0.08 145 / 0.14);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .bid-preset-card:hover {
     border-color: var(--accent);
     transform: translateY(-1px);
@@ -8797,8 +8797,6 @@ button:active,
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
   --animate-pulse: pulse var(--duration) ease-out infinite;
-  --animate-pulse-ripple: pulse-ripple var(--duration) cubic-bezier(0.16, 1, 0.3, 1) infinite;
-  --animate-rippling: rippling var(--duration) ease-out;
   @keyframes pulse {
   0%, 100% {
     box-shadow: 0 0 0 0 var(--pulse-color, oklch(from var(--bg) l c h / 0.5));
@@ -8813,15 +8811,6 @@ button:active,
     }
   100% {
     box-shadow: 0 0 0 var(--distance) oklch(from var(--pulse-color, var(--bg)) l c h / 0);
-    }
-  }
-  @keyframes rippling {
-  0% {
-    opacity: 1;
-    }
-  100% {
-    transform: scale(2);
-    opacity: 0;
     }
   }
 }
@@ -9086,7 +9075,7 @@ button {
 }
 
 .customer-job-card__status--active > span {
-  animation: customer-job-status-pulse 1.9s ease-out infinite;
+  animation: customer-job-status-arrive var(--wk-motion-micro) var(--wk-ease-out) both;
 }
 
 .customer-job-card__title-row {
@@ -9152,16 +9141,15 @@ button {
   color: var(--body);
 }
 
-@keyframes customer-job-status-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 8px oklch(40% 0.08 145 / 0.1);
-    transform: scale(1);
+@keyframes customer-job-status-arrive {
+  from {
+    opacity: 0.55;
+    transform: scale(0.9);
   }
 
-  50% {
-    box-shadow: 0 0 0 14px oklch(40% 0.08 145 / 0);
-    transform: scale(1.12);
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
@@ -10600,6 +10588,7 @@ button {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .customer-job-card__status--active > span,
   .customer-open-job-status--active span {
     animation: none;
   }
@@ -11173,6 +11162,42 @@ button {
   .wk-job-deck__arrows button,
   .wk-hinge-job-card__actions button {
     transition: none;
+  }
+
+  .wk-role-shell *,
+  .wk-role-shell *::before,
+  .wk-role-shell *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+
+  .wk-role-shell button,
+  .wk-role-shell a,
+  .wk-role-shell input,
+  .wk-role-shell select,
+  .wk-role-shell textarea {
+    transition-duration: 120ms !important;
+    transition-property: background-color, border-color, box-shadow, color, opacity !important;
+  }
+
+  .wk-role-shell button:active,
+  .wk-role-shell a:active {
+    filter: none !important;
+    transform: none !important;
+  }
+
+  [data-slot="dialog-overlay"],
+  [data-slot="dialog-content"],
+  [data-slot="alert-dialog-overlay"],
+  [data-slot="alert-dialog-content"],
+  [data-slot="sheet-overlay"],
+  [data-slot="sheet-content"],
+  [data-slot="popover-content"],
+  [data-slot="dropdown-menu-content"],
+  [data-slot="select-content"] {
+    animation: none !important;
+    transition: none !important;
   }
 }
 
