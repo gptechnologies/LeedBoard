@@ -78,6 +78,392 @@
   gap: 18px;
 }
 
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-launch-card,
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-wizard-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--home-line);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 88% 8%, oklch(94.5% 0.035 143 / 0.8), transparent 36%),
+    var(--home-surface);
+  box-shadow: 0 22px 48px oklch(31% 0.045 137 / 0.1);
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-launch-card {
+  min-height: min(540px, calc(100dvh - 252px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 38px 24px 28px;
+  text-align: center;
+  animation: wk-card-arrive 500ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-launch-card::after {
+  position: absolute;
+  inset: auto -15% -35% 38%;
+  height: 58%;
+  border-radius: 50% 50% 0 0;
+  background: oklch(94.5% 0.035 143 / 0.58);
+  content: "";
+  pointer-events: none;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-launch-art {
+  position: relative;
+  z-index: 1;
+  width: 138px;
+  height: 138px;
+  display: grid;
+  place-items: center;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-launch-home {
+  width: 92px;
+  height: 92px;
+  display: grid;
+  place-items: center;
+  border: 1px solid oklch(78% 0.05 143);
+  border-radius: 30px;
+  background: var(--home-green-soft);
+  color: var(--home-green-dark);
+  box-shadow: 0 18px 36px oklch(35% 0.09 145 / 0.16);
+  animation: wk-home-float 3.8s ease-in-out infinite;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-launch-home svg {
+  width: 40px;
+  height: 40px;
+  stroke-width: 1.65;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-launch-orbit {
+  position: absolute;
+  z-index: 2;
+  top: 4px;
+  right: 6px;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 4px solid var(--home-surface);
+  border-radius: 50%;
+  background: var(--home-green);
+  color: var(--home-surface);
+  box-shadow: 0 8px 18px oklch(35% 0.09 145 / 0.2);
+  animation: wk-spark-pulse 2.4s ease-in-out infinite;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-launch-orbit svg { width: 19px; height: 19px; }
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-launch-art > i {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--home-green);
+  opacity: 0.3;
+  animation: wk-dot-drift 3.2s ease-in-out infinite;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-launch-art > i:nth-of-type(1) { left: 5px; top: 37px; }
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-launch-art > i:nth-of-type(2) { right: 4px; bottom: 20px; animation-delay: -1.1s; }
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-launch-art > i:nth-of-type(3) { left: 25px; bottom: 4px; animation-delay: -2.1s; }
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-launch-copy {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-launch-copy > span,
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-question-heading > span {
+  color: var(--home-green);
+  font-size: 0.76rem;
+  font-weight: 780;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-launch-copy h2 {
+  max-width: 13ch;
+  margin: 0;
+  color: var(--home-green-dark);
+  font-family: var(--serif);
+  font-size: clamp(2rem, 9vw, 2.65rem);
+  font-weight: 520;
+  letter-spacing: -0.045em;
+  line-height: 0.98;
+  text-wrap: balance;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-launch-copy p {
+  max-width: 31ch;
+  margin: 4px 0 0;
+  color: var(--home-muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-launch-button {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-height: 62px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 2px;
+  border: 1px solid var(--home-green);
+  border-radius: 15px;
+  background: var(--home-green);
+  color: var(--home-surface);
+  font-size: 1.03rem;
+  font-weight: 780;
+  box-shadow: 0 14px 28px oklch(35% 0.09 145 / 0.2);
+  transition: transform 220ms ease, background 220ms ease, box-shadow 220ms ease;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-launch-button:hover {
+  background: var(--home-green-dark);
+  box-shadow: 0 17px 32px oklch(35% 0.09 145 / 0.24);
+  transform: translateY(-2px);
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-launch-button svg { width: 20px; height: 20px; }
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-wizard-card {
+  min-height: 535px;
+  padding: 18px;
+  scroll-margin-top: 14px;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-wizard-card .wk-progress {
+  padding: 2px 2px 18px;
+  border-bottom: 1px solid var(--home-line);
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-question-card {
+  padding-top: 25px;
+  will-change: transform, opacity;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-question-card.is-forward {
+  animation: wk-question-forward 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-question-card.is-back {
+  animation: wk-question-back 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-question-heading {
+  display: grid;
+  gap: 7px;
+  padding-bottom: 2px;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-question-heading h2 {
+  margin: 0;
+  color: var(--home-green-dark);
+  font-family: var(--serif);
+  font-size: clamp(1.75rem, 7vw, 2.15rem);
+  font-weight: 520;
+  letter-spacing: -0.04em;
+  line-height: 1.03;
+  text-wrap: balance;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-question-heading h2:focus { outline: none; }
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-choice-check {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--home-line);
+  border-radius: 50%;
+  background: var(--home-surface);
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .is-selected .wk-choice-check {
+  border-color: var(--home-green);
+  background: var(--home-green);
+  color: var(--home-surface);
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-choice-check svg { width: 14px; height: 14px; stroke-width: 3; }
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-cleaning-choice-list {
+  display: grid;
+  gap: 9px;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-cleaning-choice {
+  min-height: 67px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 13px;
+  border: 1px solid var(--home-line);
+  border-radius: 14px;
+  background: var(--home-surface);
+  color: var(--home-ink);
+  text-align: left;
+  transition: border-color 220ms ease, background 220ms ease, transform 220ms ease;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-cleaning-choice.is-selected {
+  border-color: var(--home-green);
+  background: var(--home-green-soft);
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-cleaning-choice > span:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-cleaning-choice strong { font-size: 0.96rem; }
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-cleaning-choice small { color: var(--home-muted); font-size: 0.8rem; line-height: 1.35; }
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-summary {
+  overflow: hidden;
+  border: 1px solid var(--home-line);
+  border-radius: 16px;
+  background: oklch(98.2% 0.012 100);
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-summary-row {
+  min-height: 76px;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 38px;
+  align-items: center;
+  gap: 11px;
+  padding: 12px;
+  border-bottom: 1px solid var(--home-line);
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-summary-row__icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--home-green-soft);
+  color: var(--home-green);
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-summary-row__icon svg { width: 18px; height: 18px; }
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-summary-row > span:nth-child(2) {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-summary-row small,
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-summary-note > span {
+  color: var(--home-muted);
+  font-size: 0.73rem;
+  font-weight: 720;
+  letter-spacing: 0.025em;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-summary-row strong {
+  color: var(--home-ink);
+  font-size: 0.87rem;
+  font-weight: 680;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-summary-row > button {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--home-green);
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-summary-row > button:hover { background: var(--home-green-soft); }
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-summary-row > button svg { width: 16px; height: 16px; }
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-summary-note {
+  display: grid;
+  gap: 5px;
+  padding: 13px 15px 15px;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-summary-note p {
+  margin: 0;
+  color: var(--home-ink);
+  font-size: 0.86rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-final-actions {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-step-back {
+  display: grid;
+  place-items: center;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-step-back svg { width: 19px; height: 19px; }
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-post-reassurance {
+  max-width: 37ch;
+  margin: -4px auto 0;
+  color: var(--home-muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+@keyframes wk-card-arrive {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes wk-question-forward {
+  from { opacity: 0; transform: translateX(18px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes wk-question-back {
+  from { opacity: 0; transform: translateX(-18px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes wk-home-float {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-7px) rotate(1deg); }
+}
+
+@keyframes wk-spark-pulse {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.08) rotate(8deg); }
+}
+
+@keyframes wk-dot-drift {
+  0%, 100% { opacity: 0.22; transform: translateY(0); }
+  50% { opacity: 0.55; transform: translateY(-7px); }
+}
+
 .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-progress {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -486,6 +872,13 @@
 
 @media (prefers-reduced-motion: reduce) {
   .wk-role-shell[data-role="customer"][data-ui="calm"] * { scroll-behavior: auto; }
+  .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-launch-card,
+  .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-launch-home,
+  .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-launch-orbit,
+  .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-launch-art > i,
+  .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-question-card {
+    animation: none;
+  }
 }
 
 .wk-homeowner-detail-heading {
