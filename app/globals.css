@@ -3162,10 +3162,9 @@ a.wk-profile-row:hover {
   position: relative;
   min-height: 66px;
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr);
+  grid-template-columns: 22px minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
-  overflow: hidden;
   border: 1px solid var(--wk-line);
   border-radius: 14px;
   padding: 12px;
@@ -3192,11 +3191,28 @@ a.wk-profile-row:hover {
 }
 
 .wk-schedule-input input {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  opacity: 0;
+  width: auto;
+  min-width: 112px;
+  min-height: 40px;
+  border: 1px solid #d4d9d0;
+  border-radius: 9px;
+  padding: 0 8px;
+  background: #fff;
+  color: var(--wk-charcoal);
   cursor: pointer;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  opacity: 1;
+}
+
+.wk-schedule-input input[type="date"] {
+  min-width: 138px;
+}
+
+.wk-schedule-input input:focus-visible {
+  outline: 3px solid oklch(64% 0.08 145 / 0.32);
+  outline-offset: 2px;
 }
 
 .wk-loading-header {

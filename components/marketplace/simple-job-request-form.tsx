@@ -54,7 +54,7 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
   const [selectedHomeId, setSelectedHomeId] = useState(homeProfiles[0]?.id ?? "");
   const [address, setAddress] = useState<AddressState>(emptyAddress);
   const [saveHome, setSaveHome] = useState(false);
-  const [dateChoice, setDateChoice] = useState<DateChoice | "">("");
+  const [dateChoice, setDateChoice] = useState<DateChoice | "">("pick");
   const [customDate, setCustomDate] = useState("");
   const [time, setTime] = useState("");
   const [stage, setStage] = useState<1 | 2 | 3>(1);

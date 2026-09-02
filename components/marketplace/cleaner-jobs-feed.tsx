@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties, type TouchEvent } from "react";
 import { AppScreenHeader } from "@/components/marketplace/app-screen-header";
+import { CleanerSearchingJobsState } from "@/components/marketplace/cleaner-searching-jobs-state";
 import { FastBidDrawer } from "@/components/marketplace/fast-bid-drawer";
 import {
   NearbyJobSwipeCarousel,
@@ -33,6 +34,7 @@ export function CleanerJobsFeed({
 }) {
   const router = useRouter();
   const startYRef = useRef<number | null>(null);
+  const refreshTimeoutRef = useRef<number | null>(null);
   const [pullDistance, setPullDistance] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [index, setIndex] = useState(0);
@@ -42,6 +44,38 @@ export function CleanerJobsFeed({
   useEffect(() => {
     setIndex((currentIndex) => Math.min(currentIndex, Math.max(jobs.length - 1, 0)));
   }, [jobs.length]);
+
+  useEffect(() => {
+    if (jobs.length > 0) return;
+
+    const interval = window.setInterval(() => {
+      router.refresh();
+    }, 30_000);
+
+    return () => window.clearInterval(interval);
+  }, [jobs.length, router]);
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimeoutRef.current !== null) {
+        window.clearTimeout(refreshTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  function refreshJobs() {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    router.refresh();
+    if (refreshTimeoutRef.current !== null) {
+      window.clearTimeout(refreshTimeoutRef.current);
+    }
+    refreshTimeoutRef.current = window.setTimeout(() => {
+      setIsRefreshing(false);
+      setPullDistance(0);
+      refreshTimeoutRef.current = null;
+    }, 700);
+  }
 
   function handleTouchStart(event: TouchEvent<HTMLElement>) {
     if (window.scrollY > 8 || isRefreshing) {
@@ -64,12 +98,7 @@ export function CleanerJobsFeed({
 
   function handleTouchEnd() {
     if (refreshReady) {
-      setIsRefreshing(true);
-      router.refresh();
-      window.setTimeout(() => {
-        setIsRefreshing(false);
-        setPullDistance(0);
-      }, 700);
+      refreshJobs();
     } else {
       setPullDistance(0);
     }
@@ -87,7 +116,7 @@ export function CleanerJobsFeed({
         {error ? <div className="notice error">{error}</div> : null}
         {passed ? <div className="wk-provider-toast" role="status">Job moved to Passed.</div> : null}
         <section
-          className={isRefreshing ? "cleaner-jobs-section is-refreshing" : "cleaner-jobs-section"}
+          className={`cleaner-jobs-section${isRefreshing ? " is-refreshing" : ""}${jobs.length === 0 ? " is-empty" : ""}`}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
@@ -97,22 +126,26 @@ export function CleanerJobsFeed({
             {isRefreshing ? "Refreshing..." : refreshReady ? "Release to refresh" : "Pull down to refresh"}
           </div>
 
-          <NearbyJobSwipeCarousel
-            footer={current ? (
-              <div className="wk-provider-card-actions" aria-label="Job actions">
-                <PassJobAction jobId={current.id} label="Pass" />
-                <FastBidDrawer
-                  defaults={bidDefaults}
-                  job={current.job}
-                  timingLabel={current.timingLabel}
-                  trigger={<button className="wk-provider-primary-action wk-pressable" type="button">Bid</button>}
-                />
-              </div>
-            ) : null}
-            index={index}
-            jobs={jobs}
-            onIndexChange={setIndex}
-          />
+          {current ? (
+            <NearbyJobSwipeCarousel
+              footer={(
+                <div className="wk-provider-card-actions" aria-label="Job actions">
+                  <PassJobAction jobId={current.id} label="Pass" />
+                  <FastBidDrawer
+                    defaults={bidDefaults}
+                    job={current.job}
+                    timingLabel={current.timingLabel}
+                    trigger={<button className="wk-provider-primary-action wk-pressable" type="button">Bid</button>}
+                  />
+                </div>
+              )}
+              index={index}
+              jobs={jobs}
+              onIndexChange={setIndex}
+            />
+          ) : (
+            <CleanerSearchingJobsState isRefreshing={isRefreshing} onRefresh={refreshJobs} />
+          )}
           {jobs.length > 1 ? <JobCounter count={jobs.length} index={index} /> : null}
         </section>
       </div>
