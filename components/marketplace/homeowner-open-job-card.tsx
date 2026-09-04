@@ -12,14 +12,7 @@ import {
   RoomType,
   TimingPreference,
 } from "@prisma/client";
-import {
-  formatTimingSummary,
-  getBidSelectionPriorityLabel,
-  getHomeConditionLabel,
-  getJobCleanTypeLabel,
-  getJobPriorityAreaLabel,
-  getJobRequestStatusLabel,
-} from "@/lib/marketplace";
+import { formatTimingSummary, getJobRequestStatusLabel } from "@/lib/marketplace";
 import { getCleaningJobTitle } from "@/lib/job-title";
 import { JobActivityTracker } from "@/components/marketplace/job-activity-tracker";
 import { Card } from "@/components/ui/card";
@@ -104,30 +97,6 @@ function HomeownerOpenJobCardContent({
 }) {
   const showActivity = mode === "full";
   const extraDetails = [
-    job.cleanType
-      ? {
-          label: "Clean type",
-          value: getJobCleanTypeLabel(job.cleanType),
-        }
-      : null,
-    job.currentCondition
-      ? {
-          label: "Condition",
-          value: getHomeConditionLabel(job.currentCondition),
-        }
-      : null,
-    job.matchingPriorityAreas && job.matchingPriorityAreas.length > 0
-      ? {
-          label: "Priority areas",
-          value: job.matchingPriorityAreas.map(getJobPriorityAreaLabel).join(", "),
-        }
-      : null,
-    job.selectionPriority
-      ? {
-          label: "Most important",
-          value: getBidSelectionPriorityLabel(job.selectionPriority),
-        }
-      : null,
     job.notes
       ? {
           label: "Notes",

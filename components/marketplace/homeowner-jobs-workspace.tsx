@@ -10,7 +10,6 @@ import {
   ChevronRight,
   Clock3,
   MapPin,
-  Pencil,
   Plus,
   Sparkles,
   Tag,
@@ -224,11 +223,6 @@ function SelectedJobSummary({ job }: { job: WorkspaceJob }) {
           <h1 id="selected-job-heading">{job.title}</h1>
           <p>{formatPosted(job.createdAt)} · {job.status === "AWARDED" ? "Provider selected" : job.bids.length > 0 ? "Offers ready" : "Collecting offers"}</p>
         </div>
-        {job.status === "OPEN" ? (
-          <Link className="homeowner-job-summary__edit-tag" href={`/customer/jobs/${job.id}/priority`}>
-            <Pencil aria-hidden="true" /> Edit matching
-          </Link>
-        ) : null}
       </div>
 
       <dl className="homeowner-job-summary__metadata">

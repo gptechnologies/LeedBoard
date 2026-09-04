@@ -302,8 +302,15 @@ export function parseJobRequestForm(formData: FormData) {
     const endMinutes = Number(endMatch[1]) * 60 + Number(endMatch[2]);
     const startIsValid = Number(startMatch[1]) <= 23 && Number(startMatch[2]) <= 59;
     const endIsValid = Number(endMatch[1]) <= 23 && Number(endMatch[2]) <= 59;
-    if (!startIsValid || !endIsValid || endMinutes <= startMinutes || endMinutes - startMinutes !== 120) {
-      throw new Error("Choose a two-hour arrival window that ends on the same day.");
+    const windowDuration = endMinutes - startMinutes;
+    if (
+      !startIsValid ||
+      !endIsValid ||
+      endMinutes <= startMinutes ||
+      windowDuration < 120 ||
+      windowDuration > 720
+    ) {
+      throw new Error("Choose a valid arrival window that ends on the same day.");
     }
 
     const scheduledStart = new Date(`${requestedDateRaw}T${requestedWindowStart}:00`);
