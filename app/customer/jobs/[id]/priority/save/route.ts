@@ -4,6 +4,7 @@ import {
   HomeCondition,
   JobCleanType,
   JobPriorityArea,
+  JobRequestStatus,
   RoomType,
   ServiceNeed,
   UserRole,
@@ -122,7 +123,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
   const formData = await request.formData();
   const cleanType = parseEnumValue(
     formData.get("cleanType"),
-    Object.values(JobCleanType),
+    [JobCleanType.STANDARD_CLEAN, JobCleanType.DEEP_CLEAN, JobCleanType.MOVE_OUT_CLEAN],
     JobCleanType.STANDARD_CLEAN,
   );
   const currentCondition = parseEnumValue(
@@ -141,6 +142,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
     where: {
       id,
       customerId: user.id,
+      status: JobRequestStatus.OPEN,
     },
     data: {
       cleanType,
@@ -151,5 +153,5 @@ export async function POST(request: Request, { params }: { params: Params }) {
     },
   });
 
-  return NextResponse.redirect(new URL(`/customer/jobs/${id}`, request.url));
+  return NextResponse.redirect(new URL(`/customer/jobs/${id}?updated=1`, request.url));
 }

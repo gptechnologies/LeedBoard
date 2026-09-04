@@ -39,24 +39,22 @@ function parsePropertyType(value: FormDataEntryValue | null) {
   return propertyType as PropertyType;
 }
 
-function parseNumber(value: FormDataEntryValue | null, label: string) {
-  const raw = getRequiredString(value, label);
+function parseOptionalNumber(value: FormDataEntryValue | null, label: string) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
   const parsed = Number(raw);
-
   if (!Number.isFinite(parsed) || parsed < 0) {
     throw new Error(`${label} must be a valid number.`);
   }
-
   return parsed;
 }
 
-function parsePositiveInteger(value: FormDataEntryValue | null, label: string) {
-  const parsed = parseNumber(value, label);
-
+function parseOptionalPositiveInteger(value: FormDataEntryValue | null, label: string) {
+  const parsed = parseOptionalNumber(value, label);
+  if (parsed === null) return null;
   if (!Number.isInteger(parsed) || parsed < 1) {
     throw new Error(`${label} must be a whole number greater than 0.`);
   }
-
   return parsed;
 }
 
@@ -67,6 +65,14 @@ function parseBoolean(value: FormDataEntryValue | null, label: string) {
   if (raw === "false") return false;
 
   throw new Error(`${label} must be yes or no.`);
+}
+
+function parsePostalCode(value: FormDataEntryValue | null) {
+  const postalCode = getRequiredString(value, "ZIP code");
+  if (!/^\d{5}(?:-\d{4})?$/.test(postalCode)) {
+    throw new Error("Enter a valid ZIP code.");
+  }
+  return postalCode;
 }
 
 export async function POST(request: Request) {
@@ -81,16 +87,16 @@ export async function POST(request: Request) {
     const addressInput = {
       label: "Home",
       propertyType: parsePropertyType(formData.get("propertyType")),
-      bedroomCount: parseNumber(formData.get("bedroomCount"), "Bedrooms"),
-      bathroomCount: parseNumber(formData.get("bathroomCount"), "Bathrooms"),
-      estimatedSquareFeet: parsePositiveInteger(formData.get("estimatedSquareFeet"), "Square footage"),
-      storyCount: parsePositiveInteger(formData.get("storyCount"), "Stories"),
+      bedroomCount: parseOptionalNumber(formData.get("bedroomCount"), "Bedrooms"),
+      bathroomCount: parseOptionalNumber(formData.get("bathroomCount"), "Bathrooms"),
+      estimatedSquareFeet: parseOptionalPositiveInteger(formData.get("estimatedSquareFeet"), "Square footage"),
+      storyCount: parseOptionalPositiveInteger(formData.get("storyCount"), "Stories"),
       hasPets: parseBoolean(formData.get("hasPets"), "Pets"),
       addressLine1: getRequiredString(formData.get("addressLine1"), "Street address"),
       addressLine2: optionalString(formData.get("addressLine2")),
       city: getRequiredString(formData.get("city"), "City"),
       state: getRequiredString(formData.get("state"), "State"),
-      postalCode: getRequiredString(formData.get("postalCode"), "ZIP code"),
+      postalCode: parsePostalCode(formData.get("postalCode")),
       googlePlaceId: optionalString(formData.get("googlePlaceId")),
     };
     const pushChoice = String(formData.get("pushChoice") || "").trim();

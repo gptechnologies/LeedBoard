@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
   Check,
@@ -98,6 +98,12 @@ export function HomeownerJobsWorkspace({ jobs }: { jobs: WorkspaceJob[] }) {
     () => selectedJob ? sortOffers(selectedJob.bids, sort, selectedJob.selectionPriority) : [],
     [selectedJob, sort],
   );
+
+  useEffect(() => {
+    if (!jobs.some((job) => job.status === "OPEN")) return;
+    const interval = window.setInterval(() => router.refresh(), 30000);
+    return () => window.clearInterval(interval);
+  }, [jobs, router]);
 
   function selectJob(id: string) {
     setFallbackJobId(id);
@@ -219,7 +225,9 @@ function SelectedJobSummary({ job }: { job: WorkspaceJob }) {
           <p>{formatPosted(job.createdAt)} · {job.status === "AWARDED" ? "Provider selected" : job.bids.length > 0 ? "Offers ready" : "Collecting offers"}</p>
         </div>
         {job.status === "OPEN" ? (
-          <span className="homeowner-job-summary__edit-tag" aria-label="Edit job is coming soon"><Pencil aria-hidden="true" /> Edit job</span>
+          <Link className="homeowner-job-summary__edit-tag" href={`/customer/jobs/${job.id}/priority`}>
+            <Pencil aria-hidden="true" /> Edit matching
+          </Link>
         ) : null}
       </div>
 
@@ -312,8 +320,8 @@ function CollectingOffersState({ job }: { job: WorkspaceJob }) {
       <span aria-hidden="true"><Sparkles /></span>
       <div>
         <p className="homeowner-kicker">Job posted</p>
-        <h2>Finding providers</h2>
-        <p>We’re collecting availability and pricing for this job. New offers will appear here.</p>
+        <h2>Collecting offers</h2>
+        <p>Nearby cleaners can review your request now. New offers will appear here automatically.</p>
       </div>
       <strong>0 offers received</strong>
       <Link href={`/customer/jobs/${job.id}`}>View job details <ChevronRight aria-hidden="true" /></Link>

@@ -3,10 +3,13 @@ import {
   HomeCondition,
   JobCleanType,
   JobPriorityArea,
+  JobRequestStatus,
   UserRole,
 } from "@prisma/client";
 import type { ReactNode } from "react";
-import { notFound } from "next/navigation";
+import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 
@@ -20,8 +23,6 @@ const cleanTypeOptions = [
   { value: JobCleanType.STANDARD_CLEAN, label: "Standard Clean" },
   { value: JobCleanType.DEEP_CLEAN, label: "Deep Clean" },
   { value: JobCleanType.MOVE_OUT_CLEAN, label: "Move-Out Clean" },
-  { value: JobCleanType.RECURRING_CLEAN, label: "Recurring Clean" },
-  { value: JobCleanType.ASAP_REFRESH, label: "ASAP Refresh" },
 ] as const;
 
 const conditionOptions = [
@@ -59,6 +60,7 @@ export default async function CustomerJobPriorityPage({ params }: { params: Para
       id: true,
       matchingPriorityAreas: true,
       selectionPriority: true,
+      status: true,
       title: true,
     },
   });
@@ -67,14 +69,19 @@ export default async function CustomerJobPriorityPage({ params }: { params: Para
     notFound();
   }
 
+  if (job.status !== JobRequestStatus.OPEN) {
+    redirect(`/customer/jobs/${job.id}`);
+  }
+
   return (
     <div className="market-shell market-shell--detail">
       <section className="market-surface">
         <header className="market-topbar market-topbar--detail">
           <div>
-            <div className="market-kicker">Request posted</div>
-            <h1>Your job is being posted</h1>
-            <p>Answer a few details so cleaners can price and prioritize the work with more confidence.</p>
+            <Link href={`/customer/jobs/${job.id}`}><ChevronLeft aria-hidden="true" /> Back to job details</Link>
+            <div className="market-kicker">Matching settings</div>
+            <h1>Edit matching preferences</h1>
+            <p>Update how cleaners understand the scope and how offers are ranked for you.</p>
           </div>
         </header>
 
@@ -178,7 +185,7 @@ export default async function CustomerJobPriorityPage({ params }: { params: Para
           <div className="market-wizard-actions market-wizard-actions--first">
             <div className="market-wizard-actions__row">
               <button type="submit" className="button flex-1">
-                Improve Matching
+                Save changes
               </button>
             </div>
           </div>

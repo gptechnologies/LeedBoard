@@ -192,8 +192,8 @@ function HomeownerOpenJobCardContent({
 }
 
 function getCustomerJobStatusLabel(status: JobRequestStatus) {
-  if (status === JobRequestStatus.OPEN) return "Accepting Bids";
-  if (status === JobRequestStatus.AWARDED) return "Bid Accepted";
+  if (status === JobRequestStatus.OPEN) return "Collecting Offers";
+  if (status === JobRequestStatus.AWARDED) return "Cleaner Selected";
   if (status === JobRequestStatus.COMPLETED) return "Completed";
   if (status === JobRequestStatus.CANCELLED) return "Cancelled";
   if (status === JobRequestStatus.EXPIRED) return "Expired";

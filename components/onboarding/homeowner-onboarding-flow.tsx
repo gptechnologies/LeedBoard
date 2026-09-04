@@ -26,7 +26,9 @@ const bedroomOptions = [
   { label: "2", value: 2 },
   { label: "3", value: 3 },
   { label: "4", value: 4 },
-  { label: "5+", value: 5 },
+  { label: "5", value: 5 },
+  { label: "6", value: 6 },
+  { label: "Not sure", value: -1 },
 ];
 
 const bathroomOptions = [
@@ -34,18 +36,25 @@ const bathroomOptions = [
   { label: "1.5", value: 1.5 },
   { label: "2", value: 2 },
   { label: "2.5", value: 2.5 },
-  { label: "3+", value: 3 },
+  { label: "3", value: 3 },
+  { label: "3.5", value: 3.5 },
+  { label: "4", value: 4 },
+  { label: "Not sure", value: -1 },
 ];
+
+const HOMEOWNER_DRAFT_KEY = "wellkept-homeowner-onboarding-draft";
 
 function getPropertyLabel(value: PropertyType) {
   return value === "HOUSE" ? "House" : "Apartment";
 }
 
 function getBedroomLabel(value: number | null) {
+  if (value === -1) return "Not sure";
   return bedroomOptions.find((option) => option.value === value)?.label ?? "";
 }
 
 function getBathroomLabel(value: number | null) {
+  if (value === -1) return "Not sure";
   return bathroomOptions.find((option) => option.value === value)?.label ?? "";
 }
 
@@ -65,6 +74,7 @@ export function HomeownerOnboardingFlow({
   const [bathroomCount, setBathroomCount] = useState<number | null>(null);
   const [estimatedSquareFeet, setEstimatedSquareFeet] = useState<number | null>(null);
   const [storyCount, setStoryCount] = useState<number | null>(null);
+  const [sizeUnknown, setSizeUnknown] = useState(false);
   const [hasPets, setHasPets] = useState<boolean | null>(null);
   const [address, setAddress] = useState<AddressState>({
     addressLine1: "",
@@ -75,6 +85,54 @@ export function HomeownerOnboardingFlow({
     googlePlaceId: "",
   });
   const [addressError, setAddressError] = useState("");
+  const [draftLoaded, setDraftLoaded] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(HOMEOWNER_DRAFT_KEY);
+      if (saved) {
+        const draft = JSON.parse(saved) as {
+          step?: number;
+          propertyType?: PropertyType | "";
+          bedroomCount?: number | null;
+          bathroomCount?: number | null;
+          estimatedSquareFeet?: number | null;
+          storyCount?: number | null;
+          sizeUnknown?: boolean;
+          hasPets?: boolean | null;
+          address?: AddressState;
+        };
+        if (typeof draft.step === "number") setStep(Math.min(Math.max(draft.step, 0), 5));
+        if (draft.propertyType !== undefined) setPropertyType(draft.propertyType);
+        if (draft.bedroomCount !== undefined) setBedroomCount(draft.bedroomCount);
+        if (draft.bathroomCount !== undefined) setBathroomCount(draft.bathroomCount);
+        if (draft.estimatedSquareFeet !== undefined) setEstimatedSquareFeet(draft.estimatedSquareFeet);
+        if (draft.storyCount !== undefined) setStoryCount(draft.storyCount);
+        if (draft.sizeUnknown !== undefined) setSizeUnknown(draft.sizeUnknown);
+        if (draft.hasPets !== undefined) setHasPets(draft.hasPets);
+        if (draft.address) setAddress(draft.address);
+      }
+    } catch {
+      window.localStorage.removeItem(HOMEOWNER_DRAFT_KEY);
+    } finally {
+      setDraftLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!draftLoaded) return;
+    window.localStorage.setItem(HOMEOWNER_DRAFT_KEY, JSON.stringify({
+      step,
+      propertyType,
+      bedroomCount,
+      bathroomCount,
+      estimatedSquareFeet,
+      storyCount,
+      sizeUnknown,
+      hasPets,
+      address,
+    }));
+  }, [address, bathroomCount, bedroomCount, draftLoaded, estimatedSquareFeet, hasPets, propertyType, sizeUnknown, step, storyCount]);
 
   const progress = useMemo(() => Math.round(((step + 1) / 6) * 100), [step]);
   const firstNameCopy = firstName ? `${firstName}, ` : "";
@@ -84,7 +142,7 @@ export function HomeownerOnboardingFlow({
       key: "address",
       eyebrow: "Address",
       title: "Where should cleaners arrive?",
-      helper: "Start typing your address, then choose the matching place to fill the details.",
+      helper: "Enter the address cleaners should use. Address suggestions appear when lookup is available.",
       summary: address.addressLine1,
       isComplete: !validateAddress(),
       content: (
@@ -125,7 +183,7 @@ export function HomeownerOnboardingFlow({
       eyebrow: "Bedrooms",
       title: "How many bedrooms should cleaners plan for?",
       helper: "Use the closest match. You can update room details later.",
-      summary: bedroomCount === null ? "" : `${getBedroomLabel(bedroomCount)} bedrooms`,
+      summary: bedroomCount === null ? "" : bedroomCount === -1 ? "Bedrooms not sure" : `${getBedroomLabel(bedroomCount)} bedrooms`,
       isComplete: bedroomCount !== null,
       content: (
         <SegmentedNumberGrid label="Bedrooms">
@@ -148,7 +206,7 @@ export function HomeownerOnboardingFlow({
       eyebrow: "Bathrooms",
       title: "How many bathrooms are in the home?",
       helper: "Half bathrooms count too.",
-      summary: bathroomCount === null ? "" : `${getBathroomLabel(bathroomCount)} bathrooms`,
+      summary: bathroomCount === null ? "" : bathroomCount === -1 ? "Bathrooms not sure" : `${getBathroomLabel(bathroomCount)} bathrooms`,
       isComplete: bathroomCount !== null,
       content: (
         <SegmentedNumberGrid label="Bathrooms">
@@ -172,10 +230,12 @@ export function HomeownerOnboardingFlow({
       title: "What is the estimated size of the home?",
       helper: "A close estimate is enough. Cleaners use this with beds and baths to price the job.",
       summary:
-        estimatedSquareFeet && storyCount
+        sizeUnknown
+          ? "Size not sure"
+          : estimatedSquareFeet && storyCount
           ? `${estimatedSquareFeet} sq ft, ${storyCount} ${storyCount === 1 ? "story" : "stories"}`
           : "",
-      isComplete: estimatedSquareFeet !== null && storyCount !== null,
+      isComplete: sizeUnknown || (estimatedSquareFeet !== null && storyCount !== null),
       content: (
         <div className="onboarding-fields stack">
           <div className="field">
@@ -193,6 +253,7 @@ export function HomeownerOnboardingFlow({
               min="1"
               step="50"
               placeholder="1100"
+              disabled={sizeUnknown}
             />
           </div>
           <div className="field">
@@ -210,8 +271,21 @@ export function HomeownerOnboardingFlow({
               min="1"
               step="1"
               placeholder="1"
+              disabled={sizeUnknown}
             />
           </div>
+          <button
+            type="button"
+            className={sizeUnknown ? "onboarding-option active" : "onboarding-option"}
+            aria-pressed={sizeUnknown}
+            onClick={() => {
+              setSizeUnknown((current) => !current);
+              setEstimatedSquareFeet(null);
+              setStoryCount(null);
+            }}
+          >
+            I’m not sure
+          </button>
         </div>
       ),
     },
@@ -253,7 +327,7 @@ export function HomeownerOnboardingFlow({
     if (!address.addressLine1.trim()) return "Enter your street address.";
     if (!address.city.trim()) return "Enter your city.";
     if (!address.state.trim()) return "Enter your state.";
-    if (!address.postalCode.trim()) return "Enter your ZIP code.";
+    if (!/^\d{5}(?:-\d{4})?$/.test(address.postalCode.trim())) return "Enter a valid ZIP code.";
     return "";
   }
 
@@ -270,12 +344,12 @@ export function HomeownerOnboardingFlow({
 
   return (
     <section className="onboarding-shell" aria-label="Homeowner onboarding">
-      <form action="/onboarding/homeowner/complete" method="post" className="onboarding-panel onboarding-panel--progressive">
+      <form action="/onboarding/homeowner/complete" method="post" className="onboarding-panel onboarding-panel--progressive" onSubmit={() => window.localStorage.removeItem(HOMEOWNER_DRAFT_KEY)}>
         <input type="hidden" name="propertyType" value={propertyType} readOnly />
-        <input type="hidden" name="bedroomCount" value={bedroomCount ?? ""} readOnly />
-        <input type="hidden" name="bathroomCount" value={bathroomCount ?? ""} readOnly />
-        <input type="hidden" name="estimatedSquareFeet" value={estimatedSquareFeet ?? ""} readOnly />
-        <input type="hidden" name="storyCount" value={storyCount ?? ""} readOnly />
+        <input type="hidden" name="bedroomCount" value={bedroomCount === -1 ? "" : bedroomCount ?? ""} readOnly />
+        <input type="hidden" name="bathroomCount" value={bathroomCount === -1 ? "" : bathroomCount ?? ""} readOnly />
+        <input type="hidden" name="estimatedSquareFeet" value={sizeUnknown ? "" : estimatedSquareFeet ?? ""} readOnly />
+        <input type="hidden" name="storyCount" value={sizeUnknown ? "" : storyCount ?? ""} readOnly />
         <input type="hidden" name="hasPets" value={hasPets === null ? "" : String(hasPets)} readOnly />
         <input type="hidden" name="addressLine1" value={address.addressLine1} readOnly />
         <input type="hidden" name="addressLine2" value={address.addressLine2} readOnly />
@@ -296,7 +370,7 @@ export function HomeownerOnboardingFlow({
 
         <div className="onboarding-optional-note">
           <span>Optional setup</span>
-          <Link href="/customer/jobs/new">Skip for now</Link>
+          <Link href="/customer/jobs/new" onClick={() => window.localStorage.removeItem(HOMEOWNER_DRAFT_KEY)}>Skip for now</Link>
         </div>
 
         {error ? <div className="notice error">{error}</div> : null}
@@ -355,9 +429,6 @@ export function HomeownerOnboardingFlow({
               </button>
             )}
           </div>
-          <Link className="onboarding-skip-link" href="/customer/jobs/new">
-            Skip and post a job
-          </Link>
         </div>
       </form>
     </section>

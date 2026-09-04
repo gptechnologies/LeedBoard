@@ -66,6 +66,7 @@ export async function POST(request: Request) {
               postalCode: input.postalCode,
               entryMethod: input.entryMethod,
               entryNotes: input.entryNotes,
+              suppliesSource: input.suppliesSource,
               customerId: user.id,
               isDefault: true,
             },

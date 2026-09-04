@@ -28,11 +28,6 @@ export default async function CustomerNewJobPage({
           <p>Tell us where and when. Cleaners will send their prices.</p>
         </header>
         {params.error ? <div className="notice error">{params.error}</div> : null}
-        {homeProfiles.length === 0 ? (
-          <div className="notice error">
-            Add a home address from the Home tab before posting a job.
-          </div>
-        ) : null}
         <SimpleJobRequestForm homeProfiles={homeProfiles} />
       </div>
     </div>

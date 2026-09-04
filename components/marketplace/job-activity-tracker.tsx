@@ -37,15 +37,15 @@ export function JobActivityTracker({ bidCount, status }: ActivityTrackerProps) {
             ? "Provider selected"
             : hasResponses
               ? "Reviewing providers"
-              : "Waiting for providers"}
+              : "Collecting offers"}
         </strong>
         {!hasResponses && isUpdating ? (
           <span className="wk-status-progress__waiting"><i aria-hidden="true" /> Live</span>
         ) : null}
       </div>
       <ol>
-        <StatusStep complete={hasResponses} current={!hasResponses} label="Waiting" />
-        <StatusStep complete={selected} current={hasResponses && !selected} label="Reviewing" />
+        <StatusStep complete={hasResponses} current={!hasResponses} label="Posted" />
+        <StatusStep complete={selected} current={hasResponses && !selected} label="Offers" />
         <StatusStep complete={status === "COMPLETED"} current={selected} label="Selected" />
       </ol>
     </section>

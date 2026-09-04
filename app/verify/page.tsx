@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import {
   getCurrentUser,
   getMissingVerificationChannel,
@@ -64,6 +65,7 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
         <input type="hidden" name="destination" value={destination} />
         <input type="hidden" name="email" value={destination} />
         <input type="hidden" name="role" value={role} />
+        <input type="hidden" name="mode" value={params.mode ?? "login"} />
         {params.inviteToken ? (
           <input type="hidden" name="inviteToken" value={params.inviteToken} />
         ) : null}
@@ -82,6 +84,13 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
         </div>
         <button type="submit">Verify email</button>
       </form>
+
+      <Link
+        className="auth-switch-role"
+        href={`${params.mode === "signup" ? "/signup" : "/login"}?role=${role}`}
+      >
+        Change email address
+      </Link>
 
       <form action="/auth/otp/start" method="post">
         <input type="hidden" name="mode" value={params.mode ?? "login"} />

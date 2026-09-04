@@ -2453,6 +2453,11 @@ a.wk-profile-row:hover {
   font-size: 0.68rem;
   font-weight: 760;
   white-space: nowrap;
+  text-decoration: none;
+}
+
+.homeowner-job-summary__edit-tag:hover {
+  background: #e2f0dc;
 }
 
 .homeowner-job-summary__edit-tag svg {
@@ -5101,6 +5106,19 @@ button[type="submit"]:disabled {
 .auth-legal strong {
   color: var(--accent-strong);
   font-weight: 760;
+}
+
+.auth-legal a,
+.auth-switch-role {
+  color: var(--accent-strong);
+  font-weight: 760;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.auth-switch-role {
+  justify-self: center;
+  font-size: 0.9rem;
 }
 
 .inline-metrics {
@@ -10590,6 +10608,36 @@ button {
 .customer-open-job-delete:focus-visible {
   outline: 3px solid oklch(60% 0.12 28 / 0.22);
   outline-offset: 4px;
+}
+
+.button.button--danger {
+  background: var(--destructive);
+  color: white;
+}
+
+.button.button--danger:hover {
+  background: oklch(42% 0.11 27);
+}
+
+.legal-page {
+  width: min(100% - 32px, 760px);
+  margin-inline: auto;
+  padding-block: 48px 80px;
+}
+
+.legal-page .panel {
+  padding: clamp(24px, 5vw, 48px);
+}
+
+.legal-page h1,
+.legal-page h2,
+.legal-page p {
+  margin-block: 0;
+}
+
+.legal-page h2 {
+  margin-top: 12px;
+  font-size: 1.12rem;
 }
 
 .customer-open-job-chevron svg {

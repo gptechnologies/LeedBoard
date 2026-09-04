@@ -2,8 +2,9 @@ import { BidStatus, JobRequestStatus, UserRole } from "@prisma/client";
 import { BidCard } from "@/components/marketplace/cards";
 import { HomeownerOpenJobDetailCard } from "@/components/marketplace";
 import { ProviderSelectionDrawer } from "@/components/marketplace/provider-selection-drawer";
+import { CancelJobAction } from "@/components/marketplace/cancel-job-action";
 import Link from "next/link";
-import { ChevronLeft, Trash2 } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import {
   formatBidAmount,
   formatBidTiming,
@@ -83,7 +84,7 @@ export default async function CustomerJobBidsPage({
 
   return (
     <div className="wk-app-screen wk-homeowner-detail-screen">
-      <main className="wk-screen-content">
+      <div className="wk-screen-content">
         <header className="wk-homeowner-detail-heading">
           <Link href="/customer/jobs"><ChevronLeft aria-hidden="true" />Back to Activity</Link>
           <div><h1>Compare bids</h1><p>Review price, timing, and trust details before choosing.</p></div>
@@ -92,15 +93,7 @@ export default async function CustomerJobBidsPage({
 
         <HomeownerOpenJobDetailCard
           action={
-            <form action={`/customer/jobs/${job.id}/delete`} method="post">
-              <button
-                type="submit"
-                className="customer-open-job-delete"
-                aria-label="Delete job"
-              >
-                <Trash2 aria-hidden="true" />
-              </button>
-            </form>
+            <CancelJobAction jobId={job.id} />
           }
           job={job}
         />
@@ -155,7 +148,7 @@ export default async function CustomerJobBidsPage({
         ) : null}
 
         {activeBids.length > 0 ? <p className="wk-homeowner-trust-note">Cleaners are reviewed before they can bid.</p> : null}
-      </main>
+      </div>
     </div>
   );
 }

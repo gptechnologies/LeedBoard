@@ -20,6 +20,7 @@ function toVerifyError(
   destination: string,
   role: UserRole,
   channel: OtpChannel,
+  mode: string,
   inviteToken?: string,
   returnTo?: string,
 ) {
@@ -28,6 +29,7 @@ function toVerifyError(
     destination,
     error: message,
     role,
+    mode,
   });
 
   if (channel === "email") {
@@ -53,6 +55,7 @@ export async function POST(request: Request) {
   const inviteToken = String(formData.get("inviteToken") || "").trim();
   const returnTo = getSafeReturnTo(String(formData.get("returnTo") || "")) ?? undefined;
   const role = getRole(formData.get("role"));
+  const mode = String(formData.get("mode") || "login") === "signup" ? "signup" : "login";
 
   try {
     const currentUser = await getCurrentUser();
@@ -117,6 +120,6 @@ export async function POST(request: Request) {
     return NextResponse.redirect(new URL(getPostAuthPath({ inviteToken, returnTo, role: updatedUser.role }), request.url));
   } catch (error) {
     const message = error instanceof Error ? error.message : "We couldn't verify that code.";
-    return toVerifyError(request, message, rawDestination, role, channel, inviteToken, returnTo);
+    return toVerifyError(request, message, rawDestination, role, channel, mode, inviteToken, returnTo);
   }
 }

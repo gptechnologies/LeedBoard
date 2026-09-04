@@ -2,7 +2,8 @@ import Link from "next/link";
 import { BidStatus, JobRequestStatus, UserRole } from "@prisma/client";
 import { BidCard } from "@/components/marketplace/cards";
 import { HomeownerOpenJobDetailCard } from "@/components/marketplace";
-import { ChevronLeft, Trash2 } from "lucide-react";
+import { CancelJobAction } from "@/components/marketplace/cancel-job-action";
+import { ChevronLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { notFound } from "next/navigation";
@@ -15,6 +16,8 @@ type Params = Promise<{
 
 type SearchParams = Promise<{
   error?: string;
+  posted?: string;
+  updated?: string;
 }>;
 
 export default async function CustomerJobDetailPage({
@@ -67,25 +70,26 @@ export default async function CustomerJobDetailPage({
 
   return (
     <div className="wk-app-screen wk-homeowner-detail-screen">
-      <main className="wk-screen-content">
+      <div className="wk-screen-content">
         <header className="wk-homeowner-detail-heading">
           <Link href="/customer/jobs"><ChevronLeft aria-hidden="true" />Back to Activity</Link>
           <div><h1>Job details</h1><p>Track responses and choose a cleaner when you are ready.</p></div>
         </header>
+        {query.posted === "1" ? (
+          <div className="notice success" role="status">
+            <strong>Job published.</strong> Nearby cleaners can review it now. We’ll email you when
+            an offer arrives.
+          </div>
+        ) : null}
+        {query.updated === "1" ? (
+          <div className="notice success" role="status">Matching preferences updated.</div>
+        ) : null}
         {query.error ? <div className="notice error">{query.error}</div> : null}
 
         <HomeownerOpenJobDetailCard
           action={
             job.status === JobRequestStatus.OPEN ? (
-              <form action={`/customer/jobs/${job.id}/delete`} method="post">
-                <button
-                  type="submit"
-                  className="customer-open-job-delete"
-                  aria-label="Delete job"
-                >
-                  <Trash2 aria-hidden="true" />
-                </button>
-              </form>
+              <CancelJobAction jobId={job.id} />
             ) : null
           }
           job={job}
@@ -130,7 +134,7 @@ export default async function CustomerJobDetailPage({
             ) : null}
           </aside>
         ) : null}
-      </main>
+      </div>
     </div>
   );
 }

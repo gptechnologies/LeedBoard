@@ -11,41 +11,26 @@ function redirectWithError(request: Request, jobId: string, message: string) {
 
 export async function POST(
   request: Request,
-  context: {
-    params: Promise<{
-      id: string;
-    }>;
-  },
+  context: { params: Promise<{ id: string }> },
 ) {
   const user = await requireApiUser(request, UserRole.CUSTOMER);
-  if (user instanceof NextResponse) {
-    return user;
-  }
+  if (user instanceof NextResponse) return user;
 
   const { id } = await context.params;
-  const job = await prisma.jobRequest.findFirst({
+  const result = await prisma.jobRequest.updateMany({
     where: {
       id,
       customerId: user.id,
+      status: JobRequestStatus.OPEN,
     },
-    select: {
-      id: true,
-      status: true,
+    data: {
+      status: JobRequestStatus.CANCELLED,
     },
   });
 
-  if (!job) {
-    return redirectWithError(request, id, "That job could not be found.");
-  }
-
-  if (job.status !== JobRequestStatus.OPEN) {
+  if (result.count === 0) {
     return redirectWithError(request, id, "Only an open job can be cancelled.");
   }
-
-  await prisma.jobRequest.update({
-    where: { id: job.id },
-    data: { status: JobRequestStatus.CANCELLED },
-  });
 
   return NextResponse.redirect(new URL("/customer/jobs?cancelled=1", request.url));
 }

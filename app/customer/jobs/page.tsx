@@ -6,8 +6,11 @@ import { requireUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-export default async function CustomerJobsPage() {
+type SearchParams = Promise<{ cancelled?: string }>;
+
+export default async function CustomerJobsPage({ searchParams }: { searchParams: SearchParams }) {
   const user = await requireUser(UserRole.CUSTOMER);
+  const query = await searchParams;
   const { jobs } = await getCustomerHomeData(user.id);
   const activeJobs = jobs.filter(
     (job) => job.status === JobRequestStatus.OPEN || job.status === JobRequestStatus.AWARDED,
@@ -21,6 +24,9 @@ export default async function CustomerJobsPage() {
         initials={initials}
       />
       <div className="wk-screen-content">
+        {query.cancelled === "1" ? (
+          <div className="notice success" role="status">Job cancelled. Cleaners can no longer send offers.</div>
+        ) : null}
         <HomeownerJobsWorkspace jobs={activeJobs} />
       </div>
     </div>

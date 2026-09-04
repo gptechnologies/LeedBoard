@@ -3,6 +3,9 @@ import {
   BidSelectionPriority,
   CleanLevel,
   EntryMethod,
+  HomeCondition,
+  JobCleanType,
+  JobPriorityArea,
   RoomType,
   ServiceNeed,
   SuppliesSource,
@@ -101,6 +104,14 @@ function parseBoolean(value: FormDataEntryValue | null) {
   return String(value || "").trim() === "true";
 }
 
+function parsePostalCode(value: FormDataEntryValue | null) {
+  const postalCode = getRequiredString(value, "ZIP code");
+  if (!/^\d{5}(?:-\d{4})?$/.test(postalCode)) {
+    throw new Error("Enter a valid ZIP code.");
+  }
+  return postalCode;
+}
+
 function parseEntryMethod(value: FormDataEntryValue | null) {
   const entryMethod = getRequiredString(value, "Entry method");
 
@@ -131,6 +142,41 @@ function parseBidSelectionPriority(value: FormDataEntryValue | null) {
   return BidSelectionPriority.BEST_OVERALL;
 }
 
+function parseJobCleanType(value: FormDataEntryValue | null) {
+  const cleanType = getRequiredString(value, "Cleaning type");
+  const supported: JobCleanType[] = [
+    JobCleanType.STANDARD_CLEAN,
+    JobCleanType.DEEP_CLEAN,
+    JobCleanType.MOVE_OUT_CLEAN,
+  ];
+
+  if (!supported.includes(cleanType as JobCleanType)) {
+    throw new Error("Choose a valid cleaning type.");
+  }
+
+  return cleanType as JobCleanType;
+}
+
+function parseHomeCondition(value: FormDataEntryValue | null) {
+  const condition = getRequiredString(value, "Home condition");
+
+  if (!Object.values(HomeCondition).includes(condition as HomeCondition)) {
+    throw new Error("Choose a valid home condition.");
+  }
+
+  return condition as HomeCondition;
+}
+
+function parseSuppliesSource(value: FormDataEntryValue | null) {
+  const source = getRequiredString(value, "Supplies");
+
+  if (!Object.values(SuppliesSource).includes(source as SuppliesSource)) {
+    throw new Error("Choose who will provide supplies.");
+  }
+
+  return source as SuppliesSource;
+}
+
 export function parseHomeProfileForm(formData: FormData) {
   const roomCleanLevels = getDefaultWholeHomeCleanLevels();
   const defaultRoomTypes = getDefaultWholeHomeRoomTypes();
@@ -150,7 +196,7 @@ export function parseHomeProfileForm(formData: FormData) {
     addressLine2: String(formData.get("addressLine2") || "").trim() || null,
     city: getRequiredString(formData.get("city"), "City"),
     state: getRequiredString(formData.get("state"), "State"),
-    postalCode: getRequiredString(formData.get("postalCode"), "ZIP code"),
+    postalCode: parsePostalCode(formData.get("postalCode")),
     entryMethod: parseEntryMethod(formData.get("entryMethod")),
     entryNotes: String(formData.get("entryNotes") || "").trim() || null,
     suppliesSource: SuppliesSource.CLEANER_BRINGS_ALL,
@@ -179,18 +225,36 @@ export function parseJobRequestForm(formData: FormData) {
     formData.getAll("serviceNeeds"),
     Object.values(ServiceNeed),
   );
-  const serviceNeeds = parsedServiceNeeds.length > 0
-    ? parsedServiceNeeds
-    : getDefaultServiceNeeds();
+  const matchingPriorityAreas = parseEnumList(
+    formData.getAll("matchingPriorityAreas"),
+    Object.values(JobPriorityArea),
+  );
+  const serviceNeedSet = new Set(
+    parsedServiceNeeds.length > 0 ? parsedServiceNeeds : getDefaultServiceNeeds(),
+  );
+  if (
+    matchingPriorityAreas.includes(JobPriorityArea.KITCHEN) ||
+    matchingPriorityAreas.includes(JobPriorityArea.INSIDE_FRIDGE) ||
+    matchingPriorityAreas.includes(JobPriorityArea.INSIDE_OVEN)
+  ) serviceNeedSet.add(ServiceNeed.KITCHEN);
+  if (matchingPriorityAreas.includes(JobPriorityArea.BATHROOMS)) {
+    serviceNeedSet.add(ServiceNeed.BATHROOMS);
+  }
+  if (matchingPriorityAreas.includes(JobPriorityArea.FLOORS)) {
+    serviceNeedSet.add(ServiceNeed.FLOORS);
+  }
+  const serviceNeeds = Array.from(serviceNeedSet);
   const cleanLevel = Object.keys(roomCleanLevels).length > 0
     ? getDominantLevel(roomCleanLevels)
     : parseCleanLevel(formData.get("cleanLevel"));
   const addressLine1 = getRequiredString(formData.get("addressLine1"), "Street address");
   const city = getRequiredString(formData.get("city"), "City");
   const state = getRequiredString(formData.get("state"), "State");
-  const postalCode = getRequiredString(formData.get("postalCode"), "ZIP code");
+  const postalCode = parsePostalCode(formData.get("postalCode"));
   const notes = String(formData.get("notes") || "").trim() || null;
   const title = String(formData.get("title") || "").trim() || buildJobTitle(serviceNeeds, roomTypes);
+  const cleanType = parseJobCleanType(formData.get("cleanType"));
+  const currentCondition = parseHomeCondition(formData.get("currentCondition"));
 
   const baseInput = {
     title,
@@ -204,11 +268,14 @@ export function parseJobRequestForm(formData: FormData) {
     roomTypes,
     cleanLevel,
     roomCleanLevels,
+    cleanType,
+    currentCondition,
+    matchingPriorityAreas,
     priorityTypes: [],
     selectionPriority: parseBidSelectionPriority(formData.get("selectionPriority")),
     entryMethod: parseEntryMethod(formData.get("entryMethod")),
     entryNotes: String(formData.get("entryNotes") || "").trim() || null,
-    suppliesSource: SuppliesSource.CLEANER_BRINGS_ALL,
+    suppliesSource: parseSuppliesSource(formData.get("suppliesSource")),
     timingPreference,
     notes,
   };
@@ -223,10 +290,30 @@ export function parseJobRequestForm(formData: FormData) {
       formData.get("requestedWindowEnd"),
       "Arrival window end",
     );
+    const date = new Date(`${requestedDateRaw}T12:00:00`);
+    const startMatch = /^(\d{2}):(\d{2})$/.exec(requestedWindowStart);
+    const endMatch = /^(\d{2}):(\d{2})$/.exec(requestedWindowEnd);
+
+    if (Number.isNaN(date.getTime()) || !startMatch || !endMatch) {
+      throw new Error("Choose a valid cleaning date and arrival window.");
+    }
+
+    const startMinutes = Number(startMatch[1]) * 60 + Number(startMatch[2]);
+    const endMinutes = Number(endMatch[1]) * 60 + Number(endMatch[2]);
+    const startIsValid = Number(startMatch[1]) <= 23 && Number(startMatch[2]) <= 59;
+    const endIsValid = Number(endMatch[1]) <= 23 && Number(endMatch[2]) <= 59;
+    if (!startIsValid || !endIsValid || endMinutes <= startMinutes || endMinutes - startMinutes !== 120) {
+      throw new Error("Choose a two-hour arrival window that ends on the same day.");
+    }
+
+    const scheduledStart = new Date(`${requestedDateRaw}T${requestedWindowStart}:00`);
+    if (scheduledStart.getTime() <= Date.now()) {
+      throw new Error("Choose a future arrival time.");
+    }
 
     return {
       ...baseInput,
-      requestedDate: new Date(`${requestedDateRaw}T12:00:00`),
+      requestedDate: date,
       requestedWindowStart,
       requestedWindowEnd,
     };

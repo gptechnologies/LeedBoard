@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 import { LockKeyhole, Mail } from "lucide-react";
+import Link from "next/link";
 
 type OtpStartFormProps = {
   error?: string;
@@ -13,12 +14,20 @@ type OtpStartFormProps = {
 
 export function OtpStartForm({ error, inviteToken, mode, returnTo, role }: OtpStartFormProps) {
   const inputId = useId();
+  const roleLabel = role === "CUSTOMER" ? "homeowner" : "cleaner";
+  const heading = mode === "signup"
+    ? `Create your ${roleLabel} account`
+    : "Welcome back";
+  const intro = mode === "signup"
+    ? `Use your email to create a ${roleLabel} account.`
+    : `Sign in to your ${roleLabel} account with a one-time code.`;
 
   return (
     <section className="auth-shell auth-passcode-card">
       <div className="auth-intro">
-        <h1>Get started</h1>
-        <p>Sign up or log in with a one-time passcode</p>
+        <span className="eyebrow">{role === "CUSTOMER" ? "Homeowner" : "Cleaner"}</span>
+        <h1>{heading}</h1>
+        <p>{intro}</p>
       </div>
 
       {error ? <div className="notice error">{error}</div> : null}
@@ -58,10 +67,19 @@ export function OtpStartForm({ error, inviteToken, mode, returnTo, role }: OtpSt
           <LockKeyhole aria-hidden="true" size={16} />
           <span>No password needed</span>
         </div>
+        <Link
+          className="auth-switch-role"
+          href={mode === "signup" ? `/signup?role=${role === "CUSTOMER" ? "CLEANER" : "CUSTOMER"}` : "/login"}
+        >
+          {mode === "signup"
+            ? `Create a ${role === "CUSTOMER" ? "cleaner" : "homeowner"} account instead`
+            : "Use a different account type"}
+        </Link>
       </form>
 
       <p className="auth-legal">
-        We use your email to verify your account and send important job updates.
+        We use your email to verify your account and send important job updates. By continuing,
+        you agree to our <Link href="/terms">Terms</Link> and acknowledge our <Link href="/privacy">Privacy Policy</Link>.
       </p>
     </section>
   );
