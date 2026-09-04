@@ -2353,6 +2353,7 @@ a.wk-profile-row:hover {
 .homeowner-job-picker__card:focus-visible,
 .homeowner-offer__overview:focus-visible,
 .homeowner-job-summary__details:focus-visible,
+.homeowner-job-offers-summary > a:focus-visible,
 .homeowner-offer__actions > a:focus-visible,
 .homeowner-accepted-provider__actions a:focus-visible {
   outline: 3px solid rgba(23, 79, 43, 0.22);
@@ -2404,126 +2405,419 @@ a.wk-profile-row:hover {
   color: var(--wk-muted);
 }
 
-.homeowner-job-summary {
+.homeowner-my-jobs {
+  display: grid;
+  gap: 10px;
+}
+
+.homeowner-my-jobs > h1 {
+  margin: 2px 5px 0;
+  color: var(--wk-charcoal);
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.homeowner-my-jobs__list {
   display: grid;
   gap: 16px;
-  border: 1px solid var(--wk-line);
-  border-radius: 20px;
-  padding: 18px;
+}
+
+.homeowner-job-summary {
+  display: grid;
+  gap: 17px;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #dfdfd7;
+  border-radius: 24px;
+  padding: 19px 19px 0;
   background: var(--wk-paper);
-  box-shadow: 0 10px 26px rgba(36, 52, 39, 0.06);
+  box-shadow: 0 8px 22px rgba(36, 52, 39, 0.045);
 }
 
 .homeowner-job-summary__intro {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) auto;
+  grid-template-columns: 46px minmax(0, 1fr);
   align-items: center;
-  gap: 11px;
+  gap: 12px;
 }
 
 .homeowner-job-summary__intro > div {
   min-width: 0;
 }
 
-.homeowner-job-summary h1 {
+.homeowner-job-summary__title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.homeowner-job-summary h2 {
   margin: 0;
   color: var(--wk-charcoal);
-  font-family: var(--sans);
-  font-size: 1.05rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  font-family: var(--serif);
+  font-size: clamp(1.32rem, 5.7vw, 1.62rem);
+  font-weight: 650;
+  letter-spacing: -0.045em;
+  line-height: 1.05;
 }
 
-.homeowner-job-summary p {
-  margin: 3px 0 0;
+.homeowner-job-summary__intro p {
+  margin: 5px 0 0;
   color: var(--wk-muted);
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 610;
+  line-height: 1.35;
 }
 
-.homeowner-job-summary__edit-tag {
-  min-height: 30px;
+.homeowner-job-status {
+  min-height: 22px;
   display: inline-flex;
   align-items: center;
   gap: 5px;
   border-radius: 999px;
-  padding: 6px 10px;
-  background: #edf6e9;
+  padding: 4px 8px;
+  background: #eef7ea;
   color: var(--wk-forest);
-  font-size: 0.68rem;
-  font-weight: 760;
+  font-size: 0.58rem;
+  font-weight: 820;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
   white-space: nowrap;
-  text-decoration: none;
 }
 
-.homeowner-job-summary__edit-tag:hover {
-  background: #e2f0dc;
+.homeowner-job-status i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #149447;
+  box-shadow: 0 0 0 3px rgba(20, 148, 71, 0.09);
 }
 
-.homeowner-job-summary__edit-tag svg {
-  width: 13px;
-  height: 13px;
-  stroke-width: 1.9;
+.homeowner-job-status svg {
+  width: 10px;
+  height: 10px;
+  stroke-width: 2.5;
+}
+
+.homeowner-job-status--booked {
+  background: #f4f0e5;
+  color: #755e24;
 }
 
 .homeowner-job-summary__metadata {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
   margin: 0;
+  border: 1px solid #e7e6df;
+  border-radius: 13px;
+  padding: 3px 11px;
 }
 
 .homeowner-job-summary__metadata > div {
   min-width: 0;
   display: grid;
-  grid-template-columns: 19px minmax(0, 1fr);
-  grid-template-rows: auto auto;
-  column-gap: 7px;
-  row-gap: 2px;
-  border: 1px solid #ecebe4;
-  border-radius: 12px;
-  padding: 10px 8px;
+  grid-template-columns: 22px minmax(80px, 0.72fr) minmax(0, 1.3fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 43px;
+  padding: 7px 0;
+}
+
+.homeowner-job-summary__metadata > div + div {
+  border-top: 1px solid #eeede7;
 }
 
 .homeowner-job-summary__metadata svg {
-  grid-row: 1 / 3;
-  width: 17px;
-  height: 17px;
-  align-self: center;
+  width: 18px;
+  height: 18px;
   color: var(--wk-forest);
-  stroke-width: 2;
+  stroke-width: 1.8;
 }
 
 .homeowner-job-summary__metadata dt {
   color: var(--wk-muted);
-  font-size: 0.56rem;
-  font-weight: 700;
+  font-size: 0.68rem;
+  font-weight: 650;
 }
 
 .homeowner-job-summary__metadata dd {
-  overflow: hidden;
+  min-width: 0;
   margin: 0;
   color: var(--wk-charcoal);
-  font-size: 0.66rem;
-  font-weight: 760;
-  line-height: 1.2;
-  text-overflow: ellipsis;
+  font-size: 0.7rem;
+  font-weight: 780;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  text-align: right;
 }
 
-.homeowner-job-summary__details {
+.homeowner-job-summary__attributes {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  min-height: 40px;
+  border-radius: 11px;
+  padding: 8px 11px;
+  background: #fbf7ec;
+}
+
+.homeowner-job-summary__attributes svg {
+  width: 18px;
+  height: 18px;
+  color: var(--wk-forest);
+  stroke-width: 1.8;
+}
+
+.homeowner-job-summary__attributes p {
+  margin: 0;
+  color: #3f453f;
+  font-size: 0.69rem;
+  font-weight: 680;
+  line-height: 1.35;
+}
+
+.homeowner-cleaner-broadcast {
+  display: grid;
+  grid-template-columns: minmax(138px, 0.9fr) minmax(125px, 1fr);
+  align-items: center;
+  gap: 14px;
+  min-height: 164px;
+  padding: 1px 4px 3px;
+}
+
+.homeowner-cleaner-radar {
+  position: relative;
+  width: 148px;
+  height: 148px;
+  max-width: 100%;
+  justify-self: center;
+}
+
+.homeowner-cleaner-radar__ring {
+  position: absolute;
+  inset: 8px;
+  border: 1px solid rgba(45, 112, 62, 0.25);
+  border-radius: 50%;
+  opacity: 0;
+  transform: scale(0.28);
+  animation: homeowner-radar-pulse 2100ms cubic-bezier(0.2, 0.62, 0.35, 1) infinite;
+}
+
+.homeowner-cleaner-radar__ring--two { animation-delay: 700ms; }
+.homeowner-cleaner-radar__ring--three { animation-delay: 1400ms; }
+
+.homeowner-cleaner-radar__center {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  z-index: 2;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 3px solid rgba(255, 255, 255, 0.92);
+  border-radius: 50%;
+  background: var(--wk-forest);
+  color: var(--wk-paper);
+  box-shadow: 0 0 0 8px rgba(23, 79, 43, 0.1), 0 5px 14px rgba(23, 79, 43, 0.22);
+  transform: translate(-50%, -50%);
+}
+
+.homeowner-cleaner-radar__center svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 1.65;
+}
+
+.homeowner-cleaner-radar__person {
+  position: absolute;
+  z-index: 3;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--wk-paper);
+  border-radius: 50%;
+  color: var(--wk-forest);
+  box-shadow: 0 3px 8px rgba(30, 61, 37, 0.16);
+  animation: homeowner-cleaner-notified 2800ms ease-in-out infinite;
+}
+
+.homeowner-cleaner-radar__person svg {
+  width: 13px;
+  height: 13px;
+  stroke-width: 1.9;
+}
+
+.homeowner-cleaner-radar__person--one { top: 8px; left: 30px; background: #dcebd8; }
+.homeowner-cleaner-radar__person--two { top: 38px; right: 2px; background: #f0e1c6; animation-delay: 700ms; }
+.homeowner-cleaner-radar__person--three { bottom: 3px; left: 24px; background: #d9e7e4; animation-delay: 1400ms; }
+
+.homeowner-cleaner-radar__signal {
+  position: absolute;
+  z-index: 2;
+  width: 6px;
+  height: 6px;
+  border: 1.5px solid var(--wk-paper);
+  border-radius: 50%;
+  background: #4d9660;
+  box-shadow: 0 2px 5px rgba(23, 79, 43, 0.18);
+}
+
+.homeowner-cleaner-radar__signal--one { top: 38px; left: 47%; }
+.homeowner-cleaner-radar__signal--two { right: 18px; bottom: 39px; }
+.homeowner-cleaner-radar__signal--three { bottom: 27px; left: 37%; }
+
+.homeowner-cleaner-broadcast__copy {
+  min-width: 0;
+  display: grid;
+  justify-items: start;
+  gap: 7px;
+}
+
+.homeowner-cleaner-broadcast__copy > span {
   display: inline-flex;
   align-items: center;
-  justify-self: start;
-  gap: 4px;
+  gap: 5px;
+  border: 1px solid #dfebdc;
+  border-radius: 999px;
+  padding: 4px 8px;
   color: var(--wk-forest);
-  font-size: 0.73rem;
-  font-weight: 760;
+  font-size: 0.57rem;
+  font-weight: 730;
+}
+
+.homeowner-cleaner-broadcast__copy > span i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #159447;
+}
+
+.homeowner-cleaner-broadcast__copy > strong {
+  max-width: 170px;
+  color: var(--wk-charcoal);
+  font-family: var(--serif);
+  font-size: clamp(1.2rem, 5vw, 1.48rem);
+  font-weight: 650;
+  letter-spacing: -0.04em;
+  line-height: 1.02;
+}
+
+.homeowner-cleaner-broadcast__dots {
+  display: flex;
+  gap: 6px;
+  min-height: 8px;
+}
+
+.homeowner-cleaner-broadcast__dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #97b99b;
+  animation: homeowner-status-dot 1800ms ease-in-out infinite;
+}
+
+.homeowner-cleaner-broadcast__dots i:first-child { background: var(--wk-forest); }
+.homeowner-cleaner-broadcast__dots i:nth-child(2) { animation-delay: 300ms; }
+.homeowner-cleaner-broadcast__dots i:nth-child(3) { animation-delay: 600ms; }
+
+.homeowner-job-offers-summary,
+.homeowner-job-booked-summary {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  border-top: 1px solid #ecebe5;
+  padding: 17px 2px 2px;
+}
+
+.homeowner-job-booked-summary {
+  grid-template-columns: 38px minmax(0, 1fr);
+}
+
+.homeowner-job-offers-summary > span,
+.homeowner-job-booked-summary > span {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #e8f3e5;
+  color: var(--wk-forest);
+}
+
+.homeowner-job-offers-summary > span svg,
+.homeowner-job-booked-summary > span svg {
+  width: 18px;
+  height: 18px;
+}
+
+.homeowner-job-offers-summary p,
+.homeowner-job-booked-summary p {
+  margin: 0 0 2px;
+  color: var(--wk-muted);
+  font-size: 0.62rem;
+  font-weight: 680;
+}
+
+.homeowner-job-offers-summary strong,
+.homeowner-job-booked-summary strong {
+  color: var(--wk-charcoal);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.homeowner-job-offers-summary > a {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--wk-forest);
+  font-size: 0.7rem;
+  font-weight: 780;
   text-decoration: none;
 }
 
+.homeowner-job-offers-summary > a svg { width: 15px; height: 15px; }
+
+.homeowner-job-summary__details {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 -19px;
+  border-top: 1px solid #e8e7e1;
+  padding: 0 19px;
+  color: var(--wk-forest);
+  font-size: 0.73rem;
+  font-weight: 780;
+  text-decoration: none;
+  transition: background-color 160ms ease;
+}
+
+.homeowner-job-summary__details:hover { background: #fbfdf9; }
+
 .homeowner-job-summary__details svg {
-  width: 15px;
-  height: 15px;
+  width: 17px;
+  height: 17px;
+}
+
+@keyframes homeowner-radar-pulse {
+  0% { opacity: 0; transform: scale(0.28); }
+  16% { opacity: 0.52; }
+  78%, 100% { opacity: 0; transform: scale(1); }
+}
+
+@keyframes homeowner-cleaner-notified {
+  0%, 100% { opacity: 0.72; transform: translateY(1px) scale(0.96); }
+  50% { opacity: 1; transform: translateY(-2px) scale(1); }
+}
+
+@keyframes homeowner-status-dot {
+  0%, 58%, 100% { opacity: 0.38; transform: scale(0.84); }
+  24% { opacity: 1; transform: scale(1); }
 }
 
 .homeowner-kicker {
@@ -2551,7 +2845,7 @@ a.wk-profile-row:hover {
 .homeowner-offers-workspace h2,
 .homeowner-collecting-offers h2,
 .homeowner-accepted-provider h2,
-.homeowner-empty-jobs h1 {
+.homeowner-empty-jobs h2 {
   margin: 4px 0 0;
   color: var(--wk-charcoal);
   font-family: var(--sans);
@@ -2910,7 +3204,7 @@ a.wk-profile-row:hover {
   padding: 28px;
 }
 
-.homeowner-empty-jobs h1 {
+.homeowner-empty-jobs h2 {
   font-size: 1.45rem;
 }
 
@@ -2930,24 +3224,41 @@ a.wk-profile-row:hover {
     gap: 20px;
   }
 
-  .homeowner-job-summary,
   .homeowner-collecting-offers,
   .homeowner-accepted-provider,
   .homeowner-empty-jobs {
     padding: 22px;
   }
+
+  .homeowner-job-summary {
+    padding: 23px 23px 0;
+  }
+
+  .homeowner-job-summary__details {
+    margin-inline: -23px;
+    padding-inline: 23px;
+  }
 }
 
 @media (max-width: 365px) {
-  .homeowner-job-summary,
   .homeowner-collecting-offers,
   .homeowner-accepted-provider {
     padding: 15px;
   }
 
+  .homeowner-job-summary {
+    padding: 16px 16px 0;
+  }
+
+  .homeowner-job-summary__details {
+    margin-inline: -16px;
+    padding-inline: 16px;
+  }
+
   .homeowner-job-summary__metadata > div {
-    grid-template-columns: 16px minmax(0, 1fr);
-    padding: 8px 5px;
+    grid-template-columns: 18px minmax(72px, 0.7fr) minmax(0, 1.3fr);
+    gap: 6px;
+    padding: 7px 0;
   }
 
   .homeowner-job-summary__metadata svg {
@@ -2956,7 +3267,25 @@ a.wk-profile-row:hover {
   }
 
   .homeowner-job-summary__metadata dd {
-    font-size: 0.6rem;
+    font-size: 0.64rem;
+  }
+
+  .homeowner-cleaner-broadcast {
+    grid-template-columns: minmax(126px, 0.9fr) minmax(105px, 1fr);
+    gap: 8px;
+  }
+
+  .homeowner-cleaner-radar {
+    width: 134px;
+    height: 134px;
+  }
+
+  .homeowner-job-offers-summary {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+
+  .homeowner-job-offers-summary > a {
+    grid-column: 2;
   }
 
   .homeowner-offer__overview {
@@ -2983,8 +3312,20 @@ a.wk-profile-row:hover {
 @media (prefers-reduced-motion: reduce) {
   .homeowner-job-picker__card,
   .homeowner-offer__overview,
-  .homeowner-offer__chevron {
+  .homeowner-offer__chevron,
+  .homeowner-job-summary__details {
     transition: none;
+  }
+
+  .homeowner-cleaner-radar__ring,
+  .homeowner-cleaner-radar__person,
+  .homeowner-cleaner-broadcast__dots i {
+    animation: none;
+  }
+
+  .homeowner-cleaner-radar__ring {
+    opacity: 0.22;
+    transform: scale(1);
   }
 }
 

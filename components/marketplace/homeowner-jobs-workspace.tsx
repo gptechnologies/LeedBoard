@@ -6,16 +6,17 @@ import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
   Check,
-  ChevronDown,
   ChevronRight,
+  ChevronDown,
   Clock3,
+  Home,
   MapPin,
   Plus,
   Sparkles,
   Tag,
+  UserRound,
 } from "lucide-react";
 
-import { HomeownerOpenJobsCarousel } from "@/components/marketplace/homeowner-open-jobs-carousel";
 import { ProviderSelectionDrawer } from "@/components/marketplace/provider-selection-drawer";
 
 type WorkspaceBid = {
@@ -67,6 +68,8 @@ type WorkspaceJob = {
   selectionPriority: "BEST_OVERALL" | "CHEAPEST" | "FASTEST" | "BEST_QUALITY";
   status: string;
   createdAt: Date;
+  entryMethod: "HIDDEN_KEY" | "DOOR_CODE" | "BUZZ_IN" | "I_WILL_BE_HOME" | "FRONT_DESK" | "OTHER";
+  entryNotes: string | null;
   notes: string | null;
   bids: WorkspaceBid[];
   acceptedBid: WorkspaceBid | null;
@@ -85,13 +88,11 @@ export function HomeownerJobsWorkspace({ jobs }: { jobs: WorkspaceJob[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedFromUrl = searchParams.get("job");
-  const [fallbackJobId, setFallbackJobId] = useState(jobs[0]?.id ?? "");
   const [sort, setSort] = useState<OfferSort>("best");
   const [expandedBidId, setExpandedBidId] = useState<string | null>(null);
 
   const selectedJob =
     jobs.find((job) => job.id === selectedFromUrl) ??
-    jobs.find((job) => job.id === fallbackJobId) ??
     jobs[0];
   const visibleOffers = useMemo(
     () => selectedJob ? sortOffers(selectedJob.bids, sort, selectedJob.selectionPriority) : [],
@@ -104,18 +105,6 @@ export function HomeownerJobsWorkspace({ jobs }: { jobs: WorkspaceJob[] }) {
     return () => window.clearInterval(interval);
   }, [jobs, router]);
 
-  function selectJob(id: string) {
-    setFallbackJobId(id);
-    setExpandedBidId(null);
-    router.replace(`/customer/jobs?job=${id}`, { scroll: false });
-  }
-
-  if (!selectedJob) {
-    return <EmptyJobsWorkspace />;
-  }
-
-  const isOpen = selectedJob.status === "OPEN";
-
   return (
     <div className="homeowner-jobs-workspace">
       <Link className="homeowner-jobs-workspace__create wk-pressable" href="/customer/jobs/new">
@@ -123,14 +112,21 @@ export function HomeownerJobsWorkspace({ jobs }: { jobs: WorkspaceJob[] }) {
         Create new job
       </Link>
 
-      <ActiveJobPicker jobs={jobs} selectedId={selectedJob.id} onSelect={selectJob} />
+      <section className="homeowner-my-jobs" aria-labelledby="my-jobs-heading">
+        <h1 id="my-jobs-heading">My Jobs</h1>
+        {jobs.length > 0 ? (
+          <div className="homeowner-my-jobs__list">
+            {jobs.map((job) => <HomeownerJobCard job={job} key={job.id} />)}
+          </div>
+        ) : (
+          <EmptyJobsWorkspace />
+        )}
+      </section>
 
-      <SelectedJobSummary job={selectedJob} />
-
-      {selectedJob.status === "AWARDED" && selectedJob.acceptedBid ? (
+      {selectedJob?.status === "AWARDED" && selectedJob.acceptedBid ? (
         <AcceptedProviderPanel bid={selectedJob.acceptedBid} job={selectedJob} />
-      ) : visibleOffers.length > 0 ? (
-        <section className="homeowner-offers-workspace" aria-labelledby="offers-heading">
+      ) : selectedJob && visibleOffers.length > 0 ? (
+        <section className="homeowner-offers-workspace" id="offers" aria-labelledby="offers-heading">
           <div className="homeowner-offers-workspace__heading">
             <div>
               <p className="homeowner-kicker">Compare your options</p>
@@ -160,68 +156,35 @@ export function HomeownerJobsWorkspace({ jobs }: { jobs: WorkspaceJob[] }) {
             ))}
           </div>
         </section>
-      ) : (
-        <CollectingOffersState job={selectedJob} />
-      )}
+      ) : null}
 
-      {isOpen && selectedJob.notes ? (
+      {selectedJob?.status === "OPEN" && selectedJob.notes ? (
         <p className="homeowner-jobs-workspace__note">Providers can see the job details before they send an offer.</p>
       ) : null}
     </div>
   );
 }
 
-function ActiveJobPicker({
-  jobs,
-  selectedId,
-  onSelect,
-}: {
-  jobs: WorkspaceJob[];
-  selectedId: string;
-  onSelect: (id: string) => void;
-}) {
-  if (jobs.length === 1) return null;
-
-  const selectedIndex = Math.max(0, jobs.findIndex((job) => job.id === selectedId));
-
-  return (
-    <section className="homeowner-job-picker" aria-label="Active jobs">
-      <p>{selectedIndex + 1} of {jobs.length} active jobs</p>
-      <HomeownerOpenJobsCarousel
-        className="homeowner-job-picker__carousel"
-        initialIndex={selectedIndex}
-        onSelectionChange={(index) => onSelect(jobs[index]?.id ?? selectedId)}
-      >
-        {jobs.map((job) => (
-          <button
-            className={`homeowner-job-picker__card${job.id === selectedId ? " is-selected" : ""}`}
-            key={job.id}
-            onClick={() => onSelect(job.id)}
-            type="button"
-          >
-            <span className="homeowner-job-picker__card-icon" aria-hidden="true"><Sparkles /></span>
-            <span>
-              <strong>{job.title}</strong>
-              <small>{job.status === "AWARDED" ? "Provider selected" : job.bids.length > 0 ? `${job.bids.length} offers to review` : "Collecting offers"}</small>
-            </span>
-            <ChevronRight aria-hidden="true" />
-          </button>
-        ))}
-      </HomeownerOpenJobsCarousel>
-    </section>
-  );
-}
-
-function SelectedJobSummary({ job }: { job: WorkspaceJob }) {
+function HomeownerJobCard({ job }: { job: WorkspaceJob }) {
   const reference = job.publicReference ?? `WK-${job.id.slice(-6).toUpperCase()}`;
+  const offerCount = job.bids.length;
+  const isOpen = job.status === "OPEN";
+  const statusLabel = job.status === "AWARDED" ? "Booked" : offerCount > 0 ? "Offers ready" : "Live";
+  const attributes = getJobAttributes(job);
 
   return (
-    <section className="homeowner-job-summary" aria-labelledby="selected-job-heading">
+    <article className="homeowner-job-summary" aria-labelledby={`job-heading-${job.id}`}>
       <div className="homeowner-job-summary__intro">
         <span className="homeowner-job-summary__service-mark" aria-hidden="true"><Sparkles /></span>
         <div>
-          <h1 id="selected-job-heading">{job.title}</h1>
-          <p>{formatPosted(job.createdAt)} · {job.status === "AWARDED" ? "Provider selected" : job.bids.length > 0 ? "Offers ready" : "Collecting offers"}</p>
+          <div className="homeowner-job-summary__title-row">
+            <h2 id={`job-heading-${job.id}`}>{job.title}</h2>
+            <span className={`homeowner-job-status homeowner-job-status--${statusLabel.toLowerCase().replace(" ", "-")}`}>
+              {isOpen ? <i aria-hidden="true" /> : <Check aria-hidden="true" />}
+              {statusLabel}
+            </span>
+          </div>
+          <p>{formatPosted(job.createdAt)} · {getJobSupportCopy(job)}</p>
         </div>
       </div>
 
@@ -233,7 +196,7 @@ function SelectedJobSummary({ job }: { job: WorkspaceJob }) {
         </div>
         <div>
           <CalendarDays aria-hidden="true" />
-          <dt>Requested</dt>
+          <dt>Requested time</dt>
           <dd>{formatJobTiming(job)}</dd>
         </div>
         <div>
@@ -243,10 +206,57 @@ function SelectedJobSummary({ job }: { job: WorkspaceJob }) {
         </div>
       </dl>
 
+      <div className="homeowner-job-summary__attributes">
+        <Home aria-hidden="true" />
+        <p>{attributes.join(" · ")}</p>
+      </div>
+
+      {isOpen && offerCount === 0 ? (
+        <CleanerBroadcastAnimation />
+      ) : isOpen ? (
+        <div className="homeowner-job-offers-summary" aria-live="polite">
+          <span aria-hidden="true"><Check /></span>
+          <div>
+            <p>New activity</p>
+            <strong>{offerCount} {offerCount === 1 ? "offer" : "offers"} received</strong>
+          </div>
+          <Link href={`/customer/jobs?job=${job.id}#offers`}>View offers <ChevronRight aria-hidden="true" /></Link>
+        </div>
+      ) : (
+        <div className="homeowner-job-booked-summary">
+          <span aria-hidden="true"><Check /></span>
+          <div><p>Cleaner selected</p><strong>Your cleaning is booked</strong></div>
+        </div>
+      )}
+
       <Link className="homeowner-job-summary__details" href={`/customer/jobs/${job.id}`}>
-        Job details <ChevronRight aria-hidden="true" />
+        View job details <ChevronRight aria-hidden="true" />
       </Link>
-    </section>
+    </article>
+  );
+}
+
+function CleanerBroadcastAnimation() {
+  return (
+    <div className="homeowner-cleaner-broadcast" aria-live="polite">
+      <div className="homeowner-cleaner-radar" aria-hidden="true">
+        <span className="homeowner-cleaner-radar__ring homeowner-cleaner-radar__ring--one" />
+        <span className="homeowner-cleaner-radar__ring homeowner-cleaner-radar__ring--two" />
+        <span className="homeowner-cleaner-radar__ring homeowner-cleaner-radar__ring--three" />
+        <span className="homeowner-cleaner-radar__signal homeowner-cleaner-radar__signal--one" />
+        <span className="homeowner-cleaner-radar__signal homeowner-cleaner-radar__signal--two" />
+        <span className="homeowner-cleaner-radar__signal homeowner-cleaner-radar__signal--three" />
+        <span className="homeowner-cleaner-radar__person homeowner-cleaner-radar__person--one"><UserRound /></span>
+        <span className="homeowner-cleaner-radar__person homeowner-cleaner-radar__person--two"><UserRound /></span>
+        <span className="homeowner-cleaner-radar__person homeowner-cleaner-radar__person--three"><UserRound /></span>
+        <span className="homeowner-cleaner-radar__center"><Sparkles /></span>
+      </div>
+      <div className="homeowner-cleaner-broadcast__copy">
+        <span><i aria-hidden="true" /> Live now</span>
+        <strong>Notifying Cleaners</strong>
+        <div className="homeowner-cleaner-broadcast__dots" aria-hidden="true"><i /><i /><i /></div>
+      </div>
+    </div>
   );
 }
 
@@ -308,21 +318,6 @@ function OfferRow({
   );
 }
 
-function CollectingOffersState({ job }: { job: WorkspaceJob }) {
-  return (
-    <section className="homeowner-collecting-offers" aria-live="polite">
-      <span aria-hidden="true"><Sparkles /></span>
-      <div>
-        <p className="homeowner-kicker">Job posted</p>
-        <h2>Collecting offers</h2>
-        <p>Nearby cleaners can review your request now. New offers will appear here automatically.</p>
-      </div>
-      <strong>0 offers received</strong>
-      <Link href={`/customer/jobs/${job.id}`}>View job details <ChevronRight aria-hidden="true" /></Link>
-    </section>
-  );
-}
-
 function AcceptedProviderPanel({ bid, job }: { bid: WorkspaceBid; job: WorkspaceJob }) {
   const provider = getProvider(bid);
   return (
@@ -351,11 +346,37 @@ function EmptyJobsWorkspace() {
     <section className="homeowner-empty-jobs">
       <span aria-hidden="true"><Sparkles /></span>
       <p className="homeowner-kicker">Your cleaning marketplace</p>
-      <h1>No active jobs</h1>
+      <h2>No active jobs</h2>
       <p>Post a cleaning request and we’ll collect offers from local providers.</p>
-      <Link className="wk-pressable" href="/customer/jobs/new"><Plus aria-hidden="true" /> Create new job</Link>
     </section>
   );
+}
+
+function getJobSupportCopy(job: WorkspaceJob) {
+  if (job.status === "AWARDED") return "Your cleaner has been selected";
+  if (job.bids.length > 0) return `${job.bids.length} ${job.bids.length === 1 ? "offer is" : "offers are"} ready to review`;
+  return "Nearby cleaners are reviewing your request";
+}
+
+function getJobAttributes(job: WorkspaceJob) {
+  const attributes: string[] = [];
+  if (job.entryMethod === "I_WILL_BE_HOME") attributes.push("I’ll be home");
+  else if (job.entryMethod !== "OTHER") attributes.push(formatEntryMethod(job.entryMethod));
+  else if (job.entryNotes) attributes.push("Entry details added");
+  if (job.notes) attributes.push("Notes added");
+  return attributes.length > 0 ? attributes : ["Details ready for cleaners"];
+}
+
+function formatEntryMethod(method: WorkspaceJob["entryMethod"]) {
+  const labels: Record<WorkspaceJob["entryMethod"], string> = {
+    HIDDEN_KEY: "Hidden key",
+    DOOR_CODE: "Door code",
+    BUZZ_IN: "Buzz in",
+    I_WILL_BE_HOME: "I’ll be home",
+    FRONT_DESK: "Front desk",
+    OTHER: "Entry details added",
+  };
+  return labels[method];
 }
 
 function getProvider(bid: WorkspaceBid) {
