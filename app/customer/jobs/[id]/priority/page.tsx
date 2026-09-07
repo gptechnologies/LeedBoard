@@ -74,7 +74,7 @@ export default async function CustomerJobPriorityPage({ params }: { params: Para
   }
 
   return (
-    <div className="market-shell market-shell--detail">
+    <div className="wk-app-screen wk-secondary-app-screen">
       <section className="market-surface">
         <header className="market-topbar market-topbar--detail">
           <div>

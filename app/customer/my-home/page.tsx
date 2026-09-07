@@ -1,4 +1,7 @@
 import { UserRole } from "@prisma/client";
+import { ChevronLeft } from "lucide-react";
+import Link from "next/link";
+import { AppScreenHeader } from "@/components/marketplace/app-screen-header";
 import { HomePresetsManager } from "@/components/marketplace/home-presets-manager";
 import { getCustomerHomeProfiles } from "@/lib/marketplace";
 import { requireUser } from "@/lib/session";
@@ -17,21 +20,24 @@ export default async function CustomerMyHomePage({
   const user = await requireUser(UserRole.CUSTOMER);
   const params = await searchParams;
   const homeProfiles = await getCustomerHomeProfiles(user.id);
+  const initials = `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
 
   return (
-    <div className="market-shell market-shell--detail">
-      <section className="market-surface">
-        <header className="market-topbar market-topbar--detail">
+    <div className="wk-app-screen wk-secondary-app-screen">
+      <AppScreenHeader accountMenu initials={initials} />
+      <div className="wk-screen-content">
+        <header className="wk-homeowner-detail-heading">
+          <Link href="/customer/account"><ChevronLeft aria-hidden="true" />Back to account</Link>
           <div>
-            <div className="market-kicker">Home presets</div>
-            <h1>Save homes for faster job posts.</h1>
+            <h1>Your homes</h1>
+            <p>Save addresses and access details for faster job posts.</p>
           </div>
         </header>
 
         {params.error ? <div className="notice error">{params.error}</div> : null}
 
         <HomePresetsManager homeProfiles={homeProfiles} />
-      </section>
+      </div>
     </div>
   );
 }

@@ -63,7 +63,7 @@ export default async function CleanerMessageThreadPage({
   const statusLabel = isCompleted ? "Completed" : getBidStatusLabel(bid.status);
 
   return (
-    <div className="market-shell market-shell--detail">
+    <div className="wk-app-screen wk-message-detail-screen">
       <ActivityReadMarker bidId={bid.id} role="cleaner" />
       <section className="market-surface">
         <header className="market-topbar market-topbar--detail">

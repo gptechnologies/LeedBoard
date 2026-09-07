@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "@/app/globals.css";
+import "@/app/marketplace-shell.css";
+import { InteractionFeedback } from "@/components/interaction-feedback";
 import { SiteHeader } from "@/components/site-header";
 
 export const metadata: Metadata = {
@@ -23,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </a>
         <SiteHeader />
         <main id="main-content">{children}</main>
+        <InteractionFeedback />
       </body>
     </html>
   );

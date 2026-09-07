@@ -66,7 +66,7 @@ export default async function CustomerMessageThreadPage({
   const statusLabel = isCompleted ? "Completed" : getBidStatusLabel(bid.status);
 
   return (
-    <div className="market-shell market-shell--detail">
+    <div className="wk-app-screen wk-message-detail-screen">
       <ActivityReadMarker bidId={bid.id} role="customer" />
       <section className="market-surface">
         <header className="market-topbar market-topbar--detail">

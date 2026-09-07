@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { UserRole } from "@prisma/client";
-import { BriefcaseBusiness, Home, LogOut, MessageSquare, Settings, UserRound } from "lucide-react";
+import { BriefcaseBusiness, Home, LogOut, MessageSquare, Plus, Settings, UserRound } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -91,17 +91,16 @@ function getRoleLinks(role?: AccountRole | null) {
   if (role === "CLEANER") {
     return [
       { href: "/cleaner", label: "Jobs", Icon: BriefcaseBusiness },
-      { href: "/cleaner/bids", label: "Bids", Icon: UserRound },
-      { href: "/cleaner/messages", label: "Messages", Icon: MessageSquare },
+      { href: "/cleaner/messages", label: "Activity", Icon: MessageSquare },
       { href: "/cleaner/account", label: "Account", Icon: Settings },
     ];
   }
 
   if (role === "CUSTOMER") {
     return [
-      { href: "/customer", label: "Home", Icon: Home },
-      { href: "/customer/jobs", label: "Jobs", Icon: BriefcaseBusiness },
-      { href: "/customer/my-home", label: "Home presets", Icon: Home },
+      { href: "/customer/jobs", label: "Activity", Icon: BriefcaseBusiness },
+      { href: "/customer/jobs/new", label: "Post a job", Icon: Plus },
+      { href: "/customer/my-home", label: "Your homes", Icon: Home },
       { href: "/customer/account", label: "Account", Icon: Settings },
     ];
   }

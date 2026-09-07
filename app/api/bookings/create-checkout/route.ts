@@ -14,7 +14,7 @@ import { getStripe, isStripeConfigured } from "@/lib/stripe";
 
 function redirectWithError(request: Request, message: string) {
   return NextResponse.redirect(
-    new URL(`/customer/book?error=${encodeURIComponent(message)}`, request.url),
+    new URL(`/customer/jobs/new?error=${encodeURIComponent(message)}`, request.url),
   );
 }
 

@@ -163,10 +163,14 @@ export function ActivityScreen({
                           <ConversationRowContent conversation={conversation} unread={Boolean(unread)} />
                           <ChevronDown aria-hidden="true" className="wk-activity-item__chevron" />
                         </button>
-                      ) : (
-                        <Link className={rowClass} href={conversation.href ?? "#"} onClick={() => triggerHaptic("selection")}>
+                      ) : conversation.href ? (
+                        <Link className={rowClass} href={conversation.href} onClick={() => triggerHaptic("selection")}>
                           <ConversationRowContent conversation={conversation} unread={Boolean(unread)} />
                         </Link>
+                      ) : (
+                        <div className={rowClass}>
+                          <ConversationRowContent conversation={conversation} unread={Boolean(unread)} />
+                        </div>
                       )}
                       {expandedId === conversation.id && conversation.detail ? <ActivityInlineDetails detail={conversation.detail} /> : null}
                     </div>
@@ -197,11 +201,15 @@ export function ActivityScreen({
                         <JobRowContent job={job} />
                         <ChevronDown aria-hidden="true" className="wk-activity-item__chevron" />
                       </button>
-                    ) : (
-                      <Link className="wk-activity-job wk-pressable" href={job.href ?? "#"} onClick={() => triggerHaptic("selection")}>
+                    ) : job.href ? (
+                      <Link className="wk-activity-job wk-pressable" href={job.href} onClick={() => triggerHaptic("selection")}>
                         <JobRowContent job={job} />
                         <ChevronRight aria-hidden="true" />
                       </Link>
+                    ) : (
+                      <div className="wk-activity-job">
+                        <JobRowContent job={job} />
+                      </div>
                     )}
                     {expandedId === job.id && job.detail ? <ActivityInlineDetails detail={job.detail} /> : null}
                   </div>
