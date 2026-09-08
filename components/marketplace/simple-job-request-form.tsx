@@ -10,7 +10,7 @@ import {
   SuppliesSource,
   TimingPreference,
 } from "@prisma/client";
-import { Check, ChevronRight, LoaderCircle, MapPin } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight, LoaderCircle, MapPin } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { triggerHaptic } from "@/lib/haptics";
@@ -42,7 +42,7 @@ type SectionIndex = 0 | 1 | 2 | 3;
 type SubmitState = "idle" | "posting";
 type WindowChoice = "morning" | "midday" | "afternoon" | "evening" | "flexible";
 
-const sections = ["Address", "When", "Notes & entry", "Review"] as const;
+const sections = ["Address", "When", "Notes", "Review"] as const;
 
 const emptyAddress: AddressState = {
   addressLine1: "",
@@ -78,7 +78,7 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
   const [highestReached, setHighestReached] = useState<SectionIndex>(0);
   const [locationMode, setLocationMode] = useState<LocationMode>(homeProfiles.length ? "saved" : "manual");
   const [selectedHomeId, setSelectedHomeId] = useState(homeProfiles[0]?.id ?? "");
-  const [address, setAddress] = useState<AddressState>(emptyAddress);
+  const [fullAddress, setFullAddress] = useState("");
   const [dateChoice, setDateChoice] = useState<DateChoice | "">("");
   const [customDate, setCustomDate] = useState("");
   const [windowChoice, setWindowChoice] = useState<WindowChoice | "">("");
@@ -86,7 +86,6 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
   const [entryNotes, setEntryNotes] = useState(homeProfiles[0]?.entryNotes ?? "");
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [submitError, setSubmitError] = useState("");
-  const activePanelRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const hasAdvanced = useRef(false);
 
@@ -99,7 +98,7 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
         state: selectedHome.state,
         postalCode: selectedHome.postalCode,
       }
-    : address;
+    : parseFullAddress(fullAddress);
   const requestedDate = useMemo(
     () => getRequestedDate(dateChoice, customDate),
     [customDate, dateChoice],
@@ -120,14 +119,10 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
 
   useEffect(() => {
     if (!hasAdvanced.current) return;
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const timer = window.setTimeout(() => {
-      activePanelRef.current?.scrollIntoView({
-        behavior: reducedMotion ? "auto" : "smooth",
-        block: "nearest",
-      });
+      window.scrollTo({ top: 0, behavior: "auto" });
       headingRef.current?.focus({ preventScroll: true });
-    }, 180);
+    }, 20);
     return () => window.clearTimeout(timer);
   }, [activeSection]);
 
@@ -161,6 +156,7 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
     setEntryNotes(home.entryNotes ?? "");
     setSubmitError("");
     triggerHaptic("selection");
+    advanceTo(1);
   }
 
   function chooseDate(choice: DateChoice) {
@@ -170,9 +166,11 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
     triggerHaptic("selection");
   }
 
-  function updateAddress(field: keyof AddressState, value: string) {
-    setAddress((current) => ({ ...current, [field]: value }));
+  function chooseWindow(value: WindowChoice) {
+    setWindowChoice(value);
     setSubmitError("");
+    triggerHaptic("selection");
+    advanceTo(2);
   }
 
   async function postJob(event: FormEvent<HTMLFormElement>) {
@@ -208,7 +206,6 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
     ? `${formatDate(requestedDate)} · ${selectedWindow.label} (${selectedWindow.detail})`
     : "Choose a date and arrival window";
   const notesSummary = notes.trim() ? summarizeText(notes) : "No extra notes";
-  const entrySummary = entryNotes.trim() ? summarizeText(entryNotes) : "No entry instructions yet";
 
   return (
     <form action="/customer/jobs/create" className="wk-job-form" method="post" onSubmit={postJob}>
@@ -242,7 +239,7 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
 
       <div className="wk-wizard-card wk-post-flow">
         <div className="wk-post-flow__progress" aria-label={`Step ${activeSection + 1} of 4`}>
-          <span>{String(activeSection + 1).padStart(2, "0")} / 04</span>
+          <span>{activeSection + 1} of 4</span>
           <progress max="4" value={activeSection + 1}>Step {activeSection + 1} of 4</progress>
         </div>
 
@@ -258,18 +255,18 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
 
             if (isActive) {
               return (
-                <section className="wk-post-section is-active" key={section} ref={activePanelRef}>
+                <section className="wk-post-section is-active" key={section}>
                   {sectionIndex === 0 ? (
                     <AddressSection
-                      address={address}
                       addressComplete={addressComplete}
+                      fullAddress={fullAddress}
                       headingRef={headingRef}
                       homeProfiles={homeProfiles}
                       locationMode={locationMode}
                       onAdvance={() => advanceTo(1)}
                       onChooseHome={chooseSavedHome}
                       onChooseMode={chooseLocationMode}
-                      onUpdateAddress={updateAddress}
+                      onFullAddress={(value) => { setFullAddress(value); setSubmitError(""); }}
                       selectedHomeId={selectedHomeId}
                     />
                   ) : null}
@@ -279,29 +276,24 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
                       customDate={customDate}
                       dateChoice={dateChoice}
                       headingRef={headingRef}
-                      onAdvance={() => advanceTo(2)}
                       onChooseDate={chooseDate}
-                      onChooseWindow={(value) => { setWindowChoice(value); triggerHaptic("selection"); }}
+                      onChooseWindow={chooseWindow}
                       onCustomDate={(value) => { setCustomDate(value); setWindowChoice(""); }}
                       requestedDate={requestedDate}
-                      whenComplete={whenComplete}
                       windowChoice={windowChoice}
                     />
                   ) : null}
                   {sectionIndex === 2 ? (
                     <NotesSection
-                      entryNotes={entryNotes}
                       headingRef={headingRef}
                       notes={notes}
                       onAdvance={() => advanceTo(3)}
-                      onEntryNotes={setEntryNotes}
                       onNotes={setNotes}
                     />
                   ) : null}
                   {sectionIndex === 3 ? (
                     <ReviewSection
                       address={addressSummary}
-                      entry={entrySummary}
                       headingRef={headingRef}
                       notes={notesSummary}
                       onEdit={openSection}
@@ -315,7 +307,7 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
             }
 
             if (isComplete) {
-              const summaries = [addressSummary, whenSummary, `${notesSummary} · ${entrySummary}`, "Ready to post"];
+              const summaries = [addressSummary, whenSummary, notesSummary, "Ready to post"];
               return (
                 <section className="wk-post-section is-complete" key={section}>
                   <button
@@ -332,11 +324,7 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
               );
             }
 
-            return (
-              <section aria-hidden="true" className="wk-post-section is-locked" key={section}>
-                <span>{index + 1}</span><strong>{section}</strong>
-              </section>
-            );
+            return null;
           })}
         </div>
       </div>
@@ -345,41 +333,34 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
 }
 
 function AddressSection({
-  address,
   addressComplete,
+  fullAddress,
   headingRef,
   homeProfiles,
   locationMode,
   onAdvance,
   onChooseHome,
   onChooseMode,
-  onUpdateAddress,
+  onFullAddress,
   selectedHomeId,
 }: {
-  address: AddressState;
   addressComplete: boolean;
+  fullAddress: string;
   headingRef: React.RefObject<HTMLHeadingElement | null>;
   homeProfiles: HomeChoice[];
   locationMode: LocationMode;
   onAdvance: () => void;
   onChooseHome: (home: HomeChoice) => void;
   onChooseMode: (mode: LocationMode) => void;
-  onUpdateAddress: (field: keyof AddressState, value: string) => void;
+  onFullAddress: (value: string) => void;
   selectedHomeId: string;
 }) {
-  const addressError = locationMode === "manual" ? getAddressValidation(address) : "";
-  const hasStartedAddress = Boolean(address.addressLine1 || address.city || address.postalCode);
+  const addressError = locationMode === "manual" ? getFullAddressValidation(fullAddress) : "";
+  const hasStartedAddress = Boolean(fullAddress.trim());
 
   return (
     <div className="wk-post-section__content">
-      <QuestionHeading eyebrow="Address" headingRef={headingRef}>Where should cleaners go?</QuestionHeading>
-
-      {homeProfiles.length ? (
-        <div className="wk-post-segmented" role="group" aria-label="Choose an address source">
-          <button aria-pressed={locationMode === "saved"} onClick={() => onChooseMode("saved")} type="button">Saved address</button>
-          <button aria-pressed={locationMode === "manual"} onClick={() => onChooseMode("manual")} type="button">Another address</button>
-        </div>
-      ) : null}
+      <QuestionHeading headingRef={headingRef}>Where do you need cleaned?</QuestionHeading>
 
       {locationMode === "saved" && homeProfiles.length ? (
         <div className="wk-post-home-list" role="radiogroup" aria-label="Saved addresses">
@@ -397,17 +378,39 @@ function AddressSection({
               {selectedHomeId === home.id ? <Check aria-hidden="true" /> : null}
             </button>
           ))}
+          <button className="wk-post-text-action" onClick={() => onChooseMode("manual")} type="button">
+            <MapPin aria-hidden="true" />
+            <span><strong>Another address</strong><small>Enter a different location</small></span>
+            <ChevronRight aria-hidden="true" />
+          </button>
         </div>
       ) : (
-        <div className="wk-post-address-fields">
-          <label><span>Street address</span><input autoComplete="street-address" onChange={(event) => onUpdateAddress("addressLine1", event.target.value)} placeholder="41 Verdun St" value={address.addressLine1} /></label>
-          <label><span>Apartment or suite <small>Optional</small></span><input autoComplete="address-line2" onChange={(event) => onUpdateAddress("addressLine2", event.target.value)} value={address.addressLine2} /></label>
-          <div>
-            <label><span>City</span><input autoComplete="address-level2" onChange={(event) => onUpdateAddress("city", event.target.value)} value={address.city} /></label>
-            <label><span>State</span><input autoComplete="address-level1" maxLength={32} onChange={(event) => onUpdateAddress("state", event.target.value)} value={address.state} /></label>
-          </div>
-          <label><span>ZIP code</span><input autoComplete="postal-code" inputMode="numeric" onChange={(event) => onUpdateAddress("postalCode", event.target.value)} value={address.postalCode} /></label>
+        <div className="wk-post-address-fields wk-post-address-fields--single">
+          <label>
+            <span>Full address</span>
+            <div className="wk-post-address-input">
+              <MapPin aria-hidden="true" />
+              <input
+                autoComplete="street-address"
+                autoFocus
+                onChange={(event) => onFullAddress(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && addressComplete) {
+                    event.preventDefault();
+                    onAdvance();
+                  }
+                }}
+                placeholder="Street, city, state ZIP"
+                value={fullAddress}
+              />
+            </div>
+          </label>
           {hasStartedAddress && addressError ? <p className="wk-post-inline-error" role="alert">{addressError}</p> : null}
+          {homeProfiles.length ? (
+            <button className="wk-post-back-to-saved" onClick={() => onChooseMode("saved")} type="button">
+              <ArrowLeft aria-hidden="true" /> Saved address
+            </button>
+          ) : null}
         </div>
       )}
 
@@ -421,29 +424,25 @@ function WhenSection({
   customDate,
   dateChoice,
   headingRef,
-  onAdvance,
   onChooseDate,
   onChooseWindow,
   onCustomDate,
   requestedDate,
-  whenComplete,
   windowChoice,
 }: {
   availableWindows: typeof windowChoices;
   customDate: string;
   dateChoice: DateChoice | "";
   headingRef: React.RefObject<HTMLHeadingElement | null>;
-  onAdvance: () => void;
   onChooseDate: (choice: DateChoice) => void;
   onChooseWindow: (choice: WindowChoice) => void;
   onCustomDate: (value: string) => void;
   requestedDate: string;
-  whenComplete: boolean;
   windowChoice: WindowChoice | "";
 }) {
   return (
     <div className="wk-post-section__content">
-      <QuestionHeading eyebrow="Date & time" headingRef={headingRef}>When would you like it cleaned?</QuestionHeading>
+      <QuestionHeading headingRef={headingRef}>When?</QuestionHeading>
 
       <fieldset className="wk-post-choice-group">
         <legend>Choose a day</legend>
@@ -479,49 +478,37 @@ function WhenSection({
           )}
         </fieldset>
       ) : null}
-
-      <PrimaryStepAction disabled={!whenComplete} label="Continue" onClick={onAdvance} />
     </div>
   );
 }
 
 function NotesSection({
-  entryNotes,
   headingRef,
   notes,
   onAdvance,
-  onEntryNotes,
   onNotes,
 }: {
-  entryNotes: string;
   headingRef: React.RefObject<HTMLHeadingElement | null>;
   notes: string;
   onAdvance: () => void;
-  onEntryNotes: (value: string) => void;
   onNotes: (value: string) => void;
 }) {
   return (
     <div className="wk-post-section__content">
-      <QuestionHeading eyebrow="Notes & entry" headingRef={headingRef}>Anything cleaners should know?</QuestionHeading>
+      <QuestionHeading headingRef={headingRef}>Anything we should know?</QuestionHeading>
       <div className="wk-post-notes-fields">
         <label>
-          <span>Cleaning notes <small>Optional</small></span>
-          <textarea onChange={(event) => onNotes(event.target.value)} placeholder="Focus on the kitchen and bathrooms, pet in home, parking is on the street…" value={notes} />
-        </label>
-        <label>
-          <span>Entry instructions <small>Optional</small></span>
-          <textarea onChange={(event) => onEntryNotes(event.target.value)} placeholder="I’ll be home, call on arrival, or check in with the front desk…" value={entryNotes} />
+          <span>Notes <small>Optional</small></span>
+          <textarea onChange={(event) => onNotes(event.target.value)} placeholder="Rooms to focus on, pets, parking, or entry details" value={notes} />
         </label>
       </div>
-      <p className="wk-post-privacy-note">Entry details are shared only after you select a cleaner.</p>
-      <PrimaryStepAction label="Review job" onClick={onAdvance} />
+      <PrimaryStepAction label="Review" onClick={onAdvance} />
     </div>
   );
 }
 
 function ReviewSection({
   address,
-  entry,
   headingRef,
   notes,
   onEdit,
@@ -530,7 +517,6 @@ function ReviewSection({
   when,
 }: {
   address: string;
-  entry: string;
   headingRef: React.RefObject<HTMLHeadingElement | null>;
   notes: string;
   onEdit: (section: SectionIndex) => void;
@@ -540,12 +526,11 @@ function ReviewSection({
 }) {
   return (
     <div className="wk-post-section__content">
-      <QuestionHeading eyebrow="Summary" headingRef={headingRef}>Ready to post your job?</QuestionHeading>
+      <QuestionHeading headingRef={headingRef}>Ready to post?</QuestionHeading>
       <div className="wk-post-review" aria-label="Job summary">
         <ReviewRow label="Address" onClick={() => onEdit(0)} value={address} />
         <ReviewRow label="When" onClick={() => onEdit(1)} value={when} />
         <ReviewRow label="Notes" onClick={() => onEdit(2)} value={notes} />
-        <ReviewRow label="Entry" onClick={() => onEdit(2)} value={entry} />
       </div>
       {submitError ? <p className="wk-post-inline-error" role="alert">{submitError}</p> : null}
       <button
@@ -554,25 +539,21 @@ function ReviewSection({
         disabled={submitState === "posting"}
         type="submit"
       >
-        {submitState === "posting" ? <><LoaderCircle className="wk-button-spinner" aria-hidden="true" /> Posting job</> : <>Post cleaning job <ChevronRight aria-hidden="true" /></>}
+        {submitState === "posting" ? <><LoaderCircle className="wk-button-spinner" aria-hidden="true" /> Posting</> : <>Post job <ChevronRight aria-hidden="true" /></>}
       </button>
-      <p className="wk-post-reassurance">No payment today. You choose a cleaner after reviewing prices.</p>
     </div>
   );
 }
 
 function QuestionHeading({
   children,
-  eyebrow,
   headingRef,
 }: {
   children: string;
-  eyebrow: string;
   headingRef: React.RefObject<HTMLHeadingElement | null>;
 }) {
   return (
     <div className="wk-question-heading">
-      <span>{eyebrow}</span>
       <h2 ref={headingRef} tabIndex={-1}>{children}</h2>
     </div>
   );
@@ -660,6 +641,26 @@ function getAddressValidation(address: AddressState) {
   if (address.state.trim().length < 2) return "Enter a state.";
   if (!/^\d{5}(?:-\d{4})?$/.test(address.postalCode.trim())) return "Enter a valid ZIP code.";
   return "";
+}
+
+function parseFullAddress(value: string): AddressState {
+  const parts = value.split(",").map((part) => part.trim()).filter(Boolean);
+  if (parts.length < 3) return emptyAddress;
+
+  const stateAndZip = parts.at(-1)?.match(/^(.+?)\s+(\d{5}(?:-\d{4})?)$/);
+  if (!stateAndZip) return emptyAddress;
+
+  return {
+    addressLine1: parts.slice(0, -2).join(", "),
+    addressLine2: "",
+    city: parts.at(-2) ?? "",
+    state: stateAndZip[1].trim(),
+    postalCode: stateAndZip[2],
+  };
+}
+
+function getFullAddressValidation(value: string) {
+  return getAddressValidation(parseFullAddress(value)) ? "Use: street, city, state ZIP." : "";
 }
 
 function summarizeText(value: string) {

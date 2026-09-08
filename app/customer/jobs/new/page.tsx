@@ -21,12 +21,14 @@ export default async function CustomerNewJobPage({
 
   return (
     <div className="wk-app-screen wk-post-screen">
-      <AppScreenHeader accountMenu initials={`${user.firstName.charAt(0)}${user.lastName.charAt(0)}`} />
+      <AppScreenHeader
+        actionHref="/customer"
+        actionLabel="Close new job"
+        actionType="close"
+        centeredTitle
+        title="New job"
+      />
       <div className="wk-screen-content">
-        <header className="wk-homeowner-task-heading">
-          <h1>What do you need cleaned?</h1>
-          <p>Tell us where and when. Cleaners will send their prices.</p>
-        </header>
         {params.error ? <div className="notice error">{params.error}</div> : null}
         <SimpleJobRequestForm homeProfiles={homeProfiles} />
       </div>

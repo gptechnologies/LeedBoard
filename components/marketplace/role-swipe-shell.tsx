@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BriefcaseBusiness, MessageCircle, Plus, UserRound } from "lucide-react";
+import { BriefcaseBusiness, Home, MessageCircle, UserRound } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { triggerHaptic } from "@/lib/haptics";
@@ -12,7 +12,7 @@ type AppRole = "customer" | "cleaner";
 const roleTabs = {
   customer: [
     { href: "/customer/account", label: "Account", Icon: UserRound },
-    { href: "/customer/jobs/new", label: "Post", Icon: Plus, primary: true },
+    { href: "/customer", label: "Home", Icon: Home, primary: true },
     { href: "/customer/jobs", label: "Activity", Icon: MessageCircle },
   ],
   cleaner: [
