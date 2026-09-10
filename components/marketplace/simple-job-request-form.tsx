@@ -10,8 +10,18 @@ import {
   SuppliesSource,
   TimingPreference,
 } from "@prisma/client";
-import { ArrowLeft, Check, ChevronRight, LoaderCircle, MapPin } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowRight,
+  CalendarDays,
+  Check,
+  ChevronDown,
+  Clock3,
+  ImagePlus,
+  LoaderCircle,
+  MapPin,
+} from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { FormEvent, useMemo, useRef, useState } from "react";
 
 import { triggerHaptic } from "@/lib/haptics";
 
@@ -37,12 +47,9 @@ type AddressState = {
 };
 
 type LocationMode = "saved" | "manual";
-type DateChoice = "today" | "tomorrow" | "weekend" | "pick";
-type SectionIndex = 0 | 1 | 2 | 3;
+type TimeMode = "custom" | "morning" | "afternoon" | "flexible";
 type SubmitState = "idle" | "posting";
-type WindowChoice = "morning" | "midday" | "afternoon" | "evening" | "flexible";
-
-const sections = ["Address", "When", "Notes", "Review"] as const;
+type ActiveSection = 1 | 2 | 3;
 
 const emptyAddress: AddressState = {
   addressLine1: "",
@@ -52,42 +59,35 @@ const emptyAddress: AddressState = {
   postalCode: "",
 };
 
-const dateChoices: Array<{ value: DateChoice; label: string }> = [
-  { value: "today", label: "Today" },
-  { value: "tomorrow", label: "Tomorrow" },
-  { value: "weekend", label: "This weekend" },
-  { value: "pick", label: "Pick a date" },
+const timeModes: Array<{ value: TimeMode; label: string }> = [
+  { value: "custom", label: "Custom" },
+  { value: "morning", label: "Morning" },
+  { value: "afternoon", label: "Afternoon" },
+  { value: "flexible", label: "Flexible" },
 ];
 
-const windowChoices: Array<{
-  value: WindowChoice;
-  label: string;
-  detail: string;
-  start: string;
-  end: string;
-}> = [
-  { value: "morning", label: "Morning", detail: "8–11 AM", start: "08:00", end: "11:00" },
-  { value: "midday", label: "Midday", detail: "11 AM–2 PM", start: "11:00", end: "14:00" },
-  { value: "afternoon", label: "Afternoon", detail: "2–5 PM", start: "14:00", end: "17:00" },
-  { value: "evening", label: "Evening", detail: "5–8 PM", start: "17:00", end: "20:00" },
-  { value: "flexible", label: "Flexible", detail: "Anytime, 8 AM–8 PM", start: "08:00", end: "20:00" },
-];
+const presetTimes: Record<Exclude<TimeMode, "custom">, { start: string; end: string }> = {
+  morning: { start: "08:00", end: "12:00" },
+  afternoon: { start: "12:00", end: "17:00" },
+  flexible: { start: "08:00", end: "20:00" },
+};
 
 export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoice[] }) {
-  const [activeSection, setActiveSection] = useState<SectionIndex>(0);
-  const [highestReached, setHighestReached] = useState<SectionIndex>(0);
+  const reduceMotion = useReducedMotion();
+  const [activeSection, setActiveSection] = useState<ActiveSection>(1);
   const [locationMode, setLocationMode] = useState<LocationMode>(homeProfiles.length ? "saved" : "manual");
   const [selectedHomeId, setSelectedHomeId] = useState(homeProfiles[0]?.id ?? "");
   const [fullAddress, setFullAddress] = useState("");
-  const [dateChoice, setDateChoice] = useState<DateChoice | "">("");
-  const [customDate, setCustomDate] = useState("");
-  const [windowChoice, setWindowChoice] = useState<WindowChoice | "">("");
+  const [requestedDate, setRequestedDate] = useState("");
+  const [timeMode, setTimeMode] = useState<TimeMode>("custom");
+  const [customStart, setCustomStart] = useState("09:00");
+  const [customEnd, setCustomEnd] = useState("13:00");
   const [notes, setNotes] = useState("");
-  const [entryNotes, setEntryNotes] = useState(homeProfiles[0]?.entryNotes ?? "");
+  const [photoCount, setPhotoCount] = useState(0);
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [submitError, setSubmitError] = useState("");
-  const headingRef = useRef<HTMLHeadingElement>(null);
-  const hasAdvanced = useRef(false);
+  const whenSectionRef = useRef<HTMLElement>(null);
+  const notesSectionRef = useRef<HTMLElement>(null);
 
   const selectedHome = homeProfiles.find((home) => home.id === selectedHomeId) ?? null;
   const activeAddress = locationMode === "saved" && selectedHome
@@ -99,83 +99,29 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
         postalCode: selectedHome.postalCode,
       }
     : parseFullAddress(fullAddress);
-  const requestedDate = useMemo(
-    () => getRequestedDate(dateChoice, customDate),
-    [customDate, dateChoice],
-  );
-  const availableWindows = useMemo(
-    () => windowChoices.filter((option) => isWindowAvailable(requestedDate, option.start)),
-    [requestedDate],
-  );
-  const selectedWindow = windowChoices.find((option) => option.value === windowChoice) ?? null;
   const addressComplete = getAddressValidation(activeAddress) === "";
-  const whenComplete = Boolean(requestedDate && selectedWindow && isWindowAvailable(requestedDate, selectedWindow.start));
-  const entryMethod = locationMode === "saved" && selectedHome
-    ? selectedHome.entryMethod
-    : EntryMethod.OTHER;
+  const schedule = useMemo(
+    () => timeMode === "custom" ? { start: customStart, end: customEnd } : presetTimes[timeMode],
+    [customEnd, customStart, timeMode],
+  );
+  const whenValidation = getWhenValidation(requestedDate, schedule.start, schedule.end);
+  const whenComplete = whenValidation === "";
+  const entryMethod = locationMode === "saved" && selectedHome ? selectedHome.entryMethod : EntryMethod.OTHER;
+  const entryNotes = locationMode === "saved" && selectedHome ? selectedHome.entryNotes ?? "" : "";
   const suppliesSource = locationMode === "saved" && selectedHome
     ? selectedHome.suppliesSource
     : SuppliesSource.CLEANER_BRINGS_ALL;
 
-  useEffect(() => {
-    if (!hasAdvanced.current) return;
-    const timer = window.setTimeout(() => {
-      window.scrollTo({ top: 0, behavior: "auto" });
-      headingRef.current?.focus({ preventScroll: true });
-    }, 20);
-    return () => window.clearTimeout(timer);
-  }, [activeSection]);
-
-  function openSection(index: SectionIndex) {
-    if (index > highestReached) return;
-    if (index === 3 && (!addressComplete || !whenComplete)) return;
-    hasAdvanced.current = true;
-    setActiveSection(index);
-    setSubmitError("");
-    triggerHaptic("light");
-  }
-
-  function advanceTo(index: SectionIndex) {
-    hasAdvanced.current = true;
-    setActiveSection(index);
-    setHighestReached((current) => Math.max(current, index) as SectionIndex);
-    setSubmitError("");
-    triggerHaptic("light");
-  }
-
-  function chooseLocationMode(mode: LocationMode) {
-    setLocationMode(mode);
-    if (mode === "saved" && selectedHome) setEntryNotes(selectedHome.entryNotes ?? "");
-    if (mode === "manual") setEntryNotes("");
-    setSubmitError("");
-    triggerHaptic("selection");
-  }
-
-  function chooseSavedHome(home: HomeChoice) {
-    setSelectedHomeId(home.id);
-    setEntryNotes(home.entryNotes ?? "");
-    setSubmitError("");
-    triggerHaptic("selection");
-    advanceTo(1);
-  }
-
-  function chooseDate(choice: DateChoice) {
-    setDateChoice(choice);
-    setWindowChoice("");
-    if (choice !== "pick") setCustomDate("");
-    triggerHaptic("selection");
-  }
-
-  function chooseWindow(value: WindowChoice) {
-    setWindowChoice(value);
-    setSubmitError("");
-    triggerHaptic("selection");
-    advanceTo(2);
+  function gentlyReveal(target: React.RefObject<HTMLElement | null>, section: ActiveSection) {
+    setActiveSection(section);
+    window.setTimeout(() => {
+      target.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }, 80);
   }
 
   async function postJob(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (activeSection !== 3 || !addressComplete || !whenComplete || submitState !== "idle") return;
+    if (!addressComplete || !whenComplete || submitState !== "idle") return;
 
     setSubmitError("");
     setSubmitState("posting");
@@ -201,14 +147,8 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
     }
   }
 
-  const addressSummary = addressComplete ? formatAddress(activeAddress) : "Add the cleaning address";
-  const whenSummary = whenComplete && selectedWindow
-    ? `${formatDate(requestedDate)} · ${selectedWindow.label} (${selectedWindow.detail})`
-    : "Choose a date and arrival window";
-  const notesSummary = notes.trim() ? summarizeText(notes) : "No extra notes";
-
   return (
-    <form action="/customer/jobs/create" className="wk-job-form" method="post" onSubmit={postJob}>
+    <form action="/customer/jobs/create" className="wk-job-composer" method="post" onSubmit={postJob}>
       <input type="hidden" name="title" value="Home Cleaning" />
       <input type="hidden" name="homeProfileId" value={locationMode === "saved" ? selectedHome?.id ?? "" : ""} />
       <input type="hidden" name="addressLine1" value={activeAddress.addressLine1} />
@@ -223,380 +163,230 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
       <input type="hidden" name="cleanType" value={JobCleanType.STANDARD_CLEAN} />
       <input type="hidden" name="currentCondition" value={HomeCondition.NORMAL_LIVED_IN} />
       <input type="hidden" name="selectionPriority" value={BidSelectionPriority.BEST_OVERALL} />
-      {[
-        ServiceNeed.GENERAL_CLEANING,
-        ServiceNeed.KITCHEN,
-        ServiceNeed.BATHROOMS,
-        ServiceNeed.FLOORS,
-        ServiceNeed.DUSTING,
-      ].map((need) => <input key={need} type="hidden" name="serviceNeeds" value={need} />)}
+      {[ServiceNeed.GENERAL_CLEANING, ServiceNeed.KITCHEN, ServiceNeed.BATHROOMS, ServiceNeed.FLOORS, ServiceNeed.DUSTING].map((need) => (
+        <input key={need} type="hidden" name="serviceNeeds" value={need} />
+      ))}
       <input type="hidden" name="notes" value={notes.trim()} />
       <input type="hidden" name="saveHome" value="false" />
       <input type="hidden" name="timingPreference" value={TimingPreference.TIME_SLOT} />
       <input type="hidden" name="requestedDate" value={requestedDate} />
-      <input type="hidden" name="requestedWindowStart" value={selectedWindow?.start ?? ""} />
-      <input type="hidden" name="requestedWindowEnd" value={selectedWindow?.end ?? ""} />
+      <input type="hidden" name="requestedWindowStart" value={schedule.start} />
+      <input type="hidden" name="requestedWindowEnd" value={schedule.end} />
 
-      <div className="wk-wizard-card wk-post-flow">
-        <div className="wk-post-flow__progress" aria-label={`Step ${activeSection + 1} of 4`}>
-          <span>{activeSection + 1} of 4</span>
-          <progress max="4" value={activeSection + 1}>Step {activeSection + 1} of 4</progress>
+      <header className="wk-job-composer__intro">
+        <span aria-hidden="true" className="wk-job-composer__script">Good spaces<br />brighter days ✦</span>
+        <h1>Post a job</h1>
+        <p>Tell us where and when. Cleaners will send prices.</p>
+      </header>
+
+      <section
+        className={`wk-composer-section${activeSection === 1 ? " is-active" : ""}`}
+        onFocus={() => setActiveSection(1)}
+      >
+        <ComposerHeading number="01">Where do you need cleaned?</ComposerHeading>
+        <div className="wk-composer-control wk-composer-address">
+          <MapPin aria-hidden="true" />
+          {locationMode === "saved" && homeProfiles.length ? (
+            <>
+              <span className="wk-composer-value">{selectedHome ? formatAddress(selectedHome) : "Choose an address"}</span>
+              <select
+                aria-label="Cleaning address"
+                className="wk-composer-native-picker"
+                onChange={(event) => {
+                  setSelectedHomeId(event.target.value);
+                  setSubmitError("");
+                  triggerHaptic("selection");
+                  gentlyReveal(whenSectionRef, 2);
+                }}
+                value={selectedHomeId}
+              >
+                {homeProfiles.map((home) => (
+                  <option key={home.id} value={home.id}>{formatAddress(home)}</option>
+                ))}
+              </select>
+            </>
+          ) : (
+            <input
+              aria-describedby="composer-address-hint"
+              autoComplete="street-address"
+              autoFocus={!homeProfiles.length}
+              onChange={(event) => { setFullAddress(event.target.value); setSubmitError(""); }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && addressComplete) {
+                  event.preventDefault();
+                  gentlyReveal(whenSectionRef, 2);
+                }
+              }}
+              placeholder="Street, city, state ZIP"
+              value={fullAddress}
+            />
+          )}
+          {addressComplete ? <span className="wk-composer-check" aria-label="Address complete"><Check /></span> : null}
         </div>
+        {locationMode === "manual" ? (
+          <div className="wk-composer-field-meta">
+            <p id="composer-address-hint">Use: street, city, state ZIP.</p>
+            {homeProfiles.length ? (
+              <button type="button" onClick={() => { setLocationMode("saved"); setActiveSection(1); }}>Use saved address</button>
+            ) : null}
+          </div>
+        ) : (
+          <button className="wk-composer-text-button" type="button" onClick={() => { setLocationMode("manual"); setFullAddress(""); setActiveSection(1); }}>
+            Use another address
+          </button>
+        )}
+      </section>
 
-        <div className="wk-post-flow__sections">
-          {sections.map((section, index) => {
-            const sectionIndex = index as SectionIndex;
-            const isActive = activeSection === sectionIndex;
-            const isComplete = sectionIndex <= highestReached && (
-              sectionIndex !== 3 || (addressComplete && whenComplete)
-            );
-
-            if (activeSection === 3 && sectionIndex < 3) return null;
-
-            if (isActive) {
-              return (
-                <section className="wk-post-section is-active" key={section}>
-                  {sectionIndex === 0 ? (
-                    <AddressSection
-                      addressComplete={addressComplete}
-                      fullAddress={fullAddress}
-                      headingRef={headingRef}
-                      homeProfiles={homeProfiles}
-                      locationMode={locationMode}
-                      onAdvance={() => advanceTo(1)}
-                      onChooseHome={chooseSavedHome}
-                      onChooseMode={chooseLocationMode}
-                      onFullAddress={(value) => { setFullAddress(value); setSubmitError(""); }}
-                      selectedHomeId={selectedHomeId}
-                    />
-                  ) : null}
-                  {sectionIndex === 1 ? (
-                    <WhenSection
-                      availableWindows={availableWindows}
-                      customDate={customDate}
-                      dateChoice={dateChoice}
-                      headingRef={headingRef}
-                      onChooseDate={chooseDate}
-                      onChooseWindow={chooseWindow}
-                      onCustomDate={(value) => { setCustomDate(value); setWindowChoice(""); }}
-                      requestedDate={requestedDate}
-                      windowChoice={windowChoice}
-                    />
-                  ) : null}
-                  {sectionIndex === 2 ? (
-                    <NotesSection
-                      headingRef={headingRef}
-                      notes={notes}
-                      onAdvance={() => advanceTo(3)}
-                      onNotes={setNotes}
-                    />
-                  ) : null}
-                  {sectionIndex === 3 ? (
-                    <ReviewSection
-                      address={addressSummary}
-                      headingRef={headingRef}
-                      notes={notesSummary}
-                      onEdit={openSection}
-                      submitError={submitError}
-                      submitState={submitState}
-                      when={whenSummary}
-                    />
-                  ) : null}
-                </section>
-              );
-            }
-
-            if (isComplete) {
-              const summaries = [addressSummary, whenSummary, notesSummary, "Ready to post"];
-              return (
-                <section className="wk-post-section is-complete" key={section}>
-                  <button
-                    aria-label={sectionIndex === 3 ? "Return to review" : `Edit ${section.toLowerCase()}`}
-                    className="wk-post-section__summary wk-pressable"
-                    onClick={() => openSection(sectionIndex)}
-                    type="button"
+      <AnimatePresence initial={false}>
+        {addressComplete ? (
+          <motion.div
+            animate={{ height: "auto", opacity: 1, y: 0 }}
+            className="wk-composer-reveal"
+            exit={reduceMotion ? { height: 0, opacity: 0 } : { height: 0, opacity: 0, y: -8 }}
+            initial={reduceMotion ? { height: 0, opacity: 0 } : { height: 0, opacity: 0, y: 16 }}
+            key="schedule"
+            transition={{ duration: reduceMotion ? 0 : 0.32, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <section
+              className={`wk-composer-section${activeSection === 2 ? " is-active" : ""}`}
+              onFocus={() => setActiveSection(2)}
+              ref={whenSectionRef}
+            >
+              <ComposerHeading number="02">When should cleaners arrive?</ComposerHeading>
+              <div className="wk-composer-schedule-grid">
+                <label className="wk-composer-control">
+                  <CalendarDays aria-hidden="true" />
+                  <span className={`wk-composer-value${requestedDate ? "" : " is-placeholder"}`}>
+                    {requestedDate ? formatDate(requestedDate) : "Choose date"}
+                  </span>
+                  <input
+                    aria-label="Cleaning date"
+                    className="wk-composer-native-picker"
+                    min={getLocalDate(0)}
+                    onChange={(event) => {
+                      setRequestedDate(event.target.value);
+                      setSubmitError("");
+                      if (getWhenValidation(event.target.value, schedule.start, schedule.end) === "") {
+                        gentlyReveal(notesSectionRef, 3);
+                      }
+                    }}
+                    type="date"
+                    value={requestedDate}
+                  />
+                  <ChevronDown aria-hidden="true" className="wk-composer-chevron" />
+                </label>
+                <label className="wk-composer-control">
+                  <Clock3 aria-hidden="true" />
+                  <span className="wk-composer-value">{timeModes.find((option) => option.value === timeMode)?.label}</span>
+                  <select
+                    aria-label="Arrival window"
+                    className="wk-composer-native-picker"
+                    onChange={(event) => {
+                      const value = event.target.value as TimeMode;
+                      setTimeMode(value);
+                      setSubmitError("");
+                      triggerHaptic("selection");
+                    }}
+                    value={timeMode}
                   >
-                    <span className="wk-post-section__status" aria-hidden="true"><Check /></span>
-                    <span><small>{section}</small><strong>{summaries[index]}</strong></span>
-                    <ChevronRight aria-hidden="true" />
-                  </button>
-                </section>
-              );
-            }
+                    {timeModes.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select>
+                  <ChevronDown aria-hidden="true" className="wk-composer-chevron" />
+                </label>
+              </div>
 
-            return null;
-          })}
-        </div>
+              <div aria-hidden={timeMode !== "custom"} className={`wk-composer-custom-time${timeMode === "custom" ? " is-visible" : ""}`}>
+                <div>
+                  <TimeControl active={timeMode === "custom"} label="Arrive" onChange={(value) => setCustomStart(value)} value={customStart} />
+                  <TimeControl active={timeMode === "custom"} label="Finish" onChange={(value) => setCustomEnd(value)} value={customEnd} />
+                </div>
+              </div>
+              {requestedDate && whenValidation ? <p className="wk-composer-error" role="alert">{whenValidation}</p> : null}
+            </section>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence initial={false}>
+        {addressComplete && whenComplete ? (
+          <motion.div
+            animate={{ height: "auto", opacity: 1, y: 0 }}
+            className="wk-composer-reveal"
+            exit={reduceMotion ? { height: 0, opacity: 0 } : { height: 0, opacity: 0, y: -8 }}
+            initial={reduceMotion ? { height: 0, opacity: 0 } : { height: 0, opacity: 0, y: 16 }}
+            key="notes"
+            transition={{ duration: reduceMotion ? 0 : 0.32, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <section
+              className={`wk-composer-section${activeSection === 3 ? " is-active" : ""}`}
+              onFocus={() => setActiveSection(3)}
+              ref={notesSectionRef}
+            >
+              <ComposerHeading number="03">Anything cleaners should know?</ComposerHeading>
+              <label className="wk-composer-notes">
+                <span className="sr-only">Notes for cleaners</span>
+                <textarea
+                  maxLength={500}
+                  onChange={(event) => setNotes(event.target.value)}
+                  placeholder="Home details, areas to focus on, entry instructions, pets, elevator or buzzer details."
+                  value={notes}
+                />
+                <small>{notes.length}/500</small>
+              </label>
+              <label className="wk-composer-photo-button">
+                <ImagePlus aria-hidden="true" />
+                <span>{photoCount ? `${photoCount} ${photoCount === 1 ? "photo" : "photos"} selected` : "Add photos"}</span>
+                <input
+                  accept="image/*"
+                  aria-label="Add photos"
+                  multiple
+                  onChange={(event) => setPhotoCount(event.target.files?.length ?? 0)}
+                  type="file"
+                />
+              </label>
+            </section>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      <div className={`wk-composer-submit${addressComplete && whenComplete ? " is-visible" : ""}`}>
+        {submitError ? <p className="wk-composer-error" role="alert">{submitError}</p> : null}
+        <button
+          aria-busy={submitState === "posting"}
+          className="wk-composer-submit__button wk-pressable"
+          disabled={!addressComplete || !whenComplete || submitState === "posting"}
+          type="submit"
+        >
+          {submitState === "posting" ? (
+            <><LoaderCircle className="wk-button-spinner" aria-hidden="true" /> Posting</>
+          ) : (
+            <><span>Post Job</span><ArrowRight aria-hidden="true" /></>
+          )}
+        </button>
+        <p>By posting, you agree to our <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy Policy</a>.</p>
       </div>
     </form>
   );
 }
 
-function AddressSection({
-  addressComplete,
-  fullAddress,
-  headingRef,
-  homeProfiles,
-  locationMode,
-  onAdvance,
-  onChooseHome,
-  onChooseMode,
-  onFullAddress,
-  selectedHomeId,
-}: {
-  addressComplete: boolean;
-  fullAddress: string;
-  headingRef: React.RefObject<HTMLHeadingElement | null>;
-  homeProfiles: HomeChoice[];
-  locationMode: LocationMode;
-  onAdvance: () => void;
-  onChooseHome: (home: HomeChoice) => void;
-  onChooseMode: (mode: LocationMode) => void;
-  onFullAddress: (value: string) => void;
-  selectedHomeId: string;
-}) {
-  const addressError = locationMode === "manual" ? getFullAddressValidation(fullAddress) : "";
-  const hasStartedAddress = Boolean(fullAddress.trim());
-
+function ComposerHeading({ children, number }: { children: string; number: string }) {
   return (
-    <div className="wk-post-section__content">
-      <QuestionHeading headingRef={headingRef}>Where do you need cleaned?</QuestionHeading>
-
-      {locationMode === "saved" && homeProfiles.length ? (
-        <div className="wk-post-home-list" role="radiogroup" aria-label="Saved addresses">
-          {homeProfiles.map((home) => (
-            <button
-              aria-checked={selectedHomeId === home.id}
-              className={selectedHomeId === home.id ? "is-selected" : ""}
-              key={home.id}
-              onClick={() => onChooseHome(home)}
-              role="radio"
-              type="button"
-            >
-              <MapPin aria-hidden="true" />
-              <span><strong>{home.label}</strong><small>{formatAddress(home)}</small></span>
-              {selectedHomeId === home.id ? <Check aria-hidden="true" /> : null}
-            </button>
-          ))}
-          <button className="wk-post-text-action" onClick={() => onChooseMode("manual")} type="button">
-            <MapPin aria-hidden="true" />
-            <span><strong>Another address</strong><small>Enter a different location</small></span>
-            <ChevronRight aria-hidden="true" />
-          </button>
-        </div>
-      ) : (
-        <div className="wk-post-address-fields wk-post-address-fields--single">
-          <label>
-            <span>Full address</span>
-            <div className="wk-post-address-input">
-              <MapPin aria-hidden="true" />
-              <input
-                autoComplete="street-address"
-                autoFocus
-                onChange={(event) => onFullAddress(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && addressComplete) {
-                    event.preventDefault();
-                    onAdvance();
-                  }
-                }}
-                placeholder="Street, city, state ZIP"
-                value={fullAddress}
-              />
-            </div>
-          </label>
-          {hasStartedAddress && addressError ? <p className="wk-post-inline-error" role="alert">{addressError}</p> : null}
-          {homeProfiles.length ? (
-            <button className="wk-post-back-to-saved" onClick={() => onChooseMode("saved")} type="button">
-              <ArrowLeft aria-hidden="true" /> Saved address
-            </button>
-          ) : null}
-        </div>
-      )}
-
-      <PrimaryStepAction disabled={!addressComplete} label="Continue" onClick={onAdvance} />
+    <div className="wk-composer-heading">
+      <span aria-hidden="true">{number}</span>
+      <h2>{children}</h2>
     </div>
   );
 }
 
-function WhenSection({
-  availableWindows,
-  customDate,
-  dateChoice,
-  headingRef,
-  onChooseDate,
-  onChooseWindow,
-  onCustomDate,
-  requestedDate,
-  windowChoice,
-}: {
-  availableWindows: typeof windowChoices;
-  customDate: string;
-  dateChoice: DateChoice | "";
-  headingRef: React.RefObject<HTMLHeadingElement | null>;
-  onChooseDate: (choice: DateChoice) => void;
-  onChooseWindow: (choice: WindowChoice) => void;
-  onCustomDate: (value: string) => void;
-  requestedDate: string;
-  windowChoice: WindowChoice | "";
-}) {
+function TimeControl({ active, label, onChange, value }: { active: boolean; label: string; onChange: (value: string) => void; value: string }) {
   return (
-    <div className="wk-post-section__content">
-      <QuestionHeading headingRef={headingRef}>When?</QuestionHeading>
-
-      <fieldset className="wk-post-choice-group">
-        <legend>Choose a day</legend>
-        <div className="wk-post-quick-grid">
-          {dateChoices.map((option) => (
-            <button aria-pressed={dateChoice === option.value} key={option.value} onClick={() => onChooseDate(option.value)} type="button">
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </fieldset>
-
-      {dateChoice === "pick" ? (
-        <label className="wk-post-date-input">
-          <span>Cleaning date</span>
-          <input aria-label="Cleaning date" min={getLocalDate(0)} onChange={(event) => onCustomDate(event.target.value)} type="date" value={customDate} />
-        </label>
-      ) : null}
-
-      {requestedDate ? (
-        <fieldset className="wk-post-choice-group">
-          <legend>Choose an arrival window</legend>
-          {availableWindows.length ? (
-            <div className="wk-post-window-grid">
-              {availableWindows.map((option) => (
-                <button aria-pressed={windowChoice === option.value} key={option.value} onClick={() => onChooseWindow(option.value)} type="button">
-                  <strong>{option.label}</strong><span>{option.detail}</span>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p className="wk-post-guidance">No arrival windows remain today. Choose another day.</p>
-          )}
-        </fieldset>
-      ) : null}
-    </div>
+    <label className="wk-composer-control wk-composer-time-control">
+      <Clock3 aria-hidden="true" />
+      <span><small>{label}</small><strong>{formatTime(value)}</strong></span>
+      <input className="wk-composer-native-picker" aria-label={`${label} time`} disabled={!active} onChange={(event) => onChange(event.target.value)} type="time" value={value} />
+      <ChevronDown aria-hidden="true" className="wk-composer-chevron" />
+    </label>
   );
-}
-
-function NotesSection({
-  headingRef,
-  notes,
-  onAdvance,
-  onNotes,
-}: {
-  headingRef: React.RefObject<HTMLHeadingElement | null>;
-  notes: string;
-  onAdvance: () => void;
-  onNotes: (value: string) => void;
-}) {
-  return (
-    <div className="wk-post-section__content">
-      <QuestionHeading headingRef={headingRef}>Anything we should know?</QuestionHeading>
-      <div className="wk-post-notes-fields">
-        <label>
-          <span>Notes <small>Optional</small></span>
-          <textarea onChange={(event) => onNotes(event.target.value)} placeholder="Rooms to focus on, pets, parking, or entry details" value={notes} />
-        </label>
-      </div>
-      <PrimaryStepAction label="Review" onClick={onAdvance} />
-    </div>
-  );
-}
-
-function ReviewSection({
-  address,
-  headingRef,
-  notes,
-  onEdit,
-  submitError,
-  submitState,
-  when,
-}: {
-  address: string;
-  headingRef: React.RefObject<HTMLHeadingElement | null>;
-  notes: string;
-  onEdit: (section: SectionIndex) => void;
-  submitError: string;
-  submitState: SubmitState;
-  when: string;
-}) {
-  return (
-    <div className="wk-post-section__content">
-      <QuestionHeading headingRef={headingRef}>Ready to post?</QuestionHeading>
-      <div className="wk-post-review" aria-label="Job summary">
-        <ReviewRow label="Address" onClick={() => onEdit(0)} value={address} />
-        <ReviewRow label="When" onClick={() => onEdit(1)} value={when} />
-        <ReviewRow label="Notes" onClick={() => onEdit(2)} value={notes} />
-      </div>
-      {submitError ? <p className="wk-post-inline-error" role="alert">{submitError}</p> : null}
-      <button
-        aria-busy={submitState === "posting"}
-        className="wk-post-primary wk-pressable"
-        disabled={submitState === "posting"}
-        type="submit"
-      >
-        {submitState === "posting" ? <><LoaderCircle className="wk-button-spinner" aria-hidden="true" /> Posting</> : <>Post job <ChevronRight aria-hidden="true" /></>}
-      </button>
-    </div>
-  );
-}
-
-function QuestionHeading({
-  children,
-  headingRef,
-}: {
-  children: string;
-  headingRef: React.RefObject<HTMLHeadingElement | null>;
-}) {
-  return (
-    <div className="wk-question-heading">
-      <h2 ref={headingRef} tabIndex={-1}>{children}</h2>
-    </div>
-  );
-}
-
-function PrimaryStepAction({
-  disabled = false,
-  label,
-  onClick,
-}: {
-  disabled?: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button className="wk-post-primary wk-pressable" disabled={disabled} onClick={onClick} type="button">
-      {label} <ChevronRight aria-hidden="true" />
-    </button>
-  );
-}
-
-function ReviewRow({ label, onClick, value }: { label: string; onClick: () => void; value: string }) {
-  return (
-    <button className="wk-post-review__row wk-pressable" onClick={onClick} type="button">
-      <span><small>{label}</small><strong>{value}</strong></span>
-      <ChevronRight aria-hidden="true" />
-    </button>
-  );
-}
-
-function getRequestedDate(choice: DateChoice | "", customDate: string) {
-  if (choice === "today") return getLocalDate(0);
-  if (choice === "tomorrow") return getLocalDate(1);
-  if (choice === "weekend") return getWeekendDate();
-  if (choice === "pick") return customDate;
-  return "";
-}
-
-function getWeekendDate() {
-  const today = new Date();
-  const day = today.getDay();
-  const offset = day === 0 || day === 6 ? 0 : 6 - day;
-  return getLocalDate(offset);
 }
 
 function getLocalDate(offsetDays: number) {
@@ -608,17 +398,29 @@ function getLocalDate(offsetDays: number) {
   return `${year}-${month}-${day}`;
 }
 
-function isWindowAvailable(date: string, start: string) {
-  if (!date) return false;
-  return new Date(`${date}T${start}:00`).getTime() > Date.now();
-}
-
 function formatDate(date: string) {
-  return new Date(`${date}T00:00:00`).toLocaleDateString("en-US", {
+  return new Date(`${date}T12:00:00`).toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
     day: "numeric",
   });
+}
+
+function formatTime(time: string) {
+  const [hour, minute] = time.split(":").map(Number);
+  const period = hour >= 12 ? "PM" : "AM";
+  const displayHour = hour % 12 || 12;
+  return `${displayHour}:${String(minute).padStart(2, "0")} ${period}`;
+}
+
+function getWhenValidation(date: string, start: string, end: string) {
+  if (!date) return "Choose a cleaning date.";
+  const [startHour, startMinute] = start.split(":").map(Number);
+  const [endHour, endMinute] = end.split(":").map(Number);
+  const duration = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
+  if (!start || !end || duration < 120 || duration > 720) return "Choose a time range between 2 and 12 hours.";
+  if (new Date(`${date}T${start}:00`).getTime() <= Date.now()) return "Choose a future arrival time.";
+  return "";
 }
 
 function formatAddress(address: {
@@ -646,10 +448,8 @@ function getAddressValidation(address: AddressState) {
 function parseFullAddress(value: string): AddressState {
   const parts = value.split(",").map((part) => part.trim()).filter(Boolean);
   if (parts.length < 3) return emptyAddress;
-
   const stateAndZip = parts.at(-1)?.match(/^(.+?)\s+(\d{5}(?:-\d{4})?)$/);
   if (!stateAndZip) return emptyAddress;
-
   return {
     addressLine1: parts.slice(0, -2).join(", "),
     addressLine2: "",
@@ -657,13 +457,4 @@ function parseFullAddress(value: string): AddressState {
     state: stateAndZip[1].trim(),
     postalCode: stateAndZip[2],
   };
-}
-
-function getFullAddressValidation(value: string) {
-  return getAddressValidation(parseFullAddress(value)) ? "Use: street, city, state ZIP." : "";
-}
-
-function summarizeText(value: string) {
-  const normalized = value.trim().replace(/\s+/g, " ");
-  return normalized.length > 72 ? `${normalized.slice(0, 69).trimEnd()}…` : normalized;
 }

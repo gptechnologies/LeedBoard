@@ -11,6 +11,7 @@ export function AppScreenHeader({
   centeredTitle,
   initials,
   middle,
+  tagline,
   title,
 }: {
   actionHref?: string;
@@ -20,6 +21,7 @@ export function AppScreenHeader({
   centeredTitle?: boolean;
   initials?: string;
   middle?: ReactNode;
+  tagline?: string;
   title?: string;
 }) {
   if (accountMenu && initials) {
@@ -31,9 +33,12 @@ export function AppScreenHeader({
             <h1>{title}</h1>
           </>
         ) : (
-          <Link className="wk-wordmark" href="/">
-            Well Kept<span aria-hidden="true">✦</span>
-          </Link>
+          <div className="wk-screen-brand">
+            <Link className="wk-wordmark" href="/">
+              Well Kept<span aria-hidden="true">✦</span>
+            </Link>
+            {tagline ? <p>{tagline}</p> : null}
+          </div>
         )}
         {middle}
         <AppAccountMenu initials={initials} />
@@ -63,9 +68,12 @@ export function AppScreenHeader({
           <h1>{title}</h1>
         </>
       ) : (
-        <Link className="wk-wordmark" href="/">
-          Well Kept<span aria-hidden="true">✦</span>
-        </Link>
+        <div className="wk-screen-brand">
+          <Link className="wk-wordmark" href="/">
+            Well Kept<span aria-hidden="true">✦</span>
+          </Link>
+          {tagline ? <p>{tagline}</p> : null}
+        </div>
       )}
       {actionHref ? <Link href={actionHref}>{action}</Link> : action}
     </header>

@@ -2185,3 +2185,875 @@
     transition-duration: 0ms;
   }
 }
+
+/* 2026 homeowner visual refresh: editorial home hub and ambient job composer. */
+.wk-screen-brand {
+  width: max-content;
+  display: grid;
+  gap: 7px;
+}
+
+.wk-screen-brand p {
+  margin: 0;
+  color: var(--home-green);
+  font-size: 0.54rem;
+  font-weight: 650;
+  letter-spacing: 0.29em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.wk-homeowner-hub-screen .wk-screen-header {
+  min-height: 86px !important;
+  align-items: center;
+  margin-bottom: 8px !important;
+}
+
+.wk-homeowner-hub-screen .wk-wordmark {
+  font-size: clamp(2.5rem, 11vw, 3.25rem) !important;
+  font-weight: 500;
+  letter-spacing: -0.065em;
+}
+
+.wk-homeowner-hub-screen .wk-screen-header__account {
+  width: 52px !important;
+  height: 52px !important;
+  border-color: oklch(82% 0.018 100) !important;
+  background: oklch(99% 0.006 100 / 0.72) !important;
+  box-shadow: 0 8px 22px oklch(29% 0.03 135 / 0.06);
+}
+
+.wk-homeowner-hub {
+  gap: 30px !important;
+}
+
+.wk-homeowner-post-card {
+  position: relative;
+  min-height: 136px;
+  grid-template-columns: 70px minmax(0, 1fr) 22px;
+  gap: 18px;
+  border: 1px solid oklch(72% 0.08 151 / 0.52);
+  border-radius: 23px;
+  padding: 23px 21px;
+  background:
+    radial-gradient(ellipse at 96% -10%, oklch(59% 0.09 151 / 0.4), transparent 42%),
+    radial-gradient(ellipse at 84% 115%, oklch(19% 0.08 150 / 0.9), transparent 47%),
+    linear-gradient(125deg, oklch(39% 0.105 151), oklch(29% 0.09 151));
+  color: oklch(99% 0.006 105);
+  box-shadow: 0 18px 35px oklch(28% 0.065 148 / 0.2);
+}
+
+.wk-homeowner-post-card::after {
+  position: absolute;
+  inset: auto -8% -55% 60%;
+  height: 112%;
+  border-radius: 52% 0 0 0;
+  background: oklch(50% 0.1 150 / 0.23);
+  content: "";
+  pointer-events: none;
+  transform: rotate(-18deg);
+}
+
+.wk-homeowner-post-card__icon,
+.wk-homeowner-post-card__copy,
+.wk-homeowner-post-card > svg {
+  position: relative;
+  z-index: 1;
+}
+
+.wk-homeowner-post-card__icon {
+  width: 66px;
+  height: 66px;
+  border: 1px solid oklch(96% 0.02 140 / 0.3);
+  background: oklch(92% 0.04 147 / 0.11);
+  box-shadow:
+    inset 0 1px 0 oklch(100% 0 0 / 0.18),
+    0 8px 24px oklch(16% 0.055 151 / 0.16);
+  backdrop-filter: blur(12px);
+}
+
+.wk-homeowner-post-card__icon svg {
+  width: 32px;
+  height: 32px;
+  stroke-width: 1.5;
+}
+
+.wk-homeowner-post-card__copy {
+  gap: 6px;
+}
+
+.wk-homeowner-post-card__copy strong {
+  font-family: var(--serif);
+  font-size: 1.85rem;
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.wk-homeowner-post-card__copy small {
+  max-width: 33ch;
+  color: oklch(96% 0.013 125 / 0.78);
+  font-size: 0.74rem;
+  font-weight: 520;
+  line-height: 1.4;
+}
+
+.wk-homeowner-post-card > svg {
+  color: oklch(99% 0.006 105);
+}
+
+.wk-homeowner-job-list {
+  gap: 12px;
+}
+
+.wk-homeowner-job-list__heading h2 {
+  font-family: var(--serif);
+  font-size: 1.7rem;
+  font-weight: 500;
+  letter-spacing: -0.045em;
+}
+
+.wk-homeowner-jobs-empty {
+  position: relative;
+  min-height: 332px;
+  overflow: hidden;
+  gap: 9px;
+  border-radius: 20px;
+  padding: 35px 28px 40px;
+  background:
+    radial-gradient(ellipse at -8% 110%, oklch(94% 0.025 121), transparent 45%),
+    radial-gradient(ellipse at 108% 108%, oklch(95% 0.023 131), transparent 44%),
+    var(--home-surface);
+  box-shadow: 0 13px 30px oklch(32% 0.035 125 / 0.065);
+}
+
+.wk-home-garden-art {
+  width: min(70%, 220px) !important;
+  height: auto !important;
+  margin-bottom: 10px;
+  overflow: visible;
+  color: var(--home-green-dark);
+  stroke-width: initial !important;
+}
+
+.wk-homeowner-jobs-empty strong {
+  font-family: var(--serif);
+  font-size: 2rem;
+  font-weight: 500;
+  letter-spacing: -0.045em;
+}
+
+.wk-homeowner-jobs-empty p {
+  max-width: 28ch;
+  color: oklch(45% 0.014 125);
+  font-size: 0.96rem;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+body .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-app-nav {
+  inset: auto 18px max(10px, env(safe-area-inset-bottom));
+  width: auto;
+  max-width: 448px;
+  min-height: 92px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+  margin-inline: auto;
+  padding: 8px 12px;
+  border: 1px solid oklch(91% 0.015 108 / 0.8);
+  border-radius: 25px;
+  background: oklch(99% 0.006 100 / 0.9);
+  box-shadow: 0 15px 38px oklch(28% 0.028 127 / 0.11);
+  transform: none;
+  backdrop-filter: blur(22px) saturate(1.08);
+}
+
+body .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-app-nav__item {
+  min-height: 72px;
+  align-content: center;
+  gap: 5px;
+  color: oklch(37% 0.015 130);
+}
+
+body .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-app-nav__icon {
+  width: 46px;
+  height: 46px;
+}
+
+body .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-app-nav__item.is-active {
+  color: var(--home-green-dark);
+}
+
+body .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-app-nav__item.is-active .wk-app-nav__icon {
+  color: white;
+}
+
+body .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-app-nav__item.is-active .wk-app-nav__icon > svg {
+  fill: none;
+  color: white;
+  stroke: white;
+}
+
+body .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-app-nav__item.is-active .wk-app-nav__icon::after {
+  position: absolute;
+  bottom: -17px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--home-green);
+  content: "";
+}
+
+body .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-app-nav__selection {
+  border-color: oklch(60% 0.09 148 / 0.52);
+  background: linear-gradient(155deg, oklch(43% 0.105 148), oklch(29% 0.09 150));
+  box-shadow:
+    inset 0 1px 0 oklch(100% 0 0 / 0.2),
+    0 7px 15px oklch(29% 0.08 149 / 0.25);
+}
+
+body .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-app-nav__label {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+  color: currentColor;
+  font-size: 0.72rem;
+  font-weight: 560;
+  white-space: nowrap;
+}
+
+/* Full-screen ambient composer. */
+.wk-role-shell[data-role="customer"]:has(.wk-post-screen) {
+  background: oklch(88% 0.065 148);
+}
+
+.wk-role-shell[data-role="customer"]:has(.wk-post-screen) .wk-route-stage {
+  background: oklch(88% 0.065 148);
+}
+
+body .wk-role-shell[data-role="customer"]:has(.wk-post-screen) .wk-app-nav {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(120%);
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-post-screen {
+  position: relative;
+  isolation: isolate;
+  width: min(100%, 520px);
+  min-height: 100dvh;
+  overflow: hidden;
+  padding: max(23px, env(safe-area-inset-top)) clamp(20px, 6vw, 34px) calc(34px + env(safe-area-inset-bottom));
+  background:
+    linear-gradient(180deg, oklch(24% 0.09 151 / 0.12), oklch(27% 0.1 151 / 0.04) 55%, oklch(22% 0.09 151 / 0.12)),
+    url("/images/well-kept-green-atmosphere.jpg") center top / cover no-repeat,
+    oklch(32% 0.11 151);
+  color: oklch(97% 0.014 130);
+}
+
+.wk-post-screen::before,
+.wk-post-screen::after {
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  content: "";
+  filter: blur(46px);
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+.wk-post-screen::before {
+  top: 33%;
+  right: -24%;
+  width: 52%;
+  height: 24%;
+  background: oklch(88% 0.065 136 / 0.7);
+  transform: rotate(18deg);
+}
+
+.wk-post-screen::after {
+  bottom: -5%;
+  left: -26%;
+  width: 60%;
+  height: 24%;
+  background: oklch(91% 0.06 132 / 0.58);
+  transform: rotate(-14deg);
+}
+
+.wk-post-screen .wk-screen-header,
+.wk-post-screen .wk-screen-content {
+  position: relative;
+  z-index: 1;
+}
+
+.wk-post-screen .wk-screen-header {
+  min-height: 70px !important;
+  align-items: start;
+  margin-bottom: clamp(48px, 8vh, 72px) !important;
+}
+
+.wk-post-screen .wk-wordmark {
+  color: oklch(99% 0.008 110);
+  font-size: clamp(2.4rem, 10vw, 3.15rem) !important;
+  font-weight: 500;
+  letter-spacing: -0.06em;
+}
+
+.wk-post-screen .wk-screen-brand p {
+  color: oklch(96% 0.018 130 / 0.88);
+  font-size: 0.55rem;
+}
+
+.wk-post-screen .wk-screen-header__action {
+  width: 50px !important;
+  height: 50px !important;
+  border-color: oklch(100% 0 0 / 0.25) !important;
+  background: oklch(94% 0.03 145 / 0.16) !important;
+  color: white;
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.12);
+  backdrop-filter: blur(16px);
+}
+
+.wk-post-screen .wk-screen-header__action:hover {
+  background: oklch(96% 0.02 145 / 0.2) !important;
+}
+
+.wk-post-screen .wk-screen-content {
+  display: block !important;
+}
+
+.wk-job-composer {
+  display: grid;
+  gap: clamp(24px, 5.4vw, 34px);
+  padding-bottom: 10px;
+}
+
+.wk-job-composer__intro {
+  position: relative;
+  display: grid;
+  gap: 10px;
+}
+
+.wk-job-composer__intro h1 {
+  max-width: 9ch;
+  margin: 0;
+  color: oklch(99% 0.008 110);
+  font-family: var(--serif);
+  font-size: clamp(3rem, 12.8vw, 3.7rem);
+  font-weight: 500;
+  letter-spacing: -0.055em;
+  line-height: 0.92;
+}
+
+.wk-job-composer__intro p {
+  max-width: 37ch;
+  margin: 0;
+  color: oklch(98% 0.012 130 / 0.82);
+  font-size: clamp(0.92rem, 3.55vw, 1.04rem);
+  font-weight: 430;
+  line-height: 1.45;
+}
+
+.wk-job-composer__script {
+  position: absolute;
+  top: -25px;
+  right: 2%;
+  color: oklch(77% 0.105 145 / 0.82);
+  font-family: "Snell Roundhand", "Segoe Script", cursive;
+  font-size: clamp(1.05rem, 4.8vw, 1.5rem);
+  font-style: italic;
+  line-height: 1.28;
+  text-align: center;
+  transform: rotate(-10deg);
+}
+
+.wk-composer-section {
+  display: grid;
+  gap: 13px;
+  opacity: 0.78;
+  scroll-margin: 24px;
+  transition: opacity 240ms ease;
+}
+
+.wk-composer-section.is-active,
+.wk-composer-section:focus-within {
+  opacity: 1;
+}
+
+.wk-composer-reveal {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.wk-composer-heading {
+  display: grid;
+  grid-template-columns: 60px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+}
+
+.wk-composer-heading > span {
+  color: oklch(95% 0.024 134 / 0.61);
+  font-family: var(--serif);
+  font-size: clamp(2.9rem, 11.5vw, 3.35rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+  letter-spacing: -0.06em;
+  line-height: 0.8;
+}
+
+.wk-composer-heading h2 {
+  margin: 0;
+  border-top: 1px solid oklch(100% 0 0 / 0.29);
+  padding-top: 12px;
+  color: oklch(99% 0.006 110);
+  font-family: var(--serif);
+  font-size: clamp(1.28rem, 4.75vw, 1.56rem);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+.wk-composer-control,
+.wk-composer-notes {
+  position: relative;
+  min-width: 0;
+  border: 1px solid oklch(100% 0 0 / 0.32);
+  background: oklch(96% 0.028 145 / 0.16);
+  box-shadow:
+    inset 0 1px 0 oklch(100% 0 0 / 0.18),
+    inset 0 -12px 26px oklch(15% 0.06 150 / 0.06),
+    0 8px 22px oklch(15% 0.07 151 / 0.08);
+  backdrop-filter: blur(20px) saturate(1.12);
+  transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease, transform 160ms ease;
+}
+
+.wk-composer-control {
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 12px;
+  border-radius: 16px;
+  padding: 8px 16px;
+}
+
+.wk-composer-control:focus-within,
+.wk-composer-notes:focus-within {
+  border-color: oklch(97% 0.025 134 / 0.68);
+  background: oklch(99% 0.018 145 / 0.22);
+  box-shadow: 0 0 0 3px oklch(90% 0.05 142 / 0.12), inset 0 1px 0 oklch(100% 0 0 / 0.16);
+}
+
+.wk-composer-control > svg:not(.wk-composer-chevron) {
+  width: 23px;
+  height: 23px;
+  color: oklch(98% 0.014 130);
+  stroke-width: 1.8;
+}
+
+.wk-composer-control input,
+.wk-composer-control select {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  border: 0;
+  padding: 0;
+  appearance: none;
+  background: transparent;
+  color: oklch(99% 0.006 110);
+  font-family: var(--sans);
+  font-size: clamp(0.94rem, 3.9vw, 1.08rem);
+  font-weight: 470;
+  line-height: 1.2;
+  outline: 0;
+  box-shadow: none;
+}
+
+.wk-composer-control input::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.wk-composer-control select option {
+  color: var(--home-ink);
+}
+
+.wk-composer-value {
+  min-width: 0;
+  overflow: hidden;
+  color: oklch(99% 0.006 110);
+  font-size: clamp(0.88rem, 3.65vw, 1.05rem);
+  font-weight: 470;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wk-composer-value.is-placeholder {
+  color: oklch(94% 0.018 132 / 0.58);
+}
+
+.wk-composer-control .wk-composer-native-picker {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.wk-composer-address {
+  grid-template-columns: 32px minmax(0, 1fr) 31px;
+}
+
+.wk-composer-check {
+  width: 27px;
+  height: 27px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: oklch(91% 0.08 145);
+  color: oklch(31% 0.1 151);
+}
+
+.wk-composer-check svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.8;
+}
+
+.wk-composer-chevron {
+  width: 21px;
+  height: 21px;
+  color: oklch(98% 0.014 130);
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.wk-composer-text-button,
+.wk-composer-field-meta button {
+  width: max-content;
+  border: 0;
+  padding: 0 2px;
+  background: transparent;
+  color: oklch(94% 0.025 136 / 0.82);
+  font-size: 0.73rem;
+  font-weight: 600;
+  text-transform: none;
+  box-shadow: none;
+}
+
+.wk-composer-field-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-inline: 2px;
+}
+
+.wk-composer-field-meta p {
+  margin: 0;
+  color: oklch(94% 0.022 136 / 0.68);
+  font-size: 0.7rem;
+}
+
+.wk-composer-schedule-grid,
+.wk-composer-custom-time > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.wk-composer-schedule-grid .wk-composer-control,
+.wk-composer-custom-time .wk-composer-control {
+  grid-template-columns: 25px minmax(0, 1fr) 17px;
+  gap: 8px;
+  padding-inline: 13px;
+}
+
+.wk-composer-schedule-grid .wk-composer-control > svg:not(.wk-composer-chevron),
+.wk-composer-custom-time .wk-composer-control > svg:not(.wk-composer-chevron) {
+  width: 22px;
+  height: 22px;
+}
+
+.wk-composer-custom-time {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: grid-template-rows 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease, transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.wk-composer-custom-time > div {
+  overflow: hidden;
+}
+
+.wk-composer-custom-time.is-visible {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.wk-composer-time-control > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.wk-composer-time-control small {
+  color: oklch(96% 0.018 130 / 0.7);
+  font-size: 0.68rem;
+  font-weight: 500;
+}
+
+.wk-composer-time-control strong {
+  overflow: hidden;
+  color: oklch(99% 0.006 110);
+  font-size: clamp(0.88rem, 3.7vw, 1.02rem);
+  font-weight: 470;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wk-composer-notes {
+  display: grid;
+  border-radius: 17px;
+  padding: 13px 15px 10px;
+}
+
+.wk-composer-notes textarea {
+  width: 100%;
+  min-height: 92px;
+  border: 0;
+  padding: 0;
+  resize: vertical;
+  background: transparent;
+  color: oklch(99% 0.006 110);
+  font-family: var(--sans);
+  font-size: 0.98rem;
+  line-height: 1.52;
+  outline: 0;
+  box-shadow: none;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-composer .wk-composer-notes textarea {
+  min-height: 92px;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: oklch(99% 0.006 110);
+  font-size: 0.98rem;
+  box-shadow: none;
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-composer .wk-composer-address > input:not(.wk-composer-native-picker) {
+  min-height: 42px;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: oklch(99% 0.006 110);
+  box-shadow: none;
+}
+
+.wk-composer-notes textarea::placeholder,
+.wk-composer-control input::placeholder {
+  color: oklch(94% 0.018 132 / 0.56);
+}
+
+.wk-composer-notes small {
+  justify-self: end;
+  color: oklch(95% 0.018 132 / 0.65);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.wk-composer-photo-button {
+  width: max-content;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px dashed oklch(100% 0 0 / 0.68);
+  border-radius: 15px;
+  padding: 0 17px;
+  background: oklch(98% 0.018 145 / 0.09);
+  color: oklch(99% 0.006 110);
+  font-size: 0.88rem;
+  font-weight: 520;
+  cursor: pointer;
+  transition: background-color 180ms ease, transform 150ms ease;
+}
+
+.wk-composer-photo-button:active {
+  transform: scale(0.98);
+}
+
+.wk-composer-photo-button svg {
+  width: 21px;
+  height: 21px;
+}
+
+.wk-composer-photo-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+}
+
+.wk-composer-error {
+  margin: 0;
+  border: 1px solid oklch(87% 0.07 75 / 0.42);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: oklch(90% 0.055 75 / 0.14);
+  color: oklch(97% 0.025 92);
+  font-size: 0.76rem;
+  font-weight: 570;
+  line-height: 1.4;
+}
+
+.wk-composer-submit {
+  display: grid;
+  gap: 16px;
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+  transition: opacity 280ms ease, transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.wk-composer-submit.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.wk-composer-submit__button {
+  width: 100%;
+  min-height: 61px;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 32px;
+  align-items: center;
+  border: 1px solid oklch(100% 0 0 / 0.72) !important;
+  border-radius: 999px !important;
+  padding: 0 24px !important;
+  background: linear-gradient(180deg, oklch(96% 0.025 145 / 0.18), oklch(85% 0.055 145 / 0.1)) !important;
+  color: oklch(100% 0 0) !important;
+  font-family: var(--serif) !important;
+  font-size: 1.56rem !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.03em;
+  text-transform: none !important;
+  box-shadow:
+    inset 0 1px 0 oklch(100% 0 0 / 0.2),
+    0 12px 28px oklch(13% 0.075 151 / 0.1) !important;
+  backdrop-filter: blur(20px) saturate(1.1);
+  transition: background-color 180ms ease, filter 180ms ease, transform 150ms ease !important;
+}
+
+.wk-composer-submit__button > span {
+  grid-column: 2;
+}
+
+.wk-composer-submit__button > svg:last-child {
+  grid-column: 3;
+  justify-self: end;
+  width: 29px;
+  height: 29px;
+  stroke-width: 1.7;
+}
+
+.wk-composer-submit__button:hover:not(:disabled) {
+  background: oklch(92% 0.04 145 / 0.18) !important;
+  filter: brightness(1.06);
+}
+
+.wk-composer-submit__button:active:not(:disabled) {
+  transform: scale(0.988);
+}
+
+.wk-composer-submit__button:disabled {
+  cursor: progress;
+  opacity: 0.72;
+}
+
+.wk-composer-submit > p:last-child {
+  margin: 0;
+  color: oklch(95% 0.018 132 / 0.72);
+  font-size: 0.68rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.wk-composer-submit a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (min-width: 560px) {
+  .wk-role-shell[data-role="customer"]:has(.wk-post-screen) .wk-route-stage {
+    padding-block: 20px;
+  }
+
+  .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-post-screen {
+    border-radius: 42px;
+    box-shadow: 0 28px 80px oklch(21% 0.075 151 / 0.28);
+  }
+}
+
+@media (max-width: 380px) {
+  .wk-homeowner-post-card {
+    min-height: 124px;
+    grid-template-columns: 58px minmax(0, 1fr) 18px;
+    gap: 13px;
+    padding-inline: 17px;
+  }
+
+  .wk-homeowner-post-card__icon {
+    width: 58px;
+    height: 58px;
+  }
+
+  .wk-homeowner-post-card__copy strong { font-size: 1.55rem; }
+  .wk-homeowner-post-card__copy small { font-size: 0.68rem; }
+
+  .wk-composer-heading {
+    grid-template-columns: 58px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .wk-composer-heading > span { font-size: 3rem; }
+  .wk-composer-heading h2 { font-size: 1.35rem; }
+  .wk-composer-control { padding-inline: 13px; }
+  .wk-composer-schedule-grid,
+  .wk-composer-custom-time > div { gap: 7px; }
+  .wk-composer-schedule-grid .wk-composer-control,
+  .wk-composer-custom-time .wk-composer-control { grid-template-columns: 24px minmax(0, 1fr) 15px; padding-inline: 10px; }
+  .wk-composer-control input,
+  .wk-composer-control select { font-size: 0.88rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wk-composer-section.is-revealed { animation: none; }
+  .wk-composer-custom-time,
+  .wk-composer-submit { transition-duration: 0ms; }
+}

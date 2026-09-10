@@ -13,7 +13,7 @@ const roleTabs = {
   customer: [
     { href: "/customer/account", label: "Account", Icon: UserRound },
     { href: "/customer", label: "Home", Icon: Home, primary: true },
-    { href: "/customer/jobs", label: "Activity", Icon: MessageCircle },
+    { href: "/customer/jobs", label: "Messages", Icon: MessageCircle },
   ],
   cleaner: [
     { href: "/cleaner/account", label: "Account", Icon: UserRound },

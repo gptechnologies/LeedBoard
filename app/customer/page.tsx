@@ -15,26 +15,23 @@ export default async function CustomerDashboard() {
 
   return (
     <div className="wk-app-screen wk-homeowner-hub-screen">
-      <AppScreenHeader accountMenu initials={initials} />
+      <AppScreenHeader accountMenu initials={initials} tagline="A cleaner home, happier you" />
       <div className="wk-screen-content wk-homeowner-hub">
-        <header className="wk-homeowner-hub__heading">
-          <h1>Home</h1>
-        </header>
-
+        <h1 className="sr-only">Home</h1>
         <Link className="wk-homeowner-post-card wk-pressable" href="/customer/jobs/new">
           <span className="wk-homeowner-post-card__icon" aria-hidden="true">
             <Plus />
           </span>
           <span className="wk-homeowner-post-card__copy">
             <strong>Post a job</strong>
-            <small>Address, time, notes</small>
+            <small>Tell us where and when. Cleaners will send prices.</small>
           </span>
           <ChevronRight aria-hidden="true" />
         </Link>
 
         <section className="wk-homeowner-job-list" aria-labelledby="homeowner-jobs-heading">
           <div className="wk-homeowner-job-list__heading">
-            <h2 id="homeowner-jobs-heading">Your jobs</h2>
+            <h2 id="homeowner-jobs-heading">My jobs</h2>
             {jobs.length > 0 ? <Link href="/customer/jobs">See all</Link> : null}
           </div>
 
@@ -61,14 +58,42 @@ export default async function CustomerDashboard() {
             </div>
           ) : (
             <div className="wk-homeowner-jobs-empty">
-              <span aria-hidden="true"><CalendarDays /></span>
+              <HomeGardenIllustration />
               <strong>No jobs yet</strong>
-              <p>Your posted jobs will show up here.</p>
+              <p>Post a job and your request and cleaner bids will appear here.</p>
             </div>
           )}
         </section>
       </div>
     </div>
+  );
+}
+
+function HomeGardenIllustration() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="wk-home-garden-art"
+      viewBox="0 0 220 150"
+    >
+      <path d="M18 127c20-11 37-13 53-7 14 5 21 14 39 13 19-1 27-12 47-14 16-2 31 2 45 9" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="5" opacity=".12" />
+      <path d="M76 122V76l35-31 35 31v46" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="3" />
+      <path d="M95 121V91h30v30" fill="currentColor" opacity=".12" />
+      <circle cx="117" cy="107" r="3" fill="currentColor" />
+      <g fill="#7fa987">
+        <ellipse cx="50" cy="87" rx="8" ry="18" transform="rotate(-28 50 87)" />
+        <ellipse cx="40" cy="108" rx="7" ry="15" transform="rotate(-58 40 108)" />
+        <ellipse cx="61" cy="103" rx="7" ry="17" transform="rotate(28 61 103)" />
+        <ellipse cx="165" cy="80" rx="8" ry="19" transform="rotate(25 165 80)" />
+        <ellipse cx="181" cy="101" rx="7" ry="17" transform="rotate(42 181 101)" />
+        <ellipse cx="155" cy="105" rx="7" ry="16" transform="rotate(-28 155 105)" />
+      </g>
+      <g fill="none" stroke="#4f805d" strokeLinecap="round" strokeWidth="2.5">
+        <path d="M58 124C57 104 52 91 48 79M58 113L38 99M58 102l12-17" />
+        <path d="M158 124c1-22 7-35 10-52m-8 40 22-24m-20 13-12-17" />
+      </g>
+      <path d="m183 42 3 8 8 3-8 3-3 8-3-8-8-3 8-3 3-8Z" fill="#f1b95d" />
+    </svg>
   );
 }
 

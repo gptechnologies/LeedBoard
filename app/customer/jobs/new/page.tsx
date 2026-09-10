@@ -25,8 +25,7 @@ export default async function CustomerNewJobPage({
         actionHref="/customer"
         actionLabel="Close new job"
         actionType="close"
-        centeredTitle
-        title="New job"
+        tagline="A cleaner home, happier you"
       />
       <div className="wk-screen-content">
         {params.error ? <div className="notice error">{params.error}</div> : null}
