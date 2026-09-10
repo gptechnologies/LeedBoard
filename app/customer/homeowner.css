@@ -3070,3 +3070,381 @@ body .wk-role-shell[data-role="customer"]:has(.wk-post-screen) .wk-app-nav {
   .wk-composer-custom-time,
   .wk-composer-submit { transition-duration: 0ms; }
 }
+
+/* Compact, staggered job composer. */
+.wk-job-composer {
+  gap: clamp(15px, 3.7vw, 20px);
+}
+
+.wk-job-composer__intro {
+  gap: 6px;
+}
+
+.wk-job-composer__intro h1 {
+  font-size: clamp(2.65rem, 11.4vw, 3.35rem);
+}
+
+.wk-job-composer__intro p {
+  font-size: clamp(0.84rem, 3.25vw, 0.96rem);
+}
+
+.wk-composer-section {
+  gap: 9px;
+}
+
+.wk-composer-heading h2 {
+  padding-top: 8px;
+}
+
+.wk-composer-control {
+  min-height: 54px;
+}
+
+.wk-composer-notes,
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-composer .wk-composer-notes textarea {
+  min-height: 78px;
+}
+
+.wk-composer-photo-button {
+  min-height: 44px;
+}
+
+.wk-composer-submit {
+  gap: 8px;
+}
+
+.wk-composer-submit__button {
+  min-height: 56px;
+}
+
+/* Homeowner account: one editable, ivory canvas. */
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-account-screen {
+  padding-inline: clamp(20px, 5vw, 28px);
+  background:
+    radial-gradient(circle at 92% 8%, oklch(92% 0.045 139 / 0.38), transparent 27%),
+    radial-gradient(circle at 4% 72%, oklch(95% 0.025 102 / 0.72), transparent 30%),
+    var(--home-bg);
+}
+
+.wk-account-header {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.wk-account-header .wk-wordmark {
+  color: var(--home-green-dark);
+  font-family: var(--serif);
+  font-size: clamp(2.15rem, 9vw, 2.7rem);
+  font-weight: 500;
+  letter-spacing: -0.06em;
+}
+
+.wk-account-header .wk-wordmark > span {
+  color: oklch(75% 0.13 79);
+  font-size: 0.52em;
+  vertical-align: top;
+}
+
+.wk-account-initials {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border: 1px solid oklch(40% 0.065 145 / 0.22);
+  border-radius: 50%;
+  background: oklch(100% 0 0 / 0.46);
+  color: var(--home-green-dark);
+  font-family: var(--serif);
+  font-size: 1.08rem;
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.8);
+  backdrop-filter: blur(14px);
+}
+
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-account-content {
+  gap: 18px;
+}
+
+.wk-account-identity {
+  display: grid;
+  gap: 5px;
+  padding: 2px 0 18px;
+  border-bottom: 1px solid oklch(39% 0.06 145 / 0.18);
+}
+
+.wk-account-identity h1 {
+  margin: 0;
+  color: var(--home-green-dark);
+  font-family: var(--serif);
+  font-size: clamp(2rem, 9.2vw, 2.75rem);
+  font-weight: 500;
+  letter-spacing: -0.052em;
+  line-height: 0.98;
+  overflow-wrap: anywhere;
+}
+
+.wk-account-identity > p {
+  margin: 0;
+  color: var(--home-muted);
+  font-size: 0.94rem;
+}
+
+.wk-account-contact-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 10px;
+}
+
+.wk-account-contact-list > span {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--home-green-dark);
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.wk-account-contact-list svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  stroke-width: 1.7;
+}
+
+.wk-account-notice {
+  margin: 0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 0.78rem;
+}
+
+.wk-account-notice.is-success {
+  background: var(--home-green-soft);
+  color: var(--home-green-dark);
+}
+
+.wk-account-notice.is-error {
+  background: oklch(95% 0.035 27);
+  color: oklch(45% 0.11 27);
+}
+
+.wk-account-editor {
+  display: grid;
+  gap: 16px;
+}
+
+.wk-account-section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--home-green-dark);
+}
+
+.wk-account-section-heading > span {
+  font-size: 0.7rem;
+  font-weight: 720;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.wk-account-section-heading > small {
+  color: var(--home-muted);
+  font-size: 0.7rem;
+}
+
+.wk-account-list {
+  display: grid;
+  gap: 10px;
+}
+
+.wk-account-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(92px, 0.72fr) minmax(0, 1.28fr);
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.wk-account-row > label,
+.wk-account-row > legend {
+  color: var(--home-muted);
+  font-size: 0.88rem;
+  font-weight: 560;
+}
+
+.wk-account-row > input,
+.wk-account-row > textarea,
+.wk-account-stepper,
+.wk-account-segmented {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid oklch(38% 0.07 145 / 0.25);
+  border-radius: 14px;
+  background: oklch(100% 0 0 / 0.5);
+  color: var(--home-green-dark);
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.92);
+  backdrop-filter: blur(15px) saturate(1.08);
+}
+
+.wk-account-row > input,
+.wk-account-row > textarea {
+  min-height: 48px;
+  padding: 11px 13px;
+  font-family: var(--sans);
+  font-size: 0.88rem;
+  outline: 0;
+  resize: vertical;
+}
+
+.wk-account-row > input:focus,
+.wk-account-row > textarea:focus {
+  border-color: oklch(35% 0.09 145 / 0.58);
+  background: oklch(100% 0 0 / 0.72);
+}
+
+.wk-account-row--wide {
+  align-items: start;
+}
+
+.wk-account-row--wide > label {
+  padding-top: 13px;
+}
+
+.wk-account-row--wide > p {
+  grid-column: 2;
+  margin: -5px 2px 0;
+  color: oklch(46% 0.12 27);
+  font-size: 0.7rem;
+}
+
+.wk-account-stepper {
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 42px;
+  align-items: center;
+  padding: 3px;
+}
+
+.wk-account-stepper button {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid oklch(37% 0.07 145 / 0.2);
+  border-radius: 11px;
+  background: oklch(36% 0.085 145 / 0.08);
+  color: var(--home-green-dark);
+}
+
+.wk-account-stepper button:disabled {
+  opacity: 0.32;
+}
+
+.wk-account-stepper svg {
+  width: 17px;
+  height: 17px;
+}
+
+.wk-account-stepper output {
+  text-align: center;
+  color: var(--home-green-dark);
+  font-size: 1rem;
+  font-weight: 680;
+  font-variant-numeric: tabular-nums;
+}
+
+.wk-account-segmented {
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 3px;
+}
+
+.wk-account-segmented label {
+  position: relative;
+  display: grid;
+}
+
+.wk-account-segmented input {
+  position: absolute;
+  opacity: 0;
+}
+
+.wk-account-segmented span {
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  color: var(--home-muted);
+  font-size: 0.8rem;
+  font-weight: 620;
+  cursor: pointer;
+}
+
+.wk-account-segmented input:checked + span {
+  background: var(--home-green-soft);
+  color: var(--home-green-dark);
+  box-shadow: inset 0 0 0 1px oklch(42% 0.08 145 / 0.15);
+}
+
+.wk-account-save,
+.wk-account-logout button {
+  width: 100%;
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border-radius: 15px;
+  font-size: 0.9rem;
+  font-weight: 680;
+}
+
+.wk-account-save {
+  border: 1px solid var(--home-green);
+  background: var(--home-green);
+  color: var(--home-surface);
+  box-shadow: 0 10px 24px oklch(28% 0.07 145 / 0.13);
+}
+
+.wk-account-save:disabled {
+  opacity: 0.62;
+}
+
+.wk-account-save svg,
+.wk-account-logout svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 1.8;
+}
+
+.wk-account-logout {
+  margin-top: 0;
+  padding-top: 2px;
+}
+
+.wk-account-logout button {
+  border: 1px solid oklch(38% 0.07 145 / 0.2);
+  background: oklch(100% 0 0 / 0.42);
+  color: var(--home-green-dark);
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.9);
+  backdrop-filter: blur(14px);
+}
+
+@media (max-width: 360px) {
+  .wk-account-row {
+    grid-template-columns: minmax(78px, 0.62fr) minmax(0, 1.38fr);
+    gap: 9px;
+  }
+
+  .wk-account-contact-list {
+    display: grid;
+  }
+}

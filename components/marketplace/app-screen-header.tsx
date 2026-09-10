@@ -8,6 +8,7 @@ export function AppScreenHeader({
   actionLabel,
   actionType = "settings",
   accountMenu,
+  brandHref = "/",
   centeredTitle,
   initials,
   middle,
@@ -18,6 +19,7 @@ export function AppScreenHeader({
   actionLabel?: string;
   actionType?: "settings" | "notifications" | "initials" | "close";
   accountMenu?: boolean;
+  brandHref?: string;
   centeredTitle?: boolean;
   initials?: string;
   middle?: ReactNode;
@@ -34,7 +36,7 @@ export function AppScreenHeader({
           </>
         ) : (
           <div className="wk-screen-brand">
-            <Link className="wk-wordmark" href="/">
+            <Link className="wk-wordmark" href={brandHref}>
               Well Kept<span aria-hidden="true">✦</span>
             </Link>
             {tagline ? <p>{tagline}</p> : null}
@@ -69,7 +71,7 @@ export function AppScreenHeader({
         </>
       ) : (
         <div className="wk-screen-brand">
-          <Link className="wk-wordmark" href="/">
+          <Link className="wk-wordmark" href={brandHref}>
             Well Kept<span aria-hidden="true">✦</span>
           </Link>
           {tagline ? <p>{tagline}</p> : null}

@@ -15,7 +15,14 @@ export default async function CustomerDashboard() {
 
   return (
     <div className="wk-app-screen wk-homeowner-hub-screen">
-      <AppScreenHeader accountMenu initials={initials} tagline="A cleaner home, happier you" />
+      <AppScreenHeader
+        actionHref="/customer/account"
+        actionLabel="Open account"
+        actionType="initials"
+        brandHref="/customer"
+        initials={initials}
+        tagline="A cleaner home, happier you"
+      />
       <div className="wk-screen-content wk-homeowner-hub">
         <h1 className="sr-only">Home</h1>
         <Link className="wk-homeowner-post-card wk-pressable" href="/customer/jobs/new">
@@ -40,7 +47,7 @@ export default async function CustomerDashboard() {
               {jobs.slice(0, 3).map((job) => {
                 const openOffers = job.bids.length;
                 return (
-                  <Link className="wk-homeowner-job-row wk-pressable" href={`/customer/jobs/${job.id}`} key={job.id}>
+                  <article className="wk-homeowner-job-row" key={job.id}>
                     <span className="wk-homeowner-job-row__date" aria-hidden="true">
                       <CalendarDays />
                     </span>
@@ -51,8 +58,7 @@ export default async function CustomerDashboard() {
                     <span className={`wk-homeowner-job-row__status is-${job.status.toLowerCase()}`}>
                       {getStatusLabel(job.status, openOffers)}
                     </span>
-                    <ChevronRight aria-hidden="true" />
-                  </Link>
+                  </article>
                 );
               })}
             </div>

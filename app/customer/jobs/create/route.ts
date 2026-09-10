@@ -13,6 +13,7 @@ function respondWithError(request: Request, message: string) {
 
   return NextResponse.redirect(
     new URL(`/customer/jobs/new?error=${encodeURIComponent(message)}`, request.url),
+    303,
   );
 }
 
@@ -100,7 +101,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ jobId: job.id });
     }
 
-    return NextResponse.redirect(new URL(`/customer/jobs/${job.id}/priority`, request.url));
+    return NextResponse.redirect(new URL("/customer?posted=1", request.url), 303);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unable to post your job right now.";

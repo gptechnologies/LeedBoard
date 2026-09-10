@@ -1,125 +1,68 @@
-import Link from "next/link";
-import {
-  BedDouble,
-  ChevronRight,
-  DoorOpen,
-  Home,
-  PawPrint,
-} from "lucide-react";
-import { UserRole } from "@prisma/client";
-import { AppScreenHeader } from "@/components/marketplace/app-screen-header";
+import { EntryMethod, UserRole } from "@prisma/client";
+import { Mail, Phone } from "lucide-react";
+
+import { HomeownerAccountForm } from "@/components/marketplace/homeowner-account-form";
 import { getCustomerHomeData } from "@/lib/marketplace";
 import { requireUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-export default async function CustomerAccountPage() {
+type CustomerAccountPageProps = {
+  searchParams: Promise<{ error?: string; saved?: string }>;
+};
+
+export default async function CustomerAccountPage({ searchParams }: CustomerAccountPageProps) {
   const user = await requireUser(UserRole.CUSTOMER);
+  const query = await searchParams;
   const { homeProfile } = await getCustomerHomeData(user.id);
-  const fullName = `${user.firstName} ${user.lastName}`;
   const initials = `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
+  const home = {
+    id: homeProfile?.id ?? null,
+    label: homeProfile?.label ?? "My Home",
+    addressLine1: homeProfile?.addressLine1 ?? "",
+    addressLine2: homeProfile?.addressLine2 ?? "",
+    city: homeProfile?.city ?? "",
+    state: homeProfile?.state ?? "New York",
+    postalCode: homeProfile?.postalCode ?? "",
+    bedroomCount: homeProfile?.bedroomCount ?? null,
+    bathroomCount: homeProfile?.bathroomCount ?? null,
+    estimatedSquareFeet: homeProfile?.estimatedSquareFeet ?? null,
+    storyCount: homeProfile?.storyCount ?? null,
+    hasPets: homeProfile?.hasPets ?? false,
+    entryMethod: homeProfile?.entryMethod ?? EntryMethod.I_WILL_BE_HOME,
+    entryNotes: homeProfile?.entryNotes ?? "",
+    notes: homeProfile?.notes ?? "",
+  };
 
   return (
-    <div className="wk-app-screen wk-profile-screen">
-      <AppScreenHeader
-        accountMenu
-        initials={initials}
-      />
+    <div className="wk-app-screen wk-account-screen">
+      <header className="wk-account-header">
+        <span className="wk-wordmark">Well Kept<span aria-hidden="true">✦</span></span>
+        <span aria-hidden="true" className="wk-account-initials">{initials}</span>
+      </header>
 
-      <div className="wk-screen-content">
-        <section className="wk-profile-intro">
-          <span className="wk-profile-avatar">{initials}</span>
-          <div>
-            <small>Welcome back,</small>
-            <h1>{fullName}</h1>
-            <strong>Homeowner</strong>
-            <p>{homeProfile ? `${homeProfile.city}, ${homeProfile.state}` : "Add your home location"}</p>
+      <div className="wk-screen-content wk-account-content">
+        <section className="wk-account-identity" aria-labelledby="account-address-heading">
+          <h1 id="account-address-heading">{home.addressLine1 || "Your home"}</h1>
+          <p>{home.city ? `${home.city}, ${home.state} ${home.postalCode}` : "Add your address and home details below"}</p>
+          <div className="wk-account-contact-list">
+            <span><Mail aria-hidden="true" />{user.email || "Email not added"}</span>
+            <span><Phone aria-hidden="true" />{user.phone ? formatPhone(user.phone) : "Phone not added"}</span>
           </div>
         </section>
 
-        <Link className="wk-profile-card" href="/customer/my-home">
-          <div className="wk-profile-card__heading">
-            <h2>Your Home</h2>
-            <span>Edit <ChevronRight aria-hidden="true" /></span>
-          </div>
-          {homeProfile ? (
-            <>
-              <div className="wk-home-grid wk-home-grid--summary">
-                <ProfileMetric
-                  Icon={Home}
-                  label={homeProfile.addressLine1}
-                  sublabel={`${homeProfile.city}, ${homeProfile.state} ${homeProfile.postalCode}`}
-                />
-                <ProfileMetric
-                  Icon={Home}
-                  label={homeProfile.propertyType === "APARTMENT" ? "Apartment" : "Single-family"}
-                  sublabel={homeProfile.estimatedSquareFeet ? `${homeProfile.estimatedSquareFeet.toLocaleString()} sq ft` : "Size not added"}
-                />
-                <ProfileMetric
-                  Icon={BedDouble}
-                  label={`${homeProfile.bedroomCount ? `${homeProfile.bedroomCount} bedrooms` : "Bedrooms not added"} · ${homeProfile.bathroomCount ? `${formatNumber(homeProfile.bathroomCount)} bathrooms` : "Bathrooms not added"}`}
-                  sublabel="Rooms"
-                />
-              </div>
-            </>
-          ) : (
-            <div className="wk-inline-empty">Add your address and home details.</div>
-          )}
-        </Link>
+        {query.saved === "1" ? <p className="wk-account-notice is-success" role="status">Home details saved.</p> : null}
+        {query.error ? <p className="wk-account-notice is-error" role="alert">{query.error}</p> : null}
 
-        <ProfileSection title="Home settings">
-          <ProfileRow href="/customer/my-home" Icon={DoorOpen} label="Address and access" />
-          <ProfileRow href="/customer/my-home" Icon={PawPrint} label="Home details and pets" />
-        </ProfileSection>
+        <HomeownerAccountForm home={home} />
       </div>
     </div>
   );
 }
 
-function ProfileMetric({
-  Icon,
-  label,
-  sublabel,
-}: {
-  Icon: React.ComponentType<{ "aria-hidden"?: boolean }>;
-  label: string;
-  sublabel?: string;
-}) {
-  return (
-    <div className="wk-profile-metric">
-      <Icon />
-      <span><strong>{label}</strong>{sublabel ? <small>{sublabel}</small> : null}</span>
-    </div>
-  );
-}
-
-function ProfileSection({ children, title }: { children: React.ReactNode; title: string }) {
-  return (
-    <section className="wk-profile-section">
-      <h2>{title}</h2>
-      <div>{children}</div>
-    </section>
-  );
-}
-
-function ProfileRow({
-  href,
-  Icon,
-  label,
-}: {
-  href: string;
-  Icon: React.ComponentType<{ "aria-hidden"?: boolean }>;
-  label: string;
-}) {
-  return (
-    <Link className="wk-profile-row" href={href}>
-      <Icon />
-      <span>{label}</span>
-      <ChevronRight aria-hidden="true" />
-    </Link>
-  );
-}
-
-function formatNumber(value: number) {
-  return Number.isInteger(value) ? value.toFixed(0) : value.toString();
+function formatPhone(value: string) {
+  const digits = value.replace(/\D/g, "");
+  const local = digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits;
+  if (local.length !== 10) return value;
+  return `(${local.slice(0, 3)}) ${local.slice(3, 6)}-${local.slice(6)}`;
 }

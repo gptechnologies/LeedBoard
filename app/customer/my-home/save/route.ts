@@ -6,7 +6,8 @@ import { requireApiUser } from "@/lib/session";
 
 function redirectWithError(request: Request, message: string) {
   return NextResponse.redirect(
-    new URL(`/customer/my-home?error=${encodeURIComponent(message)}`, request.url),
+    new URL(`/customer/account?error=${encodeURIComponent(message)}`, request.url),
+    303,
   );
 }
 
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
         },
       });
 
-      return NextResponse.redirect(new URL("/customer/my-home", request.url));
+      return NextResponse.redirect(new URL("/customer/account?saved=1", request.url), 303);
     }
 
     const existingCount = await prisma.homeProfile.count({
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.redirect(new URL("/customer/my-home", request.url));
+    return NextResponse.redirect(new URL("/customer/account?saved=1", request.url), 303);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unable to save your home preset right now.";

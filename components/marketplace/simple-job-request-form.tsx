@@ -20,8 +20,8 @@ import {
   LoaderCircle,
   MapPin,
 } from "lucide-react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { FormEvent, useMemo, useRef, useState } from "react";
+import { motion, useReducedMotion, type Variants } from "framer-motion";
+import { FormEvent, useMemo, useState } from "react";
 
 import { triggerHaptic } from "@/lib/haptics";
 
@@ -69,10 +69,23 @@ const presetTimes: Record<Exclude<TimeMode, "custom">, { start: string; end: str
   afternoon: { start: "12:00", end: "17:00" },
 };
 
+const composerContainerVariants: Variants = {
+  hidden: {},
+  visible: { transition: { delayChildren: 0.04, staggerChildren: 0.085 } },
+};
+
+const composerItemVariants: Variants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.34, ease: [0.22, 1, 0.36, 1] },
+  },
+};
+
 export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoice[] }) {
   const reduceMotion = useReducedMotion();
   const [activeSection, setActiveSection] = useState<ActiveSection>(1);
-  const [revealedThrough, setRevealedThrough] = useState<ActiveSection>(1);
   const [fullAddress, setFullAddress] = useState(() => homeProfiles[0] ? formatAddress(homeProfiles[0]) : "");
   const [requestedDate, setRequestedDate] = useState("");
   const [timeMode, setTimeMode] = useState<TimeMode>("morning");
@@ -82,8 +95,6 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
   const [photoCount, setPhotoCount] = useState(0);
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [submitError, setSubmitError] = useState("");
-  const whenSectionRef = useRef<HTMLElement>(null);
-  const notesSectionRef = useRef<HTMLElement>(null);
 
   const selectedHome = homeProfiles.find((home) => formatAddress(home) === fullAddress.trim()) ?? null;
   const activeAddress = selectedHome
@@ -108,14 +119,6 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
     ? selectedHome.suppliesSource
     : SuppliesSource.CLEANER_BRINGS_ALL;
 
-  function gentlyReveal(target: React.RefObject<HTMLElement | null>, section: ActiveSection) {
-    setActiveSection(section);
-    setRevealedThrough((current) => Math.max(current, section) as ActiveSection);
-    window.setTimeout(() => {
-      target.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }, 80);
-  }
-
   async function postJob(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!addressComplete || !whenComplete || submitState !== "idle") return;
@@ -136,7 +139,7 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
       }
 
       triggerHaptic("success");
-      window.location.assign(`/customer/jobs/${result.jobId}?posted=1`);
+      window.location.assign("/customer?posted=1");
     } catch (error) {
       setSubmitState("idle");
       setSubmitError(error instanceof Error ? error.message : "We couldn’t post your request. Try again.");
@@ -145,7 +148,15 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
   }
 
   return (
-    <form action="/customer/jobs/create" className="wk-job-composer" method="post" onSubmit={postJob}>
+    <motion.form
+      action="/customer/jobs/create"
+      animate="visible"
+      className="wk-job-composer"
+      initial={reduceMotion ? false : "hidden"}
+      method="post"
+      onSubmit={postJob}
+      variants={composerContainerVariants}
+    >
       <input type="hidden" name="title" value="Home Cleaning" />
       <input type="hidden" name="homeProfileId" value={selectedHome?.id ?? ""} />
       <input type="hidden" name="addressLine1" value={activeAddress.addressLine1} />
@@ -170,15 +181,16 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
       <input type="hidden" name="requestedWindowStart" value={schedule.start} />
       <input type="hidden" name="requestedWindowEnd" value={schedule.end} />
 
-      <header className="wk-job-composer__intro">
+      <motion.header className="wk-job-composer__intro" variants={composerItemVariants}>
         <span aria-hidden="true" className="wk-job-composer__script">Good spaces<br />brighter days ✦</span>
         <h1>Post a job</h1>
         <p>Tell us where and when. Cleaners will send prices.</p>
-      </header>
+      </motion.header>
 
-      <section
+      <motion.section
         className={`wk-composer-section${activeSection === 1 ? " is-active" : ""}`}
         onFocus={() => setActiveSection(1)}
+        variants={composerItemVariants}
       >
         <ComposerHeading number="01">Where do you need cleaned?</ComposerHeading>
         <div className="wk-composer-control wk-composer-address">
@@ -189,14 +201,11 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
             autoComplete="street-address"
             autoFocus={!homeProfiles.length}
             list={homeProfiles.length ? "composer-saved-addresses" : undefined}
-            onBlur={() => {
-              if (addressComplete) gentlyReveal(whenSectionRef, 2);
-            }}
             onChange={(event) => { setFullAddress(event.target.value); setSubmitError(""); }}
             onKeyDown={(event) => {
               if (event.key === "Enter" && addressComplete) {
                 event.preventDefault();
-                gentlyReveal(whenSectionRef, 2);
+                setActiveSection(2);
               }
             }}
             placeholder="Street, city, state ZIP"
@@ -210,23 +219,13 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
             {homeProfiles.map((home) => <option key={home.id} value={formatAddress(home)} />)}
           </datalist>
         ) : null}
-      </section>
+      </motion.section>
 
-      <AnimatePresence initial={false}>
-        {revealedThrough >= 2 ? (
-          <motion.div
-            animate={{ height: "auto", opacity: 1, y: 0 }}
-            className="wk-composer-reveal"
-            exit={reduceMotion ? { height: 0, opacity: 0 } : { height: 0, opacity: 0, y: -8 }}
-            initial={reduceMotion ? { height: 0, opacity: 0 } : { height: 0, opacity: 0, y: 16 }}
-            key="schedule"
-            transition={{ duration: reduceMotion ? 0 : 0.32, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <section
-              className={`wk-composer-section${activeSection === 2 ? " is-active" : ""}`}
-              onFocus={() => setActiveSection(2)}
-              ref={whenSectionRef}
-            >
+      <motion.section
+        className={`wk-composer-section${activeSection === 2 ? " is-active" : ""}`}
+        onFocus={() => setActiveSection(2)}
+        variants={composerItemVariants}
+      >
               <ComposerHeading number="02">When should cleaners arrive?</ComposerHeading>
               <div className="wk-composer-schedule-grid">
                 <label className="wk-composer-control">
@@ -241,9 +240,6 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
                     onChange={(event) => {
                       setRequestedDate(event.target.value);
                       setSubmitError("");
-                      if (getWhenValidation(event.target.value, schedule.start, schedule.end) === "") {
-                        gentlyReveal(notesSectionRef, 3);
-                      }
                     }}
                     type="date"
                     value={requestedDate}
@@ -277,26 +273,13 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
                 </div>
               </div>
               {requestedDate && whenValidation ? <p className="wk-composer-error" role="alert">{whenValidation}</p> : null}
-            </section>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+      </motion.section>
 
-      <AnimatePresence initial={false}>
-        {revealedThrough >= 3 ? (
-          <motion.div
-            animate={{ height: "auto", opacity: 1, y: 0 }}
-            className="wk-composer-reveal"
-            exit={reduceMotion ? { height: 0, opacity: 0 } : { height: 0, opacity: 0, y: -8 }}
-            initial={reduceMotion ? { height: 0, opacity: 0 } : { height: 0, opacity: 0, y: 16 }}
-            key="notes"
-            transition={{ duration: reduceMotion ? 0 : 0.32, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <section
-              className={`wk-composer-section${activeSection === 3 ? " is-active" : ""}`}
-              onFocus={() => setActiveSection(3)}
-              ref={notesSectionRef}
-            >
+      <motion.section
+        className={`wk-composer-section${activeSection === 3 ? " is-active" : ""}`}
+        onFocus={() => setActiveSection(3)}
+        variants={composerItemVariants}
+      >
               <ComposerHeading number="03">Anything cleaners should know?</ComposerHeading>
               <label className="wk-composer-notes">
                 <span className="sr-only">Notes for cleaners</span>
@@ -319,20 +302,9 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
                   type="file"
                 />
               </label>
-            </section>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+      </motion.section>
 
-      <AnimatePresence initial={false}>
-        {revealedThrough >= 3 ? (
-          <motion.div
-            animate={{ opacity: 1, y: 0 }}
-            className="wk-composer-submit is-visible"
-            initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 12 }}
-            key="submit"
-            transition={{ duration: reduceMotion ? 0 : 0.3, ease: [0.22, 1, 0.36, 1] }}
-          >
+      <motion.div className="wk-composer-submit is-visible" variants={composerItemVariants}>
             {submitError ? <p className="wk-composer-error" role="alert">{submitError}</p> : null}
             <button
               aria-busy={submitState === "posting"}
@@ -346,11 +318,9 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
                 <><span>Post Job</span><ArrowRight aria-hidden="true" /></>
               )}
             </button>
-            <p>By posting, you agree to our <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy Policy</a>.</p>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-    </form>
+            <p>By posting, you agree to our Terms of Service and Privacy Policy.</p>
+      </motion.div>
+    </motion.form>
   );
 }
 

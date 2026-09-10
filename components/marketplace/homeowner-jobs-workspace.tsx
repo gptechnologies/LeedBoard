@@ -229,9 +229,6 @@ function HomeownerJobCard({ job }: { job: WorkspaceJob }) {
         </div>
       )}
 
-      <Link className="homeowner-job-summary__details" href={`/customer/jobs/${job.id}`}>
-        View job details <ChevronRight aria-hidden="true" />
-      </Link>
     </article>
   );
 }
@@ -302,7 +299,6 @@ function OfferRow({
             <div><dt>Availability</dt><dd>{timing}</dd></div>
           </dl>
           <div className="homeowner-offer__actions">
-            <Link href={`/customer/messages/${bid.id}`}>View full offer</Link>
             <ProviderSelectionDrawer
               bidId={bid.id}
               jobId={job.id}
@@ -333,10 +329,6 @@ function AcceptedProviderPanel({ bid, job }: { bid: WorkspaceBid; job: Workspace
         <div><dt>Accepted offer</dt><dd>{formatBidAmount(bid)}</dd></div>
         <div><dt>Schedule</dt><dd>{formatBidTiming(bid)}</dd></div>
       </dl>
-      <div className="homeowner-accepted-provider__actions">
-        <Link href={`/customer/messages/${bid.id}`}>View contact details</Link>
-        <Link href={`/customer/jobs/${job.id}`}>Job details</Link>
-      </div>
     </section>
   );
 }

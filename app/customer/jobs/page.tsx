@@ -20,7 +20,10 @@ export default async function CustomerJobsPage({ searchParams }: { searchParams:
   return (
     <div className="wk-app-screen wk-homeowner-jobs-screen">
       <AppScreenHeader
-        accountMenu
+        actionHref="/customer/account"
+        actionLabel="Open account"
+        actionType="initials"
+        brandHref="/customer"
         initials={initials}
       />
       <div className="wk-screen-content">
