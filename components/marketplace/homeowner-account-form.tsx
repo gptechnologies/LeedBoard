@@ -64,7 +64,6 @@ export function HomeownerAccountForm({ home }: { home: AccountHome }) {
 
         <div className="wk-account-section-heading">
           <span>Home details</span>
-          <small>Edit everything here</small>
         </div>
 
         <div className="wk-account-list">

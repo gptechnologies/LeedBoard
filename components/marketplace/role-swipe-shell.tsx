@@ -13,7 +13,7 @@ const roleTabs = {
   customer: [
     { href: "/customer/account", label: "Account", Icon: UserRound },
     { href: "/customer", label: "Home", Icon: Home, primary: true },
-    { href: "/customer/jobs", label: "Messages", Icon: MessageCircle },
+    { href: "/customer/messages", label: "Messages", Icon: MessageCircle },
   ],
   cleaner: [
     { href: "/cleaner/account", label: "Account", Icon: UserRound },
@@ -136,8 +136,8 @@ export function RoleSwipeShell({
 function getActiveIndex(role: AppRole, pathname: string) {
   if (role === "customer") {
     if (pathname === "/customer/account" || pathname.startsWith("/customer/my-home")) return 0;
-    if (pathname === "/customer/jobs/new" || pathname === "/customer") return 1;
-    return 2;
+    if (pathname.startsWith("/customer/messages")) return 2;
+    return 1;
   }
 
   if (pathname.startsWith("/cleaner/account")) return 0;

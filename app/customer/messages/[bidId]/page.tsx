@@ -1,130 +1,113 @@
 import { BidStatus, JobRequestStatus, UserRole } from "@prisma/client";
+import { ArrowLeft, Check, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { JobCoordinationSummary } from "@/components/marketplace/job-coordination-summary";
 import { ActivityReadMarker } from "@/components/marketplace/activity-read-marker";
-import { StatusPill } from "@/components/marketplace/status-pill";
+import { AppScreenHeader } from "@/components/marketplace/app-screen-header";
+import { MessageComposer } from "@/components/marketplace/message-composer";
+import { ProviderSelectionDrawer } from "@/components/marketplace/provider-selection-drawer";
 import { getCleaningJobTitle } from "@/lib/job-title";
-import {
-  formatBidAmount,
-  formatBidTiming,
-  getBidStatusLabel,
-} from "@/lib/marketplace";
+import { formatBidAmount, formatBidTiming, formatTimingSummary } from "@/lib/marketplace";
 import { prisma } from "@/lib/prisma";
+import { getJobReference, getProviderName, getProviderPhone } from "@/lib/providers";
 import { requireUser } from "@/lib/session";
-import { getProviderName, getProviderPhone } from "@/lib/providers";
 
 export const dynamic = "force-dynamic";
 
-type Params = Promise<{
-  bidId: string;
-}>;
+type Params = Promise<{ bidId: string }>;
 
-export default async function CustomerMessageThreadPage({
-  params,
-}: {
-  params: Params;
-}) {
+export default async function CustomerMessageThreadPage({ params }: { params: Params }) {
   const user = await requireUser(UserRole.CUSTOMER);
   const { bidId } = await params;
   const bid = await prisma.jobBid.findFirst({
-    where: {
-      id: bidId,
-      jobRequest: {
-        customerId: user.id,
-      },
-    },
+    where: { id: bidId, jobRequest: { customerId: user.id } },
     include: {
       cleanerLead: true,
-      cleaner: {
-        include: {
-          cleanerProfile: true,
-        },
-      },
-      jobRequest: {
-        include: {
-          homeProfile: {
-            select: {
-              propertyType: true,
-            },
-          },
-        },
-      },
+      cleaner: { include: { cleanerProfile: true } },
+      jobRequest: true,
     },
   });
-
-  if (!bid) {
-    notFound();
-  }
+  if (!bid) notFound();
 
   const cleanerName = getProviderName(bid);
   const providerPhone = getProviderPhone(bid);
-  const customerName = `${user.firstName} ${user.lastName}`;
-  const isCompleted = bid.jobRequest.status === JobRequestStatus.COMPLETED;
-  const statusTone = bid.status === BidStatus.ACCEPTED ? "success" : "default";
-  const statusLabel = isCompleted ? "Completed" : getBidStatusLabel(bid.status);
+  const initials = `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
+  const providerInitials = getInitials(cleanerName);
+  const job = bid.jobRequest;
+  const accepted = bid.status === BidStatus.ACCEPTED;
+  const completed = job.status === JobRequestStatus.COMPLETED;
 
   return (
     <div className="wk-app-screen wk-message-detail-screen">
       <ActivityReadMarker bidId={bid.id} role="customer" />
-      <section className="market-surface">
-        <header className="market-topbar market-topbar--detail">
-          <Link
-            href={`/customer/jobs/${bid.jobRequestId}/bids`}
-            className="bid-screen__back"
-            aria-label="Back to bids"
-          >
-            <span aria-hidden="true">&larr;</span>
-          </Link>
-          <div>
-            <h1>{cleanerName}</h1>
-            <p>{getCleaningJobTitle(bid.jobRequest)}</p>
-          </div>
-          <StatusPill label={statusLabel} tone={isCompleted ? "success" : statusTone} />
+      <AppScreenHeader actionHref="/customer/account" actionLabel="Open account" actionType="initials" brandHref="/customer" initials={initials} tagline="A cleaner home, happier you" />
+
+      <div className="wk-screen-content wk-message-detail-content">
+        <header className="wk-conversation-header">
+          <Link aria-label="Back to messages" href="/customer/messages"><ArrowLeft aria-hidden="true" /></Link>
+          <span className="wk-conversation-header__avatar" aria-hidden="true">{providerInitials}</span>
+          <span className="wk-conversation-header__copy">
+            <strong>{cleanerName}</strong>
+            <small><i aria-hidden="true" /> Responds quickly</small>
+          </span>
+          <button aria-label="Conversation options" type="button"><MoreHorizontal aria-hidden="true" /></button>
         </header>
 
-        <div className="message-thread">
-          <JobCoordinationSummary
-            bid={bid}
-            cleanerName={cleanerName}
-            customerName={customerName}
-            job={bid.jobRequest}
-            role="customer"
-          />
+        <section className="wk-conversation-job" aria-labelledby="conversation-job-title">
+          <div className="wk-conversation-job__icon" aria-hidden="true">✦</div>
+          <div className="wk-conversation-job__main">
+            <div className="wk-conversation-job__title-row">
+              <h1 id="conversation-job-title">{getCleaningJobTitle(job)}</h1>
+              <span>From this conversation</span>
+            </div>
+            <p>{formatTimingSummary(job)}</p>
+            <p>{formatAddress(job)}</p>
+            <div><strong>{formatBidAmount(bid)} bid</strong><span>Job ID: {getJobReference(job)}</span></div>
+          </div>
+        </section>
 
-          <article className="message-event message-event--bid">
-            <div className="message-event__meta">
-              <strong>{cleanerName}'s bid</strong>
-              <span>{bid.createdAt.toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })}</span>
+        <section className="wk-conversation-thread" aria-label={`Conversation with ${cleanerName}`}>
+          <p className="wk-conversation-day">Today</p>
+          <article className="wk-chat-line is-provider">
+            <span aria-hidden="true">{providerInitials}</span>
+            <div>
+              <p>{bid.message || `I’m available for ${formatTimingSummary(job)} and would be happy to help.`}</p>
+              <time>{formatMessageTime(bid.createdAt)}</time>
             </div>
-            <div className="message-event__quote">
-              <strong>{formatBidAmount(bid)}</strong>
-              <span>{formatBidTiming(bid)}</span>
-            </div>
-            {bid.message ? <p>{bid.message}</p> : null}
           </article>
-
-          {bid.status === BidStatus.ACCEPTED ? (
-            <article className="message-event message-event--system">
-              <strong>{isCompleted ? "Cleaner marked this job complete." : "You accepted this bid."}</strong>
-              <p>
-                {isCompleted
-                  ? "The job is complete. You can keep this summary for your records."
-                  : "The cleaner can now review the confirmed address, timing, and access details."}
-              </p>
-              {providerPhone ? (
-                <p>
-                  Provider contact: <a href={`tel:${providerPhone}`}>{providerPhone}</a>
-                </p>
-              ) : null}
+          {accepted ? (
+            <article className="wk-chat-line is-customer">
+              <div>
+                <p>{completed ? "Thanks again—the cleaning is complete." : "Great, I’ve chosen you for this job."}</p>
+                <time>{completed ? "Completed" : "Chosen"} <Check aria-hidden="true" /></time>
+              </div>
             </article>
           ) : null}
+        </section>
+
+        <div className="wk-conversation-actions">
+          <MessageComposer phone={providerPhone} />
+          {accepted ? (
+            <div className="wk-conversation-chosen"><Check aria-hidden="true" /> Cleaner chosen</div>
+          ) : (
+            <ProviderSelectionDrawer bidId={bid.id} jobId={job.id} jobTitle={job.title} price={formatBidAmount(bid)} providerName={cleanerName} timing={formatBidTiming(bid)} triggerLabel="Choose this cleaner" />
+          )}
         </div>
-      </section>
+      </div>
     </div>
   );
+}
+
+function formatAddress(job: { addressLine1: string; addressLine2: string | null; city: string; state: string; postalCode: string }) {
+  return [job.addressLine1, job.addressLine2, `${job.city}, ${job.state} ${job.postalCode}`].filter(Boolean).join(", ");
+}
+
+function getInitials(name: string) {
+  const words = name.split(/\s+/).filter(Boolean);
+  return words.length === 1 ? words[0].slice(0, 2).toUpperCase() : `${words[0][0]}${words[1][0]}`.toUpperCase();
+}
+
+function formatMessageTime(date: Date) {
+  return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }

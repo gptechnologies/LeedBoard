@@ -37,7 +37,10 @@ export default async function CustomerAccountPage({ searchParams }: CustomerAcco
   return (
     <div className="wk-app-screen wk-account-screen">
       <header className="wk-account-header">
-        <span className="wk-wordmark">Well Kept<span aria-hidden="true">✦</span></span>
+        <div className="wk-account-brand">
+          <span className="wk-wordmark">Well Kept<span aria-hidden="true">✦</span></span>
+          <p>A cleaner home, happier you</p>
+        </div>
         <span aria-hidden="true" className="wk-account-initials">{initials}</span>
       </header>
 

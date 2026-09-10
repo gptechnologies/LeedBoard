@@ -62,9 +62,11 @@ export function HomeownerOpenJobsCarousel({
 
   return (
     <Carousel
+      aria-label="Open jobs. Use the left and right arrow keys to move between jobs."
       className={cn("customer-open-jobs-carousel", className)}
       opts={{ align: "center" }}
       setApi={setApi}
+      tabIndex={0}
     >
       <CarouselContent className="-ml-2">
         {slides.map((slide, index) => (

@@ -24,6 +24,7 @@ export function ProviderSelectionDrawer({
   price,
   providerName,
   timing,
+  triggerLabel = "Choose Provider",
 }: {
   bidId: string;
   jobId: string;
@@ -31,6 +32,7 @@ export function ProviderSelectionDrawer({
   price: string;
   providerName: string;
   timing: string;
+  triggerLabel?: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -76,7 +78,7 @@ export function ProviderSelectionDrawer({
         <DrawerTrigger asChild>
           <button className="wk-provider-select__trigger wk-pressable" type="button">
             {state === "selected" ? <Check aria-hidden="true" /> : null}
-            {state === "selected" ? "Provider selected" : "Choose Provider"}
+            {state === "selected" ? "Provider selected" : triggerLabel}
           </button>
         </DrawerTrigger>
         <DrawerContent className="wk-provider-drawer">
