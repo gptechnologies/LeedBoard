@@ -2020,6 +2020,13 @@
   padding-bottom: calc(24px + env(safe-area-inset-bottom));
 }
 
+.wk-post-close {
+  position: absolute;
+  z-index: 3;
+  top: max(23px, env(safe-area-inset-top));
+  right: clamp(20px, 6vw, 34px);
+}
+
 .wk-post-screen .wk-screen-header {
   margin-bottom: 18px;
 }
@@ -2552,16 +2559,17 @@ body .wk-role-shell[data-role="customer"]:has(.wk-post-screen) .wk-app-nav {
 .wk-job-composer__intro p {
   max-width: 37ch;
   margin: 0;
-  color: oklch(98% 0.012 130 / 0.82);
+  color: oklch(84% 0.04 140 / 0.98);
   font-size: clamp(0.92rem, 3.55vw, 1.04rem);
   font-weight: 430;
   line-height: 1.45;
+  text-shadow: 0 1px 2px oklch(12% 0.075 151 / 0.72), 0 4px 14px oklch(16% 0.075 151 / 0.42);
 }
 
 .wk-job-composer__script {
   position: absolute;
-  top: -25px;
-  right: 2%;
+  top: 2px;
+  right: 66px;
   color: oklch(77% 0.105 145 / 0.82);
   font-family: "Snell Roundhand", "Segoe Script", cursive;
   font-size: clamp(1.05rem, 4.8vw, 1.5rem);
@@ -2574,7 +2582,7 @@ body .wk-role-shell[data-role="customer"]:has(.wk-post-screen) .wk-app-nav {
 .wk-composer-section {
   display: grid;
   gap: 13px;
-  opacity: 0.78;
+  opacity: 0.94;
   scroll-margin: 24px;
   transition: opacity 240ms ease;
 }
@@ -2597,7 +2605,7 @@ body .wk-role-shell[data-role="customer"]:has(.wk-post-screen) .wk-app-nav {
 }
 
 .wk-composer-heading > span {
-  color: oklch(95% 0.024 134 / 0.61);
+  color: oklch(88% 0.035 137 / 0.78);
   font-family: var(--serif);
   font-size: clamp(2.9rem, 11.5vw, 3.35rem);
   font-variant-numeric: tabular-nums;
@@ -2610,12 +2618,13 @@ body .wk-role-shell[data-role="customer"]:has(.wk-post-screen) .wk-app-nav {
   margin: 0;
   border-top: 1px solid oklch(100% 0 0 / 0.29);
   padding-top: 12px;
-  color: oklch(99% 0.006 110);
+  color: oklch(87% 0.038 139);
   font-family: var(--serif);
   font-size: clamp(1.28rem, 4.75vw, 1.56rem);
   font-weight: 500;
   letter-spacing: -0.035em;
   line-height: 1.08;
+  text-shadow: 0 1px 2px oklch(12% 0.075 151 / 0.72), 0 4px 12px oklch(14% 0.075 151 / 0.4);
   text-wrap: balance;
 }
 
@@ -3050,6 +3059,10 @@ body .wk-role-shell[data-role="customer"]:has(.wk-post-screen) .wk-app-nav {
   .wk-composer-custom-time .wk-composer-control { grid-template-columns: 24px minmax(0, 1fr) 15px; padding-inline: 10px; }
   .wk-composer-control input,
   .wk-composer-control select { font-size: 0.88rem; }
+}
+
+@media (max-width: 420px) {
+  .wk-job-composer__script { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

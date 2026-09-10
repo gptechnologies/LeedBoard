@@ -46,8 +46,7 @@ type AddressState = {
   postalCode: string;
 };
 
-type LocationMode = "saved" | "manual";
-type TimeMode = "custom" | "morning" | "afternoon" | "flexible";
+type TimeMode = "custom" | "morning" | "afternoon";
 type SubmitState = "idle" | "posting";
 type ActiveSection = 1 | 2 | 3;
 
@@ -63,23 +62,20 @@ const timeModes: Array<{ value: TimeMode; label: string }> = [
   { value: "custom", label: "Custom" },
   { value: "morning", label: "Morning" },
   { value: "afternoon", label: "Afternoon" },
-  { value: "flexible", label: "Flexible" },
 ];
 
 const presetTimes: Record<Exclude<TimeMode, "custom">, { start: string; end: string }> = {
   morning: { start: "08:00", end: "12:00" },
   afternoon: { start: "12:00", end: "17:00" },
-  flexible: { start: "08:00", end: "20:00" },
 };
 
 export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoice[] }) {
   const reduceMotion = useReducedMotion();
   const [activeSection, setActiveSection] = useState<ActiveSection>(1);
-  const [locationMode, setLocationMode] = useState<LocationMode>(homeProfiles.length ? "saved" : "manual");
-  const [selectedHomeId, setSelectedHomeId] = useState(homeProfiles[0]?.id ?? "");
-  const [fullAddress, setFullAddress] = useState("");
+  const [revealedThrough, setRevealedThrough] = useState<ActiveSection>(1);
+  const [fullAddress, setFullAddress] = useState(() => homeProfiles[0] ? formatAddress(homeProfiles[0]) : "");
   const [requestedDate, setRequestedDate] = useState("");
-  const [timeMode, setTimeMode] = useState<TimeMode>("custom");
+  const [timeMode, setTimeMode] = useState<TimeMode>("morning");
   const [customStart, setCustomStart] = useState("09:00");
   const [customEnd, setCustomEnd] = useState("13:00");
   const [notes, setNotes] = useState("");
@@ -89,8 +85,8 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
   const whenSectionRef = useRef<HTMLElement>(null);
   const notesSectionRef = useRef<HTMLElement>(null);
 
-  const selectedHome = homeProfiles.find((home) => home.id === selectedHomeId) ?? null;
-  const activeAddress = locationMode === "saved" && selectedHome
+  const selectedHome = homeProfiles.find((home) => formatAddress(home) === fullAddress.trim()) ?? null;
+  const activeAddress = selectedHome
     ? {
         addressLine1: selectedHome.addressLine1,
         addressLine2: selectedHome.addressLine2 ?? "",
@@ -106,14 +102,15 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
   );
   const whenValidation = getWhenValidation(requestedDate, schedule.start, schedule.end);
   const whenComplete = whenValidation === "";
-  const entryMethod = locationMode === "saved" && selectedHome ? selectedHome.entryMethod : EntryMethod.OTHER;
-  const entryNotes = locationMode === "saved" && selectedHome ? selectedHome.entryNotes ?? "" : "";
-  const suppliesSource = locationMode === "saved" && selectedHome
+  const entryMethod = selectedHome ? selectedHome.entryMethod : EntryMethod.OTHER;
+  const entryNotes = selectedHome ? selectedHome.entryNotes ?? "" : "";
+  const suppliesSource = selectedHome
     ? selectedHome.suppliesSource
     : SuppliesSource.CLEANER_BRINGS_ALL;
 
   function gentlyReveal(target: React.RefObject<HTMLElement | null>, section: ActiveSection) {
     setActiveSection(section);
+    setRevealedThrough((current) => Math.max(current, section) as ActiveSection);
     window.setTimeout(() => {
       target.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }, 80);
@@ -150,7 +147,7 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
   return (
     <form action="/customer/jobs/create" className="wk-job-composer" method="post" onSubmit={postJob}>
       <input type="hidden" name="title" value="Home Cleaning" />
-      <input type="hidden" name="homeProfileId" value={locationMode === "saved" ? selectedHome?.id ?? "" : ""} />
+      <input type="hidden" name="homeProfileId" value={selectedHome?.id ?? ""} />
       <input type="hidden" name="addressLine1" value={activeAddress.addressLine1} />
       <input type="hidden" name="addressLine2" value={activeAddress.addressLine2} />
       <input type="hidden" name="city" value={activeAddress.city} />
@@ -186,59 +183,37 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
         <ComposerHeading number="01">Where do you need cleaned?</ComposerHeading>
         <div className="wk-composer-control wk-composer-address">
           <MapPin aria-hidden="true" />
-          {locationMode === "saved" && homeProfiles.length ? (
-            <>
-              <span className="wk-composer-value">{selectedHome ? formatAddress(selectedHome) : "Choose an address"}</span>
-              <select
-                aria-label="Cleaning address"
-                className="wk-composer-native-picker"
-                onChange={(event) => {
-                  setSelectedHomeId(event.target.value);
-                  setSubmitError("");
-                  triggerHaptic("selection");
-                  gentlyReveal(whenSectionRef, 2);
-                }}
-                value={selectedHomeId}
-              >
-                {homeProfiles.map((home) => (
-                  <option key={home.id} value={home.id}>{formatAddress(home)}</option>
-                ))}
-              </select>
-            </>
-          ) : (
-            <input
-              aria-describedby="composer-address-hint"
-              autoComplete="street-address"
-              autoFocus={!homeProfiles.length}
-              onChange={(event) => { setFullAddress(event.target.value); setSubmitError(""); }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && addressComplete) {
-                  event.preventDefault();
-                  gentlyReveal(whenSectionRef, 2);
-                }
-              }}
-              placeholder="Street, city, state ZIP"
-              value={fullAddress}
-            />
-          )}
+          <input
+            aria-describedby="composer-address-hint"
+            aria-label="Cleaning address"
+            autoComplete="street-address"
+            autoFocus={!homeProfiles.length}
+            list={homeProfiles.length ? "composer-saved-addresses" : undefined}
+            onBlur={() => {
+              if (addressComplete) gentlyReveal(whenSectionRef, 2);
+            }}
+            onChange={(event) => { setFullAddress(event.target.value); setSubmitError(""); }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && addressComplete) {
+                event.preventDefault();
+                gentlyReveal(whenSectionRef, 2);
+              }
+            }}
+            placeholder="Street, city, state ZIP"
+            value={fullAddress}
+          />
           {addressComplete ? <span className="wk-composer-check" aria-label="Address complete"><Check /></span> : null}
         </div>
-        {locationMode === "manual" ? (
-          <div className="wk-composer-field-meta">
-            <p id="composer-address-hint">Use: street, city, state ZIP.</p>
-            {homeProfiles.length ? (
-              <button type="button" onClick={() => { setLocationMode("saved"); setActiveSection(1); }}>Use saved address</button>
-            ) : null}
-          </div>
-        ) : (
-          <button className="wk-composer-text-button" type="button" onClick={() => { setLocationMode("manual"); setFullAddress(""); setActiveSection(1); }}>
-            Use another address
-          </button>
-        )}
+        <p className="sr-only" id="composer-address-hint">Enter a street, city, state, and ZIP code.</p>
+        {homeProfiles.length ? (
+          <datalist id="composer-saved-addresses">
+            {homeProfiles.map((home) => <option key={home.id} value={formatAddress(home)} />)}
+          </datalist>
+        ) : null}
       </section>
 
       <AnimatePresence initial={false}>
-        {addressComplete ? (
+        {revealedThrough >= 2 ? (
           <motion.div
             animate={{ height: "auto", opacity: 1, y: 0 }}
             className="wk-composer-reveal"
@@ -308,7 +283,7 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
       </AnimatePresence>
 
       <AnimatePresence initial={false}>
-        {addressComplete && whenComplete ? (
+        {revealedThrough >= 3 ? (
           <motion.div
             animate={{ height: "auto", opacity: 1, y: 0 }}
             className="wk-composer-reveal"
@@ -349,22 +324,32 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
         ) : null}
       </AnimatePresence>
 
-      <div className={`wk-composer-submit${addressComplete && whenComplete ? " is-visible" : ""}`}>
-        {submitError ? <p className="wk-composer-error" role="alert">{submitError}</p> : null}
-        <button
-          aria-busy={submitState === "posting"}
-          className="wk-composer-submit__button wk-pressable"
-          disabled={!addressComplete || !whenComplete || submitState === "posting"}
-          type="submit"
-        >
-          {submitState === "posting" ? (
-            <><LoaderCircle className="wk-button-spinner" aria-hidden="true" /> Posting</>
-          ) : (
-            <><span>Post Job</span><ArrowRight aria-hidden="true" /></>
-          )}
-        </button>
-        <p>By posting, you agree to our <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy Policy</a>.</p>
-      </div>
+      <AnimatePresence initial={false}>
+        {revealedThrough >= 3 ? (
+          <motion.div
+            animate={{ opacity: 1, y: 0 }}
+            className="wk-composer-submit is-visible"
+            initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 12 }}
+            key="submit"
+            transition={{ duration: reduceMotion ? 0 : 0.3, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {submitError ? <p className="wk-composer-error" role="alert">{submitError}</p> : null}
+            <button
+              aria-busy={submitState === "posting"}
+              className="wk-composer-submit__button wk-pressable"
+              disabled={!addressComplete || !whenComplete || submitState === "posting"}
+              type="submit"
+            >
+              {submitState === "posting" ? (
+                <><LoaderCircle className="wk-button-spinner" aria-hidden="true" /> Posting</>
+              ) : (
+                <><span>Post Job</span><ArrowRight aria-hidden="true" /></>
+              )}
+            </button>
+            <p>By posting, you agree to our <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy Policy</a>.</p>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </form>
   );
 }
