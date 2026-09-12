@@ -12,7 +12,7 @@ export function AppScreenHeader({
   centeredTitle,
   initials,
   middle,
-  tagline,
+  tagline = "Keep your place well kept",
   title,
 }: {
   actionHref?: string;

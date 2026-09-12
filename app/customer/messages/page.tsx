@@ -39,7 +39,7 @@ export default async function CustomerMessagesPage() {
 
   return (
     <div className="wk-app-screen wk-messages-screen">
-      <AppScreenHeader actionHref="/customer/account" actionLabel="Open account" actionType="initials" brandHref="/customer" initials={initials} tagline="A cleaner home, happier you" />
+      <AppScreenHeader actionHref="/customer/account" actionLabel="Open account" actionType="initials" brandHref="/customer" initials={initials} />
       <div className="wk-screen-content wk-messages-content">
         <HomeownerMessagesInbox conversations={conversations} />
       </div>

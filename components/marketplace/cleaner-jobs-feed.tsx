@@ -111,7 +111,6 @@ export function CleanerJobsFeed({
       <AppScreenHeader
         accountMenu
         initials={initials}
-        tagline="A CLEANER HOME HAPPIER YOU"
       />
       <div className="wk-screen-content">
         {error ? <div className="notice error">{error}</div> : null}

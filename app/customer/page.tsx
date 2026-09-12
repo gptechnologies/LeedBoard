@@ -23,7 +23,6 @@ export default async function CustomerDashboard() {
         actionType="initials"
         brandHref="/customer"
         initials={initials}
-        tagline="A cleaner home, happier you"
       />
       <div className="wk-screen-content wk-homeowner-hub">
         <HomeownerJobsWorkspace jobs={activeJobs} />

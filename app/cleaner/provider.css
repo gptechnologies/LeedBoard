@@ -69,12 +69,12 @@
   justify-self: end;
 }
 
-.wk-role-shell[data-role="cleaner"][data-ui="calm"] .wk-jobs-screen .wk-screen-brand {
+.wk-role-shell[data-role="cleaner"][data-ui="calm"] .wk-screen-brand {
   display: grid;
   gap: 5px;
 }
 
-.wk-role-shell[data-role="cleaner"][data-ui="calm"] .wk-jobs-screen .wk-screen-brand p {
+.wk-role-shell[data-role="cleaner"][data-ui="calm"] .wk-screen-brand p {
   margin: 0;
   color: var(--provider-ink);
   font-size: 0.57rem;
@@ -173,7 +173,7 @@
   border: 1px solid oklch(83% 0.022 112);
   border-radius: 22px;
   background: var(--provider-surface);
-  box-shadow: inset 0 1px 0 oklch(78% 0.025 112 / 0.42), 0 14px 34px oklch(30% 0.035 130 / 0.09);
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.68);
   outline: none;
   touch-action: pan-y;
 }

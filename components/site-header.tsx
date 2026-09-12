@@ -23,7 +23,7 @@ export async function SiteHeader() {
       <div className="site-header__inner">
         <Link href={brandHref} className="brand">
           <span>Well Kept</span>
-          <small>Bring trusted cleaners to you.</small>
+          <small>Keep your place well kept</small>
         </Link>
         <nav className="nav-links">
           {!user ? (

@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/drawer";
 import { timeWindowOptions } from "@/lib/marketplace-constants";
 import { triggerHaptic } from "@/lib/haptics";
+import { getCleaningJobTitle } from "@/lib/job-title";
 
 type FastBidDefaults = {
   standardHourlyRateCents: number | null;
@@ -62,6 +63,7 @@ export function FastBidDrawer({
   const [hourlyRate, setHourlyRate] = useState(
     defaults.standardHourlyRateCents ? (defaults.standardHourlyRateCents / 100).toFixed(0) : "",
   );
+  const [estimatedHours, setEstimatedHours] = useState("");
   const [etaMinutes, setEtaMinutes] = useState(String(defaults.defaultEtaMinutes ?? 60));
   const [timeConfirmed, setTimeConfirmed] = useState(false);
   const [message, setMessage] = useState("");
@@ -72,6 +74,15 @@ export function FastBidDrawer({
   const priceValue = pricingType === BidPricingType.FLAT ? flatRate : hourlyRate;
   const priceNumber = Number(priceValue);
   const hasValidPrice = Number.isFinite(priceNumber) && priceNumber > 0;
+  const hoursNumber = Number(estimatedHours);
+  const hasValidHours = estimatedHours.trim() !== ""
+    && Number.isFinite(hoursNumber)
+    && hoursNumber >= 0.25
+    && hoursNumber <= 24
+    && Math.round(hoursNumber * 4) === hoursNumber * 4;
+  const estimatedTotal = pricingType === BidPricingType.HOURLY && hasValidPrice && hasValidHours
+    ? priceNumber * hoursNumber
+    : null;
   const isAsap = job.timingPreference === TimingPreference.ASAP;
   const selectedWindow = useMemo(
     () =>
@@ -81,9 +92,13 @@ export function FastBidDrawer({
     [job.requestedWindowStart],
   );
   const arrivalDateValue = formatDateInputValue(job.requestedDate);
-  const canSubmit = hasValidPrice && (isAsap ? Boolean(etaMinutes) : timeConfirmed && Boolean(arrivalDateValue));
+  const canSubmit = hasValidPrice
+    && (pricingType === BidPricingType.FLAT || hasValidHours)
+    && (isAsap ? Boolean(etaMinutes) : timeConfirmed && Boolean(arrivalDateValue));
   const submitGuidance = !hasValidPrice
     ? "Enter your price to continue."
+    : pricingType === BidPricingType.HOURLY && !hasValidHours
+      ? "Add your estimated hours to continue."
     : !isAsap && !timeConfirmed
       ? "Confirm the requested time to continue."
       : "Your bid is ready to send.";
@@ -164,6 +179,7 @@ export function FastBidDrawer({
           <DrawerDescription>
             Choose a price and {isAsap ? "how soon you can arrive." : "confirm the requested time."}
           </DrawerDescription>
+          <p className="fast-bid-drawer__job">{getCleaningJobTitle(job)} <span aria-hidden="true">·</span> {job.city}, {job.state.toUpperCase()}</p>
         </DrawerHeader>
 
         <form action={`/cleaner/jobs/${job.id}/bid`} method="post" className="fast-bid-form" onSubmit={submitBid}>
@@ -192,28 +208,58 @@ export function FastBidDrawer({
               </label>
             </fieldset>
 
-            <div className="field fast-bid-price-field">
-              <label htmlFor={`fast-bid-price-${job.id}`}>Your price</label>
-              {pricingType === BidPricingType.FLAT ? (
-                <PriceInput
-                  id={`fast-bid-price-${job.id}`}
-                  name="flatRate"
-                  placeholder="120.00"
-                  required
-                  value={flatRate}
-                  onChange={(event) => setFlatRate(event.target.value)}
-                />
-              ) : (
-                <PriceInput
-                  id={`fast-bid-price-${job.id}`}
-                  name="hourlyRate"
-                  placeholder="30.00"
-                  required
-                  value={hourlyRate}
-                  onChange={(event) => setHourlyRate(event.target.value)}
-                />
-              )}
+            <div className={`fast-bid-pricing-fields${pricingType === BidPricingType.HOURLY ? " is-hourly" : ""}`}>
+              <div className="field fast-bid-price-field">
+                <label htmlFor={`fast-bid-price-${job.id}`}>
+                  {pricingType === BidPricingType.FLAT ? "Your total price" : "Your hourly rate"}
+                </label>
+                {pricingType === BidPricingType.FLAT ? (
+                  <PriceInput
+                    id={`fast-bid-price-${job.id}`}
+                    name="flatRate"
+                    placeholder="120.00"
+                    required
+                    value={flatRate}
+                    onChange={(event) => setFlatRate(event.target.value)}
+                  />
+                ) : (
+                  <PriceInput
+                    id={`fast-bid-price-${job.id}`}
+                    name="hourlyRate"
+                    placeholder="30.00"
+                    required
+                    value={hourlyRate}
+                    onChange={(event) => setHourlyRate(event.target.value)}
+                  />
+                )}
+              </div>
+
+              {pricingType === BidPricingType.HOURLY ? (
+                <div className="field fast-bid-hours-field">
+                  <label htmlFor={`fast-bid-hours-${job.id}`}>Estimated hours</label>
+                  <input
+                    id={`fast-bid-hours-${job.id}`}
+                    name="estimatedHours"
+                    type="number"
+                    inputMode="decimal"
+                    min="0.25"
+                    max="24"
+                    step="0.25"
+                    placeholder="e.g. 3"
+                    required
+                    value={estimatedHours}
+                    onChange={(event) => setEstimatedHours(event.target.value)}
+                  />
+                </div>
+              ) : null}
             </div>
+
+            {pricingType === BidPricingType.HOURLY ? (
+              <p className="fast-bid-estimate" aria-live="polite">
+                <span>Estimated total to homeowner</span>
+                <strong>{estimatedTotal === null ? "—" : formatBidTotal(estimatedTotal)}</strong>
+              </p>
+            ) : null}
 
             {isAsap ? (
               <section className="fast-bid-section">
@@ -281,6 +327,11 @@ export function FastBidDrawer({
                 {submitGuidance}
               </p>
             ) : null}
+            <DrawerClose asChild>
+              <Button type="button" variant="ghost" className="fast-bid-cancel" disabled={submitState !== "idle"}>
+                Cancel
+              </Button>
+            </DrawerClose>
             <Button
               aria-busy={submitState === "submitting"}
               type="submit"
@@ -295,11 +346,6 @@ export function FastBidDrawer({
                 "Place bid"
               )}
             </Button>
-            <DrawerClose asChild>
-              <Button type="button" variant="ghost" className="fast-bid-cancel" disabled={submitState !== "idle"}>
-                Cancel
-              </Button>
-            </DrawerClose>
           </DrawerFooter>
         </form>
       </DrawerContent>
@@ -351,4 +397,13 @@ function getOrdinalSuffix(day: number) {
     default:
       return "th";
   }
+}
+
+function formatBidTotal(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+    minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
+  }).format(value);
 }

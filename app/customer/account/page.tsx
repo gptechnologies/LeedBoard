@@ -39,7 +39,7 @@ export default async function CustomerAccountPage({ searchParams }: CustomerAcco
       <header className="wk-account-header">
         <div className="wk-account-brand">
           <span className="wk-wordmark">Well Kept<span aria-hidden="true">✦</span></span>
-          <p>A cleaner home, happier you</p>
+          <p>Keep your place well kept</p>
         </div>
         <span aria-hidden="true" className="wk-account-initials">{initials}</span>
       </header>

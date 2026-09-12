@@ -41,7 +41,7 @@ export default async function CustomerMessageThreadPage({ params }: { params: Pa
   return (
     <div className="wk-app-screen wk-message-detail-screen">
       <ActivityReadMarker bidId={bid.id} role="customer" />
-      <AppScreenHeader actionHref="/customer/account" actionLabel="Open account" actionType="initials" brandHref="/customer" initials={initials} tagline="A cleaner home, happier you" />
+      <AppScreenHeader actionHref="/customer/account" actionLabel="Open account" actionType="initials" brandHref="/customer" initials={initials} />
 
       <div className="wk-screen-content wk-message-detail-content">
         <header className="wk-conversation-header">
