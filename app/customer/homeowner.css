@@ -899,35 +899,6 @@
   font-size: 0.94rem;
 }
 
-.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-app-nav {
-  min-height: calc(78px + env(safe-area-inset-bottom));
-  align-items: center;
-  padding: 7px 16px max(8px, env(safe-area-inset-bottom));
-  border-color: var(--home-line);
-  background: oklch(99.4% 0.008 98 / 0.97);
-}
-
-.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-app-nav__item {
-  min-height: 60px;
-  gap: 3px;
-  color: var(--home-muted);
-  font-size: 0.76rem;
-}
-
-.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-app-nav__item--primary .wk-app-nav__icon {
-  width: 44px;
-  height: 44px;
-  margin-top: -8px;
-  border: 4px solid var(--home-surface);
-  background: var(--home-green);
-  color: var(--home-surface);
-  box-shadow: 0 7px 17px oklch(35% 0.09 145 / 0.2);
-}
-
-.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-app-nav__item.is-active {
-  color: var(--home-green-dark);
-}
-
 .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-pressable,
 .wk-role-shell[data-role="customer"][data-ui="calm"] button,
 .wk-role-shell[data-role="customer"][data-ui="calm"] a {
@@ -2690,80 +2661,6 @@
   text-wrap: pretty;
 }
 
-body .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-app-nav {
-  inset: auto 18px max(10px, env(safe-area-inset-bottom));
-  width: auto;
-  max-width: 448px;
-  min-height: 92px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  align-items: center;
-  margin-inline: auto;
-  padding: 8px 12px;
-  border: 1px solid oklch(91% 0.015 108 / 0.8);
-  border-radius: 25px;
-  background: oklch(99% 0.006 100 / 0.9);
-  box-shadow: 0 15px 38px oklch(28% 0.028 127 / 0.11);
-  transform: none;
-  backdrop-filter: blur(22px) saturate(1.08);
-}
-
-body .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-app-nav__item {
-  min-height: 72px;
-  align-content: center;
-  gap: 5px;
-  color: oklch(37% 0.015 130);
-}
-
-body .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-app-nav__icon {
-  width: 46px;
-  height: 46px;
-}
-
-body .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-app-nav__item.is-active {
-  color: var(--home-green-dark);
-}
-
-body .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-app-nav__item.is-active .wk-app-nav__icon {
-  color: white;
-}
-
-body .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-app-nav__item.is-active .wk-app-nav__icon > svg {
-  fill: none;
-  color: white;
-  stroke: white;
-}
-
-body .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-app-nav__item.is-active .wk-app-nav__icon::after {
-  position: absolute;
-  bottom: -17px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--home-green);
-  content: "";
-}
-
-body .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-app-nav__selection {
-  border-color: oklch(60% 0.09 148 / 0.52);
-  background: linear-gradient(155deg, oklch(43% 0.105 148), oklch(29% 0.09 150));
-  box-shadow:
-    inset 0 1px 0 oklch(100% 0 0 / 0.2),
-    0 7px 15px oklch(29% 0.08 149 / 0.25);
-}
-
-body .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-app-nav__label {
-  position: static;
-  width: auto;
-  height: auto;
-  overflow: visible;
-  clip: auto;
-  clip-path: none;
-  color: currentColor;
-  font-size: 0.72rem;
-  font-weight: 560;
-  white-space: nowrap;
-}
-
 /* Full-screen ambient composer. */
 .wk-role-shell[data-role="customer"]:has(.wk-post-screen) {
   background: oklch(88% 0.065 148);
@@ -2777,7 +2674,7 @@ body .wk-role-shell[data-role="customer"]:has(.wk-post-screen) .wk-app-nav {
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
-  transform: translateY(120%);
+  transform: translate(-50%, 120%);
 }
 
 .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-post-screen {
