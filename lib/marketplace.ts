@@ -121,6 +121,23 @@ export function formatTimingSummary(job: {
   })} · ${formatClock(job.requestedWindowStart)} - ${formatClock(job.requestedWindowEnd)}`;
 }
 
+export function formatCleanerPriceLabel(profile: {
+  hourlyRateFromCents?: number | null;
+  standardFlatRateCents: number | null;
+  standardHourlyRateCents: number | null;
+}) {
+  if (profile.standardFlatRateCents) {
+    return formatWholeCurrency(profile.standardFlatRateCents);
+  }
+
+  const hourlyRate = profile.standardHourlyRateCents ?? profile.hourlyRateFromCents;
+  if (hourlyRate) {
+    return `${formatWholeCurrency(hourlyRate)}/hr`;
+  }
+
+  return "Price TBD";
+}
+
 export function formatClock(value: string) {
   const [hours, minutes] = value.split(":").map(Number);
   const date = new Date();

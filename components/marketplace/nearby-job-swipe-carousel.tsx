@@ -12,15 +12,12 @@ import type {
   TimingPreference,
 } from "@prisma/client";
 import {
-  Bath,
-  BedDouble,
   CalendarDays,
-  Home,
+  Clock3,
   MapPin,
-  PawPrint,
-  Ruler,
+  NotebookPen,
 } from "lucide-react";
-import { useRef, type ReactNode, type TouchEvent } from "react";
+import { useEffect, useRef, useState, type ReactNode, type TouchEvent } from "react";
 
 import { EmptyState } from "@/components/marketplace/empty-state";
 import { getCleaningJobTitle } from "@/lib/job-title";
@@ -65,6 +62,7 @@ export type NearbyJobSwipeItem = {
   estimatedSquareFeet: number | null;
   id: string;
   job: NearbyJobDeckJob;
+  priceLabel: string;
   timingLabel: string;
   title: string;
 };
@@ -75,12 +73,15 @@ export function NearbyJobSwipeCarousel({
   jobs,
   onIndexChange,
 }: {
-  footer?: ReactNode;
+  footer?: (job: NearbyJobSwipeItem) => ReactNode;
   index: number;
   jobs: NearbyJobSwipeItem[];
   onIndexChange: (index: number) => void;
 }) {
   const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const deckRef = useRef<HTMLDivElement | null>(null);
+  const [dragX, setDragX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
   const current = jobs[index] ?? null;
 
   function move(direction: -1 | 1) {
@@ -94,6 +95,23 @@ export function NearbyJobSwipeCarousel({
   function handleTouchStart(event: TouchEvent<HTMLElement>) {
     const touch = event.touches[0];
     touchStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
+    setIsDragging(false);
+    setDragX(0);
+  }
+
+  function handleTouchMove(event: TouchEvent<HTMLElement>) {
+    const start = touchStart.current;
+    const touch = event.touches[0];
+    if (!start || !touch) return;
+
+    const horizontalDistance = touch.clientX - start.x;
+    const verticalDistance = touch.clientY - start.y;
+    if (!isDragging && Math.abs(horizontalDistance) <= Math.abs(verticalDistance)) return;
+
+    setIsDragging(true);
+    const atStart = index === 0 && horizontalDistance > 0;
+    const atEnd = index === jobs.length - 1 && horizontalDistance < 0;
+    setDragX(horizontalDistance * (atStart || atEnd ? 0.28 : 1));
   }
 
   function handleTouchEnd(event: TouchEvent<HTMLElement>) {
@@ -105,8 +123,13 @@ export function NearbyJobSwipeCarousel({
     const horizontalDistance = touch.clientX - start.x;
     const verticalDistance = touch.clientY - start.y;
 
-    if (Math.abs(horizontalDistance) < 64 || Math.abs(horizontalDistance) <= Math.abs(verticalDistance)) return;
-    move(horizontalDistance < 0 ? 1 : -1);
+    const deckWidth = deckRef.current?.clientWidth ?? 360;
+    const shouldMove = Math.abs(horizontalDistance) >= Math.min(88, deckWidth * 0.2)
+      && Math.abs(horizontalDistance) > Math.abs(verticalDistance);
+
+    if (shouldMove) move(horizontalDistance < 0 ? 1 : -1);
+    setIsDragging(false);
+    setDragX(0);
   }
 
   if (!current) {
@@ -119,23 +142,32 @@ export function NearbyJobSwipeCarousel({
   }
 
   return (
-    <div className="wk-provider-deck">
-      <article
-        aria-label={`${getCleaningJobTitle(current.job)}, job ${index + 1} of ${jobs.length}`}
-        className="wk-provider-job-card"
-        key={current.id}
-        onKeyDown={(event) => {
-          if (event.key === "ArrowLeft") move(-1);
-          if (event.key === "ArrowRight") move(1);
-        }}
-        onTouchEnd={handleTouchEnd}
-        onTouchStart={handleTouchStart}
-        tabIndex={0}
+    <div className="wk-provider-deck" ref={deckRef}>
+      <div
+        className={`wk-provider-deck__track${isDragging ? " is-dragging" : ""}`}
+        style={{ transform: `translate3d(calc(${-index * 100}% + ${dragX}px), 0, 0)` }}
       >
-        <ProviderJobOverview item={current} />
-        {footer}
-      </article>
-
+        {jobs.map((job, jobIndex) => (
+          <article
+            aria-hidden={jobIndex !== index}
+            aria-label={`${getCleaningJobTitle(job.job)}, job ${jobIndex + 1} of ${jobs.length}`}
+            className="wk-provider-job-card"
+            inert={jobIndex !== index}
+            key={job.id}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowLeft") move(-1);
+              if (event.key === "ArrowRight") move(1);
+            }}
+            onTouchEnd={handleTouchEnd}
+            onTouchMove={handleTouchMove}
+            onTouchStart={handleTouchStart}
+            tabIndex={jobIndex === index ? 0 : -1}
+          >
+            <ProviderJobOverview item={job} />
+            {footer?.(job)}
+          </article>
+        ))}
+      </div>
     </div>
   );
 }
@@ -167,8 +199,8 @@ export function ApproximateAreaMap({ item }: { item: NearbyJobSwipeItem }) {
         <circle className="wk-provider-map__marker-ring" cx={`${markerX}%`} cy={`${markerY}%`} r="13" />
         <circle className="wk-provider-map__marker" cx={`${markerX}%`} cy={`${markerY}%`} r="7" />
       </svg>
-      <span className="wk-provider-map__price">$140–$170</span>
-      <span className="wk-provider-map__timing"><CalendarDays aria-hidden="true" />{item.timingLabel}</span>
+      <span className="wk-provider-map__price">{item.priceLabel}</span>
+      <PostedTime createdAt={job.createdAt} />
       <figcaption>
         <MapPin aria-hidden="true" />
         <span><strong>{formatCity(job.city)}, {job.state.toUpperCase()} {job.postalCode}</strong>Approx. area · within 5 mi</span>
@@ -180,49 +212,62 @@ export function ApproximateAreaMap({ item }: { item: NearbyJobSwipeItem }) {
 function JobCardDetails({ item }: { item: NearbyJobSwipeItem }) {
   const { job } = item;
   const home = job.homeProfile;
-  const homeDetails = home ? [
-    { Icon: BedDouble, label: "Beds", value: home.bedroomCount != null ? formatNumber(home.bedroomCount) : "—" },
-    { Icon: Bath, label: "Baths", value: home.bathroomCount != null ? formatNumber(home.bathroomCount) : "—" },
-    { Icon: Ruler, label: "sq ft", value: home.estimatedSquareFeet != null ? home.estimatedSquareFeet.toLocaleString() : "—" },
-    { Icon: Home, label: "Stories", value: home.storyCount != null ? formatNumber(home.storyCount) : "—" },
-    { Icon: PawPrint, label: "Pets", value: home.hasPets ? "Yes" : "No" },
-  ] : [];
+  const homeDetails = [
+    { label: "Beds", value: home?.bedroomCount != null ? formatNumber(home.bedroomCount) : "—" },
+    { label: "Baths", value: home?.bathroomCount != null ? formatNumber(home.bathroomCount) : "—" },
+    { label: "sq ft", value: home?.estimatedSquareFeet != null ? home.estimatedSquareFeet.toLocaleString() : "—" },
+    { label: "Stories", value: home?.storyCount != null ? formatNumber(home.storyCount) : "—" },
+    { label: "Pets", value: home ? (home.hasPets ? "Yes" : "No") : "—" },
+  ];
   const homeDetailsHeadingId = `provider-home-details-${item.id}`;
   const scheduleHeadingId = `provider-date-time-${item.id}`;
   const notesHeadingId = `provider-homeowner-notes-${item.id}`;
   const requestedDateLabel = formatRequestedDate(job.requestedDate, job.timingPreference);
-  const requestedTimeLabel = formatRequestedTime(job.requestedWindowStart, job.timingPreference);
+  const requestedTimeLabel = formatRequestedTimeRange(
+    job.requestedWindowStart,
+    job.requestedWindowEnd,
+    job.timingPreference,
+  );
+  const notes = job.notes?.trim() || "No additional notes provided.";
+  const [notesExpanded, setNotesExpanded] = useState(false);
+
+  useEffect(() => setNotesExpanded(false), [item.id]);
 
   return (
     <div className="wk-provider-expanded-details">
       <section aria-labelledby={homeDetailsHeadingId} className="wk-provider-detail-section">
         <h3 id={homeDetailsHeadingId}>Home details</h3>
-        {homeDetails.length ? (
-          <dl className="wk-provider-home-details">
-            {homeDetails.map(({ Icon, label, value }) => (
-              <div key={label}>
-                <span className="wk-provider-home-detail__icon"><Icon aria-hidden="true" /></span>
-                <dt>{label}</dt>
-                <dd>{value}</dd>
-              </div>
-            ))}
-          </dl>
-        ) : (
-          <p className="wk-provider-detail-empty">No home details were provided.</p>
-        )}
+        <dl className="wk-provider-home-details">
+          {homeDetails.map(({ label, value }) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+        </dl>
       </section>
-      <section aria-labelledby={scheduleHeadingId} className="wk-provider-detail-section wk-provider-schedule">
-        <h3 className="wk-provider-schedule-line" id={scheduleHeadingId}>
-          <span>Date &amp; time</span>
-          <i aria-hidden="true">—</i>
-          <time dateTime={job.requestedDate ? new Date(job.requestedDate).toISOString() : undefined}>{requestedDateLabel}</time>
-          <b aria-hidden="true">•</b>
-          <time>{requestedTimeLabel}</time>
-        </h3>
+      <section aria-labelledby={scheduleHeadingId} className="wk-provider-detail-section wk-provider-detail-row wk-provider-schedule">
+        <span className="wk-provider-detail-row__icon"><CalendarDays aria-hidden="true" /></span>
+        <div>
+          <h3 id={scheduleHeadingId}>Date &amp; time</h3>
+          <p>
+            <time dateTime={job.requestedDate ? new Date(job.requestedDate).toISOString() : undefined}>{requestedDateLabel}</time>
+            <span aria-hidden="true"> · </span>
+            <time>{requestedTimeLabel}</time>
+          </p>
+        </div>
       </section>
-      <section aria-labelledby={notesHeadingId} className="wk-provider-detail-section wk-provider-notes">
-        <h3 id={notesHeadingId}>Homeowner notes</h3>
-        <p>{job.notes?.trim() || "No additional notes provided."}</p>
+      <section aria-labelledby={notesHeadingId} className="wk-provider-detail-section wk-provider-detail-row wk-provider-notes">
+        <span className="wk-provider-detail-row__icon"><NotebookPen aria-hidden="true" /></span>
+        <div>
+          <h3 id={notesHeadingId}>Homeowner notes</h3>
+          <p className={notesExpanded ? "is-expanded" : ""}>{notes}</p>
+          {notes.length > 150 ? (
+            <button onClick={() => setNotesExpanded((expanded) => !expanded)} type="button">
+              {notesExpanded ? "Show less" : "Show more"}
+            </button>
+          ) : null}
+        </div>
       </section>
     </div>
   );
@@ -241,13 +286,45 @@ function formatRequestedDate(value: Date | string | null, timingPreference: Timi
   });
 }
 
-function formatRequestedTime(value: string | null, timingPreference: TimingPreference) {
-  if (!value) return timingPreference === "ASAP" ? "ASAP" : "Flexible";
+function formatRequestedTimeRange(start: string | null, end: string | null, timingPreference: TimingPreference) {
+  if (!start) return timingPreference === "ASAP" ? "ASAP" : "Flexible";
+  if (!end) return formatClock(start);
+  return `${formatClock(start)}–${formatClock(end)}`;
+}
+
+function formatClock(value: string) {
   const [hourValue = "0", minute = "00"] = value.split(":");
   const hour = Number(hourValue);
   const suffix = hour >= 12 ? "PM" : "AM";
   const displayHour = hour % 12 || 12;
   return `${displayHour}:${minute} ${suffix}`;
+}
+
+function PostedTime({ createdAt }: { createdAt: Date | string }) {
+  const [label, setLabel] = useState(() => formatPostedTime(createdAt));
+
+  useEffect(() => {
+    setLabel(formatPostedTime(createdAt));
+    const interval = window.setInterval(() => setLabel(formatPostedTime(createdAt)), 60_000);
+    return () => window.clearInterval(interval);
+  }, [createdAt]);
+
+  return (
+    <time className="wk-provider-map__posted" dateTime={new Date(createdAt).toISOString()}>
+      <Clock3 aria-hidden="true" />{label}
+    </time>
+  );
+}
+
+function formatPostedTime(createdAt: Date | string) {
+  const elapsedMinutes = Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 60_000));
+  if (elapsedMinutes < 1) return "Posted just now";
+  if (elapsedMinutes < 60) return `Posted ${elapsedMinutes}m ago`;
+
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 24) return `Posted ${elapsedHours}h ago`;
+  if (elapsedHours < 48) return "Posted yesterday";
+  return `Posted ${Math.floor(elapsedHours / 24)}d ago`;
 }
 
 function formatCity(value: string) {

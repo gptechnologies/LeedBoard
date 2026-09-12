@@ -111,6 +111,7 @@ export function CleanerJobsFeed({
       <AppScreenHeader
         accountMenu
         initials={initials}
+        tagline="A CLEANER HOME HAPPIER YOU"
       />
       <div className="wk-screen-content">
         {error ? <div className="notice error">{error}</div> : null}
@@ -128,13 +129,13 @@ export function CleanerJobsFeed({
 
           {current ? (
             <NearbyJobSwipeCarousel
-              footer={(
+              footer={(job) => (
                 <div className="wk-provider-card-actions" aria-label="Job actions">
-                  <PassJobAction jobId={current.id} label="Pass" />
+                  <PassJobAction jobId={job.id} label="Pass" />
                   <FastBidDrawer
                     defaults={bidDefaults}
-                    job={current.job}
-                    timingLabel={current.timingLabel}
+                    job={job.job}
+                    timingLabel={job.timingLabel}
                     trigger={<button className="wk-provider-primary-action wk-pressable" type="button">Bid</button>}
                   />
                 </div>

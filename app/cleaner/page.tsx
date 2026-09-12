@@ -1,6 +1,7 @@
 import { UserRole } from "@prisma/client";
 import { CleanerJobsFeed } from "@/components/marketplace/cleaner-jobs-feed";
 import {
+  formatCleanerPriceLabel,
   formatTimingSummary,
   getCleanerHomeData,
 } from "@/lib/marketplace";
@@ -33,6 +34,10 @@ export default async function CleanerDashboard({ searchParams }: CleanerDashboar
     estimatedSquareFeet: job.homeProfile?.estimatedSquareFeet ?? null,
     id: job.id,
     job,
+    priceLabel: formatCleanerPriceLabel({
+      ...bidDefaults,
+      hourlyRateFromCents: cleaner?.cleanerProfile?.hourlyRateFromCents ?? null,
+    }),
     timingLabel: formatTimingSummary(job),
     title: job.title,
   });

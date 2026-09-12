@@ -6,7 +6,7 @@ import { notFound, redirect } from "next/navigation";
 import { FastBidDrawer } from "@/components/marketplace/fast-bid-drawer";
 import { ProviderJobOverview, type NearbyJobSwipeItem } from "@/components/marketplace/nearby-job-swipe-carousel";
 import { PassJobAction } from "@/components/marketplace/pass-job-action";
-import { formatTimingSummary } from "@/lib/marketplace";
+import { formatCleanerPriceLabel, formatTimingSummary } from "@/lib/marketplace";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 
@@ -79,6 +79,11 @@ export default async function CleanerJobDetailPage({
     estimatedSquareFeet: job.homeProfile?.estimatedSquareFeet ?? null,
     id: job.id,
     job,
+    priceLabel: formatCleanerPriceLabel({
+      hourlyRateFromCents: user.cleanerProfile?.hourlyRateFromCents ?? null,
+      standardFlatRateCents: user.cleanerProfile?.standardFlatRateCents ?? null,
+      standardHourlyRateCents: user.cleanerProfile?.standardHourlyRateCents ?? null,
+    }),
     timingLabel,
     title: job.title,
   };
