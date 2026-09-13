@@ -68,6 +68,11 @@ export function HomeownerOpenJobsCarousel({
       setApi={setApi}
       tabIndex={0}
     >
+      <div className="customer-open-jobs-controls">
+        <CarouselPrevious className="static translate-y-0" />
+        <CarouselNext className="static translate-y-0" />
+      </div>
+
       <CarouselContent className="-ml-2">
         {slides.map((slide, index) => (
           <CarouselItem className="basis-full pl-2" key={index}>
@@ -83,11 +88,6 @@ export function HomeownerOpenJobsCarousel({
             key={index}
           />
         ))}
-      </div>
-
-      <div className="customer-open-jobs-controls">
-        <CarouselPrevious className="static translate-y-0" />
-        <CarouselNext className="static translate-y-0" />
       </div>
     </Carousel>
   );

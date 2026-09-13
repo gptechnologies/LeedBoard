@@ -1,7 +1,6 @@
 /* Shared app-shell polish. Keep role-specific screens distinct while navigation stays familiar. */
 .wk-route-stage {
   min-height: 100dvh;
-  will-change: transform, opacity;
 }
 
 body .wk-role-shell[data-role][data-ui="calm"] .wk-app-nav {
@@ -453,10 +452,6 @@ button[data-wk-submit-pending="true"]::after {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .wk-route-stage {
-    will-change: auto;
-  }
-
   .wk-app-nav__pending,
   .wk-global-progress > span:first-child,
   button[data-wk-submit-pending="true"]::after {

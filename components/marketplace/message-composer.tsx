@@ -1,6 +1,6 @@
 "use client";
 
-import { Paperclip, Send } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { FormEvent, useState } from "react";
 
 export function MessageComposer({ phone }: { phone: string | null }) {
@@ -14,13 +14,25 @@ export function MessageComposer({ phone }: { phone: string | null }) {
   }
 
   return (
-    <form className="wk-message-composer" onSubmit={handleSubmit}>
-      <button aria-label="Attach a file" disabled title="Attachments are not available yet" type="button"><Paperclip aria-hidden="true" /></button>
-      <label>
-        <span className="sr-only">Message</span>
-        <input disabled={!phone} onChange={(event) => setMessage(event.target.value)} placeholder={phone ? "Message…" : "Messaging unavailable"} value={message} />
-      </label>
-      <button aria-label="Send message" disabled={!phone || !message.trim()} type="submit"><Send aria-hidden="true" /></button>
-    </form>
+    <div className="wk-message-handoff">
+      <form className="wk-message-composer" onSubmit={handleSubmit}>
+        <label>
+          <span className="sr-only">SMS message</span>
+          <input
+            aria-describedby="sms-handoff-hint"
+            disabled={!phone}
+            onChange={(event) => setMessage(event.target.value)}
+            placeholder={phone ? "Write an SMS…" : "SMS unavailable"}
+            value={message}
+          />
+        </label>
+        <button aria-label="Open SMS app with message draft" disabled={!phone || !message.trim()} type="submit">
+          Open SMS <ArrowUpRight aria-hidden="true" />
+        </button>
+      </form>
+      <p className="wk-message-handoff__hint" id="sms-handoff-hint">
+        {phone ? "Opens Messages so you can review and send." : "SMS is available once this cleaner shares a number."}
+      </p>
+    </div>
   );
 }

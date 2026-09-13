@@ -111,7 +111,7 @@ export function ProviderSelectionDrawer({
 
           <DrawerFooter>
             <Button
-              className="wk-pressable"
+              className="wk-pressable h-11"
               disabled={state !== "idle"}
               onClick={chooseProvider}
               type="button"
@@ -126,7 +126,7 @@ export function ProviderSelectionDrawer({
             </Button>
             {state === "idle" ? (
               <DrawerClose asChild>
-                <Button variant="ghost" type="button">Keep reviewing</Button>
+                <Button className="h-11" variant="ghost" type="button">Keep reviewing</Button>
               </DrawerClose>
             ) : null}
           </DrawerFooter>

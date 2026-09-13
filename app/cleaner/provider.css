@@ -97,6 +97,39 @@
   line-height: 1;
 }
 
+.wk-provider-deck-nav {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.wk-provider-deck-nav > button {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--provider-line);
+  border-radius: 50%;
+  background: var(--provider-surface);
+  color: var(--provider-green-dark);
+}
+
+.wk-provider-deck-nav > button:disabled {
+  opacity: 0.4;
+}
+
+.wk-provider-deck-nav > button:focus-visible {
+  outline: 2px solid var(--provider-green);
+  outline-offset: 2px;
+}
+
+.wk-provider-deck-nav > button svg {
+  width: 20px;
+  height: 20px;
+}
+
 .wk-provider-counter__dots {
   display: flex;
   gap: 6px;

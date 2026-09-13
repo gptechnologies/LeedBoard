@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BriefcaseBusiness, Home, MessageCircle, UserRound } from "lucide-react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { triggerHaptic } from "@/lib/haptics";
 
 type AppRole = "customer" | "cleaner";
@@ -36,9 +35,6 @@ export function RoleSwipeShell({
   const activeIndex = getActiveIndex(role, pathname);
   const [unreadActivityCount, setUnreadActivityCount] = useState(initialUnreadActivityCount);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
-  const previousIndex = useRef(activeIndex);
-  const reduceMotion = useReducedMotion();
-  const direction = activeIndex === previousIndex.current ? 0 : activeIndex > previousIndex.current ? 1 : -1;
   const displayedActiveIndex = pendingHref
     ? tabs.findIndex((tab) => tab.href === pendingHref)
     : activeIndex;
@@ -48,7 +44,6 @@ export function RoleSwipeShell({
   }, [initialUnreadActivityCount]);
 
   useEffect(() => {
-    previousIndex.current = activeIndex;
     setPendingHref(null);
   }, [activeIndex, pathname]);
 
@@ -63,25 +58,7 @@ export function RoleSwipeShell({
 
   return (
     <div className="wk-role-shell" data-role={role} data-ui="calm">
-      <AnimatePresence initial={false} mode="popLayout" custom={direction}>
-        <motion.div
-          animate={{ opacity: 1, x: 0, y: 0 }}
-          className="wk-route-stage"
-          custom={direction}
-          exit={reduceMotion ? { opacity: 1 } : { opacity: 0, x: direction * -12 }}
-          initial={
-            reduceMotion
-              ? { opacity: 1 }
-              : direction === 0
-                ? { opacity: 0.55, y: 8 }
-                : { opacity: 0.55, x: direction * 20 }
-          }
-          key={pathname}
-          transition={{ duration: reduceMotion ? 0 : 0.2, ease: [0.22, 1, 0.36, 1] }}
-        >
-          {children}
-        </motion.div>
-      </AnimatePresence>
+      <div className="wk-route-stage">{children}</div>
 
       <nav
         aria-busy={pendingHref ? "true" : undefined}
@@ -107,11 +84,7 @@ export function RoleSwipeShell({
             >
               <span className="wk-app-nav__icon">
                 {active ? (
-                  <motion.span
-                    className="wk-app-nav__selection"
-                    layoutId={`wk-${role}-nav-selection`}
-                    transition={reduceMotion ? { duration: 0 } : { type: "spring", duration: 0.34, bounce: 0.12 }}
-                  />
+                  <span className="wk-app-nav__selection" />
                 ) : null}
                 <Icon aria-hidden="true" />
                 {index === 2 && unreadActivityCount > 0 ? (

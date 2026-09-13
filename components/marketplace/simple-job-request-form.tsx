@@ -16,7 +16,6 @@ import {
   Check,
   ChevronDown,
   Clock3,
-  ImagePlus,
   LoaderCircle,
   MapPin,
 } from "lucide-react";
@@ -92,7 +91,6 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
   const [customStart, setCustomStart] = useState("09:00");
   const [customEnd, setCustomEnd] = useState("13:00");
   const [notes, setNotes] = useState("");
-  const [photoCount, setPhotoCount] = useState(0);
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [submitError, setSubmitError] = useState("");
 
@@ -290,17 +288,6 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
                   value={notes}
                 />
                 <small>{notes.length}/500</small>
-              </label>
-              <label className="wk-composer-photo-button">
-                <ImagePlus aria-hidden="true" />
-                <span>{photoCount ? `${photoCount} ${photoCount === 1 ? "photo" : "photos"} selected` : "Add photos"}</span>
-                <input
-                  accept="image/*"
-                  aria-label="Add photos"
-                  multiple
-                  onChange={(event) => setPhotoCount(event.target.files?.length ?? 0)}
-                  type="file"
-                />
               </label>
       </motion.section>
 

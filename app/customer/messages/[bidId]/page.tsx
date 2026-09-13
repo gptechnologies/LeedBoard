@@ -1,5 +1,5 @@
 import { BidStatus, JobRequestStatus, UserRole } from "@prisma/client";
-import { ArrowLeft, Check, MoreHorizontal } from "lucide-react";
+import { ArrowLeft, Check } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -49,9 +49,7 @@ export default async function CustomerMessageThreadPage({ params }: { params: Pa
           <span className="wk-conversation-header__avatar" aria-hidden="true">{providerInitials}</span>
           <span className="wk-conversation-header__copy">
             <strong>{cleanerName}</strong>
-            <small><i aria-hidden="true" /> Responds quickly</small>
           </span>
-          <button aria-label="Conversation options" type="button"><MoreHorizontal aria-hidden="true" /></button>
         </header>
 
         <section className="wk-conversation-job" aria-labelledby="conversation-job-title">

@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties, type TouchEvent } from "react";
 import { AppScreenHeader } from "@/components/marketplace/app-screen-header";
@@ -10,6 +11,7 @@ import {
   type NearbyJobSwipeItem,
 } from "@/components/marketplace/nearby-job-swipe-carousel";
 import { PassJobAction } from "@/components/marketplace/pass-job-action";
+import { triggerHaptic } from "@/lib/haptics";
 
 export type CleanerFeedJob = NearbyJobSwipeItem;
 
@@ -106,6 +108,13 @@ export function CleanerJobsFeed({
     startYRef.current = null;
   }
 
+  function moveJob(direction: -1 | 1) {
+    const next = Math.min(Math.max(index + direction, 0), jobs.length - 1);
+    if (next === index) return;
+    setIndex(next);
+    triggerHaptic("light");
+  }
+
   return (
     <>
       <AppScreenHeader
@@ -146,7 +155,27 @@ export function CleanerJobsFeed({
           ) : (
             <CleanerSearchingJobsState isRefreshing={isRefreshing} onRefresh={refreshJobs} />
           )}
-          {jobs.length > 1 ? <JobCounter count={jobs.length} index={index} /> : null}
+          {jobs.length > 1 ? (
+            <div className="wk-provider-deck-nav" aria-label="Browse nearby jobs" role="group">
+              <button
+                aria-label="Previous job"
+                disabled={index === 0}
+                onClick={() => moveJob(-1)}
+                type="button"
+              >
+                <ChevronLeft aria-hidden="true" />
+              </button>
+              <JobCounter count={jobs.length} index={index} />
+              <button
+                aria-label="Next job"
+                disabled={index === jobs.length - 1}
+                onClick={() => moveJob(1)}
+                type="button"
+              >
+                <ChevronRight aria-hidden="true" />
+              </button>
+            </div>
+          ) : null}
         </section>
       </div>
     </>

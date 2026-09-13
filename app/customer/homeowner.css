@@ -1006,13 +1006,15 @@
 
 .homeowner-my-jobs__position,
 .homeowner-my-jobs__dots { display: flex; align-items: center; }
-.homeowner-my-jobs__position { gap: 13px; color: var(--home-muted); font-size: 0.72rem; font-weight: 650; }
+.homeowner-my-jobs__position { gap: 13px; color: var(--home-muted); font-size: 0.72rem; font-weight: 650; font-variant-numeric: tabular-nums; }
 .homeowner-my-jobs__dots { gap: 7px; }
 .homeowner-my-jobs__dots i { width: 7px; height: 7px; border-radius: 50%; background: oklch(43% 0.055 145 / 0.25); }
 .homeowner-my-jobs__dots i.is-active { background: var(--home-green); box-shadow: 0 0 0 3px oklch(60% 0.09 145 / 0.11); }
 
-.homeowner-my-jobs__carousel .customer-open-jobs-dots,
-.homeowner-my-jobs__carousel .customer-open-jobs-controls { display: none; }
+.homeowner-my-jobs__carousel .customer-open-jobs-dots { display: none; }
+.homeowner-my-jobs__carousel .customer-open-jobs-controls { justify-content: flex-end; gap: 8px; margin: 0 2px 10px; }
+.homeowner-my-jobs__carousel .customer-open-jobs-controls [data-slot="carousel-previous"],
+.homeowner-my-jobs__carousel .customer-open-jobs-controls [data-slot="carousel-next"] { width: 44px; height: 44px; min-width: 44px; min-height: 44px; border-color: var(--home-line); background: var(--home-surface); box-shadow: none; }
 .homeowner-my-jobs__carousel [data-slot="carousel-item"] { display: flex; }
 
 .homeowner-job-summary {
@@ -1171,8 +1173,7 @@
 .wk-messages-title-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .wk-messages-title-row h1 { margin: 0; color: var(--home-green-dark); font-family: var(--serif); font-size: clamp(2.35rem, 10vw, 3rem); font-weight: 500; letter-spacing: -0.055em; line-height: 1; }
 .wk-messages-title-row button,
-.wk-conversation-header > a,
-.wk-conversation-header > button { width: 43px; height: 43px; display: grid; place-items: center; border: 1px solid oklch(38% 0.07 145 / 0.2); border-radius: 50%; background: oklch(100% 0 0 / 0.48); color: var(--home-green-dark); box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.82); backdrop-filter: blur(14px); }
+.wk-conversation-header > a { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid oklch(38% 0.07 145 / 0.2); border-radius: 50%; background: oklch(100% 0 0 / 0.48); color: var(--home-green-dark); box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.82); backdrop-filter: blur(14px); }
 .wk-messages-title-row svg,
 .wk-conversation-header svg { width: 20px; height: 20px; stroke-width: 1.65; }
 
@@ -1199,13 +1200,11 @@
 .wk-messages-empty strong { color: var(--home-green-dark); font-family: var(--serif); font-size: 1.35rem; font-weight: 520; }
 .wk-messages-empty p { max-width: 28ch; margin: 0; color: var(--home-muted); font-size: 0.78rem; line-height: 1.45; }
 
-.wk-conversation-header { min-height: 58px; display: grid; grid-template-columns: 43px 45px minmax(0, 1fr) 43px; align-items: center; gap: 9px; }
+.wk-conversation-header { min-height: 58px; display: grid; grid-template-columns: 44px 45px minmax(0, 1fr); align-items: center; gap: 9px; }
 .wk-conversation-header > a { text-decoration: none; }
 .wk-conversation-header__avatar { width: 45px; height: 45px; display: grid; place-items: center; border-radius: 50%; background: var(--home-green); color: white; font-family: var(--serif); font-size: 0.9rem; }
 .wk-conversation-header__copy { min-width: 0; display: grid; gap: 3px; }
 .wk-conversation-header__copy strong { overflow: hidden; color: var(--home-green-dark); font-family: var(--serif); font-size: 1.08rem; font-weight: 620; letter-spacing: -0.025em; text-overflow: ellipsis; white-space: nowrap; }
-.wk-conversation-header__copy small { display: flex; align-items: center; gap: 5px; color: var(--home-muted); font-size: 0.65rem; }
-.wk-conversation-header__copy small i { width: 6px; height: 6px; border-radius: 50%; background: oklch(65% 0.16 143); }
 
 .wk-conversation-job { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 11px; border: 1px solid oklch(38% 0.07 145 / 0.18); border-radius: 18px; padding: 13px; background: oklch(100% 0 0 / 0.5); box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.82); backdrop-filter: blur(15px); }
 .wk-conversation-job__icon { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; background: var(--home-green); color: white; }
@@ -1230,12 +1229,15 @@
 .wk-chat-line.is-customer time svg { width: 11px; height: 11px; }
 
 .wk-conversation-actions { position: sticky; z-index: 4; bottom: calc(99px + env(safe-area-inset-bottom)); display: grid; gap: 8px; padding-top: 8px; background: linear-gradient(180deg, transparent, var(--home-bg) 20%); }
-.wk-message-composer { min-height: 50px; display: grid; grid-template-columns: 38px minmax(0, 1fr) 38px; align-items: center; gap: 5px; border: 1px solid oklch(38% 0.07 145 / 0.2); border-radius: 17px; padding: 5px; background: oklch(100% 0 0 / 0.66); box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.82); backdrop-filter: blur(16px); }
-.wk-message-composer button { width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--home-green); }
-.wk-message-composer button:last-child { background: var(--home-green); color: white; }
+.wk-message-handoff { display: grid; gap: 5px; }
+.wk-message-composer { min-height: 56px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 5px; border: 1px solid oklch(38% 0.07 145 / 0.2); border-radius: 17px; padding: 5px; background: oklch(100% 0 0 / 0.66); box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.82); backdrop-filter: blur(16px); }
+.wk-message-composer:focus-within { border-color: var(--home-green); }
+.wk-message-composer label { min-width: 0; padding-inline: 9px; }
+.wk-message-composer button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; border: 0; border-radius: 12px; padding: 0 11px; background: var(--home-green); color: white; font-size: 0.75rem; font-weight: 720; white-space: nowrap; }
 .wk-message-composer button:disabled { opacity: 0.42; }
-.wk-message-composer svg { width: 18px; height: 18px; stroke-width: 1.7; }
-.wk-message-composer input { width: 100%; border: 0; background: transparent; color: var(--home-ink); font: inherit; font-size: 0.8rem; outline: none; }
+.wk-message-composer svg { width: 16px; height: 16px; stroke-width: 1.8; }
+.wk-message-composer input { width: 100%; border: 0; background: transparent; color: var(--home-ink); font: inherit; font-size: 1rem; outline: none; }
+.wk-message-handoff__hint { margin: 0 6px; color: var(--home-muted); font-size: 0.69rem; line-height: 1.35; }
 .wk-conversation-actions > .wk-provider-select,
 .wk-conversation-actions .wk-provider-select__trigger,
 .wk-conversation-chosen { width: 100%; }
@@ -1253,9 +1255,7 @@
   .homeowner-job-summary .homeowner-offer__detail { padding-left: 50px; }
   .wk-message-row { grid-template-columns: 43px minmax(0, 1fr) auto; gap: 9px; padding-inline: 11px; }
   .wk-message-row__avatar { width: 43px; height: 43px; }
-  .wk-conversation-header { grid-template-columns: 44px 41px minmax(0, 1fr) 44px; gap: 7px; }
-  .wk-conversation-header > a,
-  .wk-conversation-header > button { width: 44px; height: 44px; }
+  .wk-conversation-header { grid-template-columns: 44px 41px minmax(0, 1fr); gap: 7px; }
   .wk-conversation-header__avatar { width: 41px; height: 41px; }
 }
 
@@ -3122,41 +3122,6 @@ body .wk-role-shell[data-role="customer"]:has(.wk-post-screen) .wk-app-nav {
   font-variant-numeric: tabular-nums;
 }
 
-.wk-composer-photo-button {
-  width: max-content;
-  min-height: 48px;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  border: 1px dashed oklch(100% 0 0 / 0.68);
-  border-radius: 15px;
-  padding: 0 17px;
-  background: oklch(98% 0.018 145 / 0.09);
-  color: oklch(99% 0.006 110);
-  font-size: 0.88rem;
-  font-weight: 520;
-  cursor: pointer;
-  transition: background-color 180ms ease, transform 150ms ease;
-}
-
-.wk-composer-photo-button:active {
-  transform: scale(0.98);
-}
-
-.wk-composer-photo-button svg {
-  width: 21px;
-  height: 21px;
-}
-
-.wk-composer-photo-button input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  clip-path: inset(50%);
-}
-
 .wk-composer-error {
   margin: 0;
   border: 1px solid oklch(87% 0.07 75 / 0.42);
@@ -3332,10 +3297,6 @@ body .wk-role-shell[data-role="customer"]:has(.wk-post-screen) .wk-app-nav {
 .wk-composer-notes,
 .wk-role-shell[data-role="customer"][data-ui="calm"] .wk-job-composer .wk-composer-notes textarea {
   min-height: 78px;
-}
-
-.wk-composer-photo-button {
-  min-height: 44px;
 }
 
 .wk-composer-submit {
@@ -3555,16 +3516,16 @@ body .wk-role-shell[data-role="customer"]:has(.wk-post-screen) .wk-app-nav {
 }
 
 .wk-account-stepper {
-  min-height: 48px;
+  min-height: 50px;
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) 42px;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
   align-items: center;
   padding: 3px;
 }
 
 .wk-account-stepper button {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
   border: 1px solid oklch(37% 0.07 145 / 0.2);
