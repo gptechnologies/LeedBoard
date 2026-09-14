@@ -13,7 +13,7 @@ import { getConversationReference, getJobReference } from "@/lib/providers";
 const TWILIO_MESSAGES_URL = "https://api.twilio.com/2010-04-01/Accounts";
 
 export function isConversationSmsReady() {
-  return process.env.ENABLE_SMS_OUTREACH === "true" &&
+  return process.env.ENABLE_CONVERSATION_SMS === "true" &&
     Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_PHONE_NUMBER);
 }
 
@@ -266,7 +266,7 @@ export async function sendCleanerInviteSms(jobOutreachId: string) {
 }
 
 export async function sendProviderAcceptanceSms(bidId: string) {
-  if (process.env.ENABLE_SMS_OUTREACH !== "true") return null;
+  if (!isConversationSmsReady() && process.env.ENABLE_SMS_OUTREACH !== "true") return null;
 
   const bid = await prisma.jobBid.findUnique({
     where: { id: bidId },

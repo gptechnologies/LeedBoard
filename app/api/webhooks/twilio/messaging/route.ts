@@ -9,6 +9,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { normalizePhone } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { receiveConversationSms } from "@/lib/conversation";
+import { isConversationSmsReady } from "@/lib/sms";
 
 function mapTwilioStatus(status: string) {
   switch (status.toLowerCase()) {
@@ -56,7 +57,7 @@ function isNotInterested(body: string) {
 }
 
 export async function POST(request: Request) {
-  if (process.env.ENABLE_SMS_OUTREACH !== "true") {
+  if (!isConversationSmsReady() && process.env.ENABLE_SMS_OUTREACH !== "true") {
     return NextResponse.json({ disabled: true, received: false }, { status: 202 });
   }
 
@@ -85,7 +86,7 @@ export async function POST(request: Request) {
       if (conversation.matched && "ambiguous" in conversation) {
         return twiml("Please reply with the Well Kept conversation ID from your text before your message so we can route it to the right job.");
       }
-      if (!conversation.matched) await handleInboundMessage(fromRaw, body);
+      if (!conversation.matched && process.env.ENABLE_SMS_OUTREACH === "true") await handleInboundMessage(fromRaw, body);
     }
     return twiml();
   }

@@ -7,7 +7,7 @@ For an SMS-only cleaner (a bid with a cleaner lead and no linked app user), the 
 ## Phone provider setup
 
 1. Apply the additive Prisma schema change (`npm run db:push`) to the deployment database before deploying this code.
-2. Configure `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and a dedicated, SMS-capable `TWILIO_FROM_PHONE_NUMBER` in E.164 format. Set `ENABLE_SMS_OUTREACH=true`. A Messaging Service by itself is insufficient for conversation routing because inbound replies must target the same fixed number.
+2. Configure `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and a dedicated, SMS-capable `TWILIO_FROM_PHONE_NUMBER` in E.164 format. Set `ENABLE_CONVERSATION_SMS=true`. Keep `ENABLE_SMS_OUTREACH` separate; that switch controls job invite outreach. A Messaging Service by itself is insufficient for conversation routing because inbound replies must target the same fixed number.
 3. Set the number's incoming message webhook to `https://<app-domain>/api/webhooks/twilio/messaging` using HTTP POST. Set `TWILIO_MESSAGING_WEBHOOK_URL` to that exact public URL for signature validation. Configure `APP_BASE_URL` (or `NEXT_PUBLIC_APP_URL`) to the same app origin so outgoing status callbacks reach this endpoint.
 4. Verify a full exchange using a real SMS-only cleaner number: homeowner app message → cleaner text → homeowner app thread, then homeowner text → cleaner text. Confirm outbound status and failure display. Twilio account/number provisioning and carrier approval are external setup steps.
 
