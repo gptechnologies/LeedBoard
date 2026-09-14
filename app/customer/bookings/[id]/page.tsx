@@ -22,7 +22,6 @@ export default async function CustomerBookingPage({ params }: { params: Params }
 
   if (!booking) notFound();
 
-  const initials = `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
   const visitDate = booking.slot.startsAt.toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -32,7 +31,7 @@ export default async function CustomerBookingPage({ params }: { params: Params }
 
   return (
     <div className="wk-app-screen wk-secondary-app-screen">
-      <AppScreenHeader accountMenu initials={initials} />
+      <AppScreenHeader brandHref="/customer" />
       <div className="wk-screen-content">
         <header className="wk-homeowner-detail-heading">
           <Link href="/customer/jobs"><ChevronLeft aria-hidden="true" />Back to activity</Link>

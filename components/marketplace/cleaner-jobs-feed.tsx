@@ -20,7 +20,6 @@ const refreshThreshold = 72;
 export function CleanerJobsFeed({
   bidDefaults,
   error,
-  initials,
   jobs,
   passed,
 }: {
@@ -30,7 +29,6 @@ export function CleanerJobsFeed({
     defaultEtaMinutes: number | null;
   };
   error?: string;
-  initials: string;
   jobs: CleanerFeedJob[];
   passed: boolean;
 }) {
@@ -117,10 +115,7 @@ export function CleanerJobsFeed({
 
   return (
     <>
-      <AppScreenHeader
-        accountMenu
-        initials={initials}
-      />
+      <AppScreenHeader brandHref="/cleaner" />
       <div className="wk-screen-content">
         {error ? <div className="notice error">{error}</div> : null}
         {passed ? <div className="wk-provider-toast" role="status">Job moved to Passed.</div> : null}

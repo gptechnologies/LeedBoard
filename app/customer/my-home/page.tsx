@@ -20,11 +20,10 @@ export default async function CustomerMyHomePage({
   const user = await requireUser(UserRole.CUSTOMER);
   const params = await searchParams;
   const homeProfiles = await getCustomerHomeProfiles(user.id);
-  const initials = `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
 
   return (
     <div className="wk-app-screen wk-secondary-app-screen">
-      <AppScreenHeader accountMenu initials={initials} />
+      <AppScreenHeader brandHref="/customer" />
       <div className="wk-screen-content">
         <header className="wk-homeowner-detail-heading">
           <Link href="/customer/account"><ChevronLeft aria-hidden="true" />Back to account</Link>

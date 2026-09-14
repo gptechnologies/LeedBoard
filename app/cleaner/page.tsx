@@ -43,20 +43,11 @@ export default async function CleanerDashboard({ searchParams }: CleanerDashboar
   });
 
   const feedJobs = openJobs.map(toFeedJob);
-  const businessName = cleaner?.cleanerProfile?.businessName || `${user.firstName} ${user.lastName}`;
-  const initials = businessName
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part.charAt(0))
-    .join("")
-    .toUpperCase();
-
   return (
     <div className="wk-app-screen wk-jobs-screen">
       <CleanerJobsFeed
         bidDefaults={bidDefaults}
         error={params.error}
-        initials={initials}
         jobs={feedJobs}
         passed={params.passed === "1"}
       />

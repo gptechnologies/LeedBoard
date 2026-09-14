@@ -71,7 +71,7 @@ export default async function CleanerAccountPage({ searchParams }: CleanerAccoun
 
   return (
     <div className="wk-app-screen wk-profile-screen">
-      <AppScreenHeader accountMenu initials={initials} />
+      <AppScreenHeader brandHref="/cleaner" />
       <div className="wk-screen-content">
         {params.error ? <div className="notice error">{params.error}</div> : null}
 

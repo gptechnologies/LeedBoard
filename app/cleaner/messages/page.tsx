@@ -77,10 +77,7 @@ export default async function CleanerMessagesPage() {
 
   return (
     <div className="wk-app-screen wk-activity-screen">
-      <AppScreenHeader
-        accountMenu
-        initials={`${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase()}
-      />
+      <AppScreenHeader brandHref="/cleaner" />
       <div className="wk-screen-content">
         <h1 className="wk-page-title">Messages</h1>
         <ActivityScreen conversations={conversations} emptyAction={{ href: "/cleaner", label: "Browse jobs" }} jobs={activeJobs} jobsLabel="Active Jobs" />

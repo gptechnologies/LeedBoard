@@ -20,7 +20,6 @@ export default async function CustomerMessagesPage() {
     },
     orderBy: { updatedAt: "desc" },
   });
-  const initials = `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
   const conversations: HomeownerConversation[] = bids.map((bid) => {
     const name = getProviderName(bid);
     const isChosen = bid.status === BidStatus.ACCEPTED;
@@ -39,7 +38,7 @@ export default async function CustomerMessagesPage() {
 
   return (
     <div className="wk-app-screen wk-messages-screen">
-      <AppScreenHeader actionHref="/customer/account" actionLabel="Open account" actionType="initials" brandHref="/customer" initials={initials} />
+      <AppScreenHeader brandHref="/customer" />
       <div className="wk-screen-content wk-messages-content">
         <HomeownerMessagesInbox conversations={conversations} />
       </div>

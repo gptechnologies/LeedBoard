@@ -1,6 +1,7 @@
 import { UserRole } from "@prisma/client";
 import { X } from "lucide-react";
 import Link from "next/link";
+import { AppNavigationMenu } from "@/components/marketplace/app-navigation-menu";
 import { SimpleJobRequestForm } from "@/components/marketplace/simple-job-request-form";
 import { getCustomerHomeProfiles } from "@/lib/marketplace";
 import { requireUser } from "@/lib/session";
@@ -22,9 +23,12 @@ export default async function CustomerNewJobPage({
 
   return (
     <div className="wk-app-screen wk-post-screen">
-      <Link aria-label="Close new job" className="wk-post-close wk-screen-header__action" href="/customer">
-        <X aria-hidden="true" />
-      </Link>
+      <div className="wk-post-topbar">
+        <Link aria-label="Close new job" className="wk-post-close wk-screen-header__action" href="/customer">
+          <X aria-hidden="true" />
+        </Link>
+        <AppNavigationMenu />
+      </div>
       <div className="wk-screen-content">
         {params.error ? <div className="notice error">{params.error}</div> : null}
         <SimpleJobRequestForm homeProfiles={homeProfiles} />

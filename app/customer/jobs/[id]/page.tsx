@@ -4,6 +4,7 @@ import { BidCard } from "@/components/marketplace/cards";
 import { HomeownerOpenJobDetailCard } from "@/components/marketplace";
 import { CancelJobAction } from "@/components/marketplace/cancel-job-action";
 import { ChevronLeft } from "lucide-react";
+import { AppScreenHeader } from "@/components/marketplace/app-screen-header";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { notFound } from "next/navigation";
@@ -70,6 +71,7 @@ export default async function CustomerJobDetailPage({
 
   return (
     <div className="wk-app-screen wk-homeowner-detail-screen">
+      <AppScreenHeader brandHref="/customer" />
       <div className="wk-screen-content">
         <header className="wk-homeowner-detail-heading">
           <Link href="/customer/jobs"><ChevronLeft aria-hidden="true" />Back to Activity</Link>

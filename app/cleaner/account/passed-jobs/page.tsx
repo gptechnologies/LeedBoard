@@ -14,8 +14,6 @@ export const dynamic = "force-dynamic";
 
 export default async function PassedJobsPage() {
   const user = await requireUser(UserRole.CLEANER);
-  const businessName = user.cleanerProfile?.businessName || `${user.firstName} ${user.lastName}`;
-  const initials = businessName.split(/\s+/).slice(0, 2).map((part) => part.charAt(0)).join("").toUpperCase();
   const passedJobs = await prisma.cleanerJobPass.findMany({
     where: { cleanerId: user.id },
     orderBy: { passedAt: "desc" },
@@ -58,7 +56,7 @@ export default async function PassedJobsPage() {
 
   return (
     <div className="wk-app-screen wk-passed-jobs-screen">
-      <AppScreenHeader accountMenu initials={initials} />
+      <AppScreenHeader brandHref="/cleaner" />
       <main className="wk-screen-content">
         <header className="wk-secondary-page-heading">
           <Link aria-label="Back to account" href="/cleaner/account"><ChevronLeft aria-hidden="true" /></Link>

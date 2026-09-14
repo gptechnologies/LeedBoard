@@ -32,7 +32,6 @@ export default async function CustomerMessageThreadPage({ params }: { params: Pa
 
   const cleanerName = getProviderName(bid);
   const providerPhone = getProviderPhone(bid);
-  const initials = `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
   const providerInitials = getInitials(cleanerName);
   const job = bid.jobRequest;
   const accepted = bid.status === BidStatus.ACCEPTED;
@@ -41,7 +40,7 @@ export default async function CustomerMessageThreadPage({ params }: { params: Pa
   return (
     <div className="wk-app-screen wk-message-detail-screen">
       <ActivityReadMarker bidId={bid.id} role="customer" />
-      <AppScreenHeader actionHref="/customer/account" actionLabel="Open account" actionType="initials" brandHref="/customer" initials={initials} />
+      <AppScreenHeader brandHref="/customer" />
 
       <div className="wk-screen-content wk-message-detail-content">
         <header className="wk-conversation-header">

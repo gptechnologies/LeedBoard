@@ -1,9 +1,11 @@
 import { ArrowLeft, SearchX } from "lucide-react";
 import Link from "next/link";
+import { AppScreenHeader } from "@/components/marketplace/app-screen-header";
 
 export default function CustomerNotFound() {
   return (
     <div className="wk-app-screen wk-recovery-screen">
+      <AppScreenHeader brandHref="/customer" />
       <section className="wk-recovery-state">
         <span aria-hidden="true"><SearchX /></span>
         <p className="market-kicker">Nothing here</p>

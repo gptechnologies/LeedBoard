@@ -13,17 +13,10 @@ export default async function CustomerDashboard() {
   const activeJobs = jobs.filter(
     (job) => job.status === JobRequestStatus.OPEN || job.status === JobRequestStatus.AWARDED,
   );
-  const initials = `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
 
   return (
     <div className="wk-app-screen wk-homeowner-hub-screen">
-      <AppScreenHeader
-        actionHref="/customer/account"
-        actionLabel="Open account"
-        actionType="initials"
-        brandHref="/customer"
-        initials={initials}
-      />
+      <AppScreenHeader brandHref="/customer" />
       <div className="wk-screen-content wk-homeowner-hub">
         <HomeownerJobsWorkspace jobs={activeJobs} />
       </div>

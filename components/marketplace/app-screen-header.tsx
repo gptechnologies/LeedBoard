@@ -1,83 +1,22 @@
 import Link from "next/link";
-import { Bell, Settings, X } from "lucide-react";
-import type { ReactNode } from "react";
-import { AppAccountMenu } from "@/components/marketplace/app-account-menu";
+import { AppNavigationMenu } from "@/components/marketplace/app-navigation-menu";
 
 export function AppScreenHeader({
-  actionHref,
-  actionLabel,
-  actionType = "settings",
-  accountMenu,
   brandHref = "/",
-  centeredTitle,
-  initials,
-  middle,
   tagline = "Keep your place well kept",
-  title,
 }: {
-  actionHref?: string;
-  actionLabel?: string;
-  actionType?: "settings" | "notifications" | "initials" | "close";
-  accountMenu?: boolean;
   brandHref?: string;
-  centeredTitle?: boolean;
-  initials?: string;
-  middle?: ReactNode;
   tagline?: string;
-  title?: string;
 }) {
-  if (accountMenu && initials) {
-    return (
-      <header className={`wk-screen-header${centeredTitle ? " wk-screen-header--centered" : ""}${middle ? " wk-screen-header--with-middle" : ""}`}>
-        {centeredTitle ? (
-          <>
-            <span aria-hidden="true" className="wk-screen-header__spacer" />
-            <h1>{title}</h1>
-          </>
-        ) : (
-          <div className="wk-screen-brand">
-            <Link className="wk-wordmark" href={brandHref}>
-              Well Kept<span aria-hidden="true">✦</span>
-            </Link>
-            {tagline ? <p>{tagline}</p> : null}
-          </div>
-        )}
-        {middle}
-        <AppAccountMenu initials={initials} />
-      </header>
-    );
-  }
-
-  const action = (
-    <span className="wk-screen-header__action" aria-label={actionLabel}>
-      {actionType === "notifications" ? (
-        <Bell aria-hidden="true" />
-      ) : actionType === "close" ? (
-        <X aria-hidden="true" />
-      ) : actionType === "initials" ? (
-        initials
-      ) : (
-        <Settings aria-hidden="true" />
-      )}
-    </span>
-  );
-
   return (
-    <header className={`wk-screen-header${centeredTitle ? " wk-screen-header--centered" : ""}`}>
-      {centeredTitle ? (
-        <>
-          <span aria-hidden="true" className="wk-screen-header__spacer" />
-          <h1>{title}</h1>
-        </>
-      ) : (
-        <div className="wk-screen-brand">
-          <Link className="wk-wordmark" href={brandHref}>
-            Well Kept<span aria-hidden="true">✦</span>
-          </Link>
-          {tagline ? <p>{tagline}</p> : null}
-        </div>
-      )}
-      {actionHref ? <Link href={actionHref}>{action}</Link> : action}
+    <header className="wk-screen-header">
+      <div className="wk-screen-brand">
+        <Link className="wk-wordmark" href={brandHref}>
+          Well Kept<span aria-hidden="true">✦</span>
+        </Link>
+        {tagline ? <p>{tagline}</p> : null}
+      </div>
+      <AppNavigationMenu />
     </header>
   );
 }

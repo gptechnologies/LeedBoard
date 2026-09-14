@@ -1,6 +1,8 @@
 import { EntryMethod, UserRole } from "@prisma/client";
 import { Mail, Phone } from "lucide-react";
+import Link from "next/link";
 
+import { AppNavigationMenu } from "@/components/marketplace/app-navigation-menu";
 import { HomeownerAccountForm } from "@/components/marketplace/homeowner-account-form";
 import { getCustomerHomeData } from "@/lib/marketplace";
 import { requireUser } from "@/lib/session";
@@ -15,7 +17,6 @@ export default async function CustomerAccountPage({ searchParams }: CustomerAcco
   const user = await requireUser(UserRole.CUSTOMER);
   const query = await searchParams;
   const { homeProfile } = await getCustomerHomeData(user.id);
-  const initials = `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
   const home = {
     id: homeProfile?.id ?? null,
     label: homeProfile?.label ?? "My Home",
@@ -38,10 +39,10 @@ export default async function CustomerAccountPage({ searchParams }: CustomerAcco
     <div className="wk-app-screen wk-account-screen">
       <header className="wk-account-header">
         <div className="wk-account-brand">
-          <span className="wk-wordmark">Well Kept<span aria-hidden="true">✦</span></span>
+          <Link className="wk-wordmark" href="/customer">Well Kept<span aria-hidden="true">✦</span></Link>
           <p>Keep your place well kept</p>
         </div>
-        <span aria-hidden="true" className="wk-account-initials">{initials}</span>
+        <AppNavigationMenu />
       </header>
 
       <div className="wk-screen-content wk-account-content">

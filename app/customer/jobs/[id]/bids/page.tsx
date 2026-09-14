@@ -5,6 +5,7 @@ import { ProviderSelectionDrawer } from "@/components/marketplace/provider-selec
 import { CancelJobAction } from "@/components/marketplace/cancel-job-action";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
+import { AppScreenHeader } from "@/components/marketplace/app-screen-header";
 import {
   formatBidAmount,
   formatBidTiming,
@@ -84,6 +85,7 @@ export default async function CustomerJobBidsPage({
 
   return (
     <div className="wk-app-screen wk-homeowner-detail-screen">
+      <AppScreenHeader brandHref="/customer" />
       <div className="wk-screen-content">
         <header className="wk-homeowner-detail-heading">
           <Link href="/customer/jobs"><ChevronLeft aria-hidden="true" />Back to Activity</Link>

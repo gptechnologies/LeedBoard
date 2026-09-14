@@ -6,6 +6,7 @@ import { notFound, redirect } from "next/navigation";
 import { FastBidDrawer } from "@/components/marketplace/fast-bid-drawer";
 import { ProviderJobOverview, type NearbyJobSwipeItem } from "@/components/marketplace/nearby-job-swipe-carousel";
 import { PassJobAction } from "@/components/marketplace/pass-job-action";
+import { AppScreenHeader } from "@/components/marketplace/app-screen-header";
 import { formatCleanerPriceLabel, formatTimingSummary } from "@/lib/marketplace";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
@@ -90,6 +91,7 @@ export default async function CleanerJobDetailPage({
 
   return (
     <div className="wk-app-screen wk-job-detail-screen">
+      <AppScreenHeader brandHref="/cleaner" />
       <main className="wk-screen-content">
         <header className="wk-detail-page-heading">
           <Link href="/cleaner"><ChevronLeft aria-hidden="true" />Back to Open Jobs</Link>

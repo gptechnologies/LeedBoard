@@ -1,7 +1,7 @@
 "use client";
 
 import { EntryMethod } from "@prisma/client";
-import { LogOut, Minus, Plus, Save } from "lucide-react";
+import { Minus, Plus, Save } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 
 type AccountHome = {
@@ -163,10 +163,6 @@ export function HomeownerAccountForm({ home }: { home: AccountHome }) {
           <Save aria-hidden="true" />
           {saving ? "Saving…" : "Save changes"}
         </button>
-      </form>
-
-      <form action="/auth/logout" className="wk-account-logout" method="post">
-        <button className="wk-pressable" type="submit"><LogOut aria-hidden="true" />Log out</button>
       </form>
     </>
   );

@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { JobCoordinationSummary } from "@/components/marketplace/job-coordination-summary";
 import { CompletionFeedback } from "@/components/marketplace/completion-feedback";
 import { ActivityReadMarker } from "@/components/marketplace/activity-read-marker";
+import { AppScreenHeader } from "@/components/marketplace/app-screen-header";
 import { StatusPill } from "@/components/marketplace/status-pill";
 import { getCleaningJobTitle } from "@/lib/job-title";
 import {
@@ -65,6 +66,7 @@ export default async function CleanerMessageThreadPage({
   return (
     <div className="wk-app-screen wk-message-detail-screen">
       <ActivityReadMarker bidId={bid.id} role="cleaner" />
+      <AppScreenHeader brandHref="/cleaner" />
       <section className="market-surface">
         <header className="market-topbar market-topbar--detail">
           <Link href="/cleaner/messages" className="bid-screen__back" aria-label="Back to activity">

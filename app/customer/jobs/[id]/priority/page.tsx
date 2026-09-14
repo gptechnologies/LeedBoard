@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
+import { AppScreenHeader } from "@/components/marketplace/app-screen-header";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 
@@ -75,6 +76,7 @@ export default async function CustomerJobPriorityPage({ params }: { params: Para
 
   return (
     <div className="wk-app-screen wk-secondary-app-screen">
+      <AppScreenHeader brandHref="/customer" />
       <section className="market-surface">
         <header className="market-topbar market-topbar--detail">
           <div>
