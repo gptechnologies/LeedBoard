@@ -6,8 +6,10 @@ import { JobCoordinationSummary } from "@/components/marketplace/job-coordinatio
 import { CompletionFeedback } from "@/components/marketplace/completion-feedback";
 import { ActivityReadMarker } from "@/components/marketplace/activity-read-marker";
 import { AppScreenHeader } from "@/components/marketplace/app-screen-header";
+import { ConversationThread } from "@/components/marketplace/conversation-thread";
 import { StatusPill } from "@/components/marketplace/status-pill";
 import { getCleaningJobTitle } from "@/lib/job-title";
+import { initialBidMessage, toThreadMessage } from "@/lib/conversation";
 import {
   formatBidAmount,
   formatBidTiming,
@@ -37,7 +39,7 @@ export default async function CleanerMessageThreadPage({
   const bid = await prisma.jobBid.findFirst({
     where: {
       id: bidId,
-      cleanerId: user.id,
+      OR: [{ cleanerId: user.id }, { cleanerLead: { linkedCleanerUserId: user.id } }],
     },
     include: {
       jobRequest: {
@@ -50,6 +52,7 @@ export default async function CleanerMessageThreadPage({
           },
         },
       },
+      messages: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] },
     },
   });
 
@@ -103,19 +106,21 @@ export default async function CleanerMessageThreadPage({
               <strong>{formatBidAmount(bid)}</strong>
               <span>{formatBidTiming(bid)}</span>
             </div>
-            {bid.message ? <p>{bid.message}</p> : null}
           </article>
 
-          {bid.status === BidStatus.ACCEPTED ? (
+          <ConversationThread
+            bidId={bid.id}
+            chosenAt={bid.status === BidStatus.ACCEPTED ? bid.jobRequest.acceptedAt?.toISOString() : null}
+            otherInitials={`${bid.jobRequest.customer.firstName.charAt(0)}${bid.jobRequest.customer.lastName.charAt(0)}`.toUpperCase()}
+            disabled={bid.status === BidStatus.DECLINED || bid.status === BidStatus.WITHDRAWN || bid.jobRequest.status === JobRequestStatus.CANCELLED || bid.jobRequest.status === JobRequestStatus.EXPIRED}
+            initialMessages={[...initialBidMessage(bid), ...bid.messages.map(toThreadMessage)]}
+            role="cleaner"
+          />
+
+          {isCompleted ? (
             <article className="message-event message-event--system">
-              <strong>
-                {isCompleted ? "You marked this job complete." : "Homeowner accepted your bid."}
-              </strong>
-              <p>
-                {isCompleted
-                  ? "The homeowner can now see the completed job state in their activity."
-                  : "This job is confirmed. Review the address, timing, and access details here."}
-              </p>
+              <strong>You marked this job complete.</strong>
+              <p>The homeowner can now see the completed job state in their activity.</p>
             </article>
           ) : null}
 

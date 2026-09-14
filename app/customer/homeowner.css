@@ -1226,15 +1226,8 @@
 .wk-chat-line.is-customer time svg { width: 11px; height: 11px; }
 
 .wk-conversation-actions { position: sticky; z-index: 4; bottom: calc(12px + env(safe-area-inset-bottom)); display: grid; gap: 8px; padding-top: 8px; background: linear-gradient(180deg, transparent, var(--home-bg) 20%); }
-.wk-message-handoff { display: grid; gap: 5px; }
-.wk-message-composer { min-height: 56px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 5px; border: 1px solid oklch(38% 0.07 145 / 0.2); border-radius: 17px; padding: 5px; background: oklch(100% 0 0 / 0.66); box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.82); backdrop-filter: blur(16px); }
-.wk-message-composer:focus-within { border-color: var(--home-green); }
-.wk-message-composer label { min-width: 0; padding-inline: 9px; }
-.wk-message-composer button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; border: 0; border-radius: 12px; padding: 0 11px; background: var(--home-green); color: white; font-size: 0.75rem; font-weight: 720; white-space: nowrap; }
-.wk-message-composer button:disabled { opacity: 0.42; }
-.wk-message-composer svg { width: 16px; height: 16px; stroke-width: 1.8; }
-.wk-message-composer input { width: 100%; border: 0; background: transparent; color: var(--home-ink); font: inherit; font-size: 1rem; outline: none; }
-.wk-message-handoff__hint { margin: 0 6px; color: var(--home-muted); font-size: 0.69rem; line-height: 1.35; }
+.wk-message-detail-content > .wk-conversation-actions { position: static; padding-top: 0; background: none; }
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-conversation-compose textarea { min-height: 44px; height: 44px; border: 0; padding: 11px 8px; background: transparent; font-size: 0.88rem; }
 .wk-conversation-actions > .wk-provider-select,
 .wk-conversation-actions .wk-provider-select__trigger,
 .wk-conversation-chosen { width: 100%; }

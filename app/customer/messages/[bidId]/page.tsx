@@ -5,12 +5,14 @@ import { notFound } from "next/navigation";
 
 import { ActivityReadMarker } from "@/components/marketplace/activity-read-marker";
 import { AppScreenHeader } from "@/components/marketplace/app-screen-header";
-import { MessageComposer } from "@/components/marketplace/message-composer";
+import { ConversationThread } from "@/components/marketplace/conversation-thread";
 import { ProviderSelectionDrawer } from "@/components/marketplace/provider-selection-drawer";
 import { getCleaningJobTitle } from "@/lib/job-title";
+import { initialBidMessage, toThreadMessage } from "@/lib/conversation";
 import { formatBidAmount, formatBidTiming, formatTimingSummary, getBidEstimatedTotalCents } from "@/lib/marketplace";
 import { prisma } from "@/lib/prisma";
-import { getJobReference, getProviderName, getProviderPhone } from "@/lib/providers";
+import { getConversationReference, getJobReference, getProviderName } from "@/lib/providers";
+import { isConversationSmsReady } from "@/lib/sms";
 import { requireUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -26,12 +28,12 @@ export default async function CustomerMessageThreadPage({ params }: { params: Pa
       cleanerLead: true,
       cleaner: { include: { cleanerProfile: true } },
       jobRequest: true,
+      messages: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] },
     },
   });
   if (!bid) notFound();
 
   const cleanerName = getProviderName(bid);
-  const providerPhone = getProviderPhone(bid);
   const providerInitials = getInitials(cleanerName);
   const job = bid.jobRequest;
   const accepted = bid.status === BidStatus.ACCEPTED;
@@ -70,27 +72,20 @@ export default async function CustomerMessageThreadPage({ params }: { params: Pa
           </section>
         </div>
 
-        <section className="wk-conversation-thread" aria-label={`Conversation with ${cleanerName}`}>
-          <p className="wk-conversation-day">Today</p>
-          <article className="wk-chat-line is-provider">
-            <span aria-hidden="true">{providerInitials}</span>
-            <div>
-              <p>{bid.message || `I’m available for ${formatTimingSummary(job)} and would be happy to help.`}</p>
-              <time>{formatMessageTime(bid.createdAt)}</time>
-            </div>
-          </article>
-          {accepted ? (
-            <article className="wk-chat-line is-customer">
-              <div>
-                <p>{completed ? "Thanks again—the cleaning is complete." : "Great, I’ve chosen you for this job."}</p>
-                <time>{completed ? "Completed" : "Chosen"} <Check aria-hidden="true" /></time>
-              </div>
-            </article>
-          ) : null}
-        </section>
+        <ConversationThread
+          bidId={bid.id}
+          chosenAt={accepted ? job.acceptedAt?.toISOString() : null}
+          chosenText={completed ? "Thanks again—the cleaning is complete." : undefined}
+          otherInitials={providerInitials}
+          conversationRef={getConversationReference(bid)}
+          disabled={bid.status === BidStatus.DECLINED || bid.status === BidStatus.WITHDRAWN || job.status === JobRequestStatus.CANCELLED || job.status === JobRequestStatus.EXPIRED}
+          initialMessages={[...initialBidMessage(bid), ...bid.messages.map(toThreadMessage)]}
+          role="customer"
+          smsOnly={!bid.cleanerId && !bid.cleanerLead?.linkedCleanerUserId && Boolean(bid.cleanerLeadId)}
+          smsReady={isConversationSmsReady() && !bid.cleanerLead?.optedOutAt}
+        />
 
         <div className="wk-conversation-actions">
-          <MessageComposer phone={providerPhone} />
           {accepted ? (
             <div className="wk-conversation-chosen"><Check aria-hidden="true" /> Cleaner chosen</div>
           ) : (
@@ -109,10 +104,6 @@ function formatAddress(job: { addressLine1: string; addressLine2: string | null;
 function getInitials(name: string) {
   const words = name.split(/\s+/).filter(Boolean);
   return words.length === 1 ? words[0].slice(0, 2).toUpperCase() : `${words[0][0]}${words[1][0]}`.toUpperCase();
-}
-
-function formatMessageTime(date: Date) {
-  return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
 function formatCurrency(cents: number) {

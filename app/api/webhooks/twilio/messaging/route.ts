@@ -1,4 +1,5 @@
 import {
+  ConversationDeliveryStatus,
   JobOutreachStatus,
   NotificationStatus,
   OutreachEventType,
@@ -7,6 +8,7 @@ import { NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { normalizePhone } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { receiveConversationSms } from "@/lib/conversation";
 
 function mapTwilioStatus(status: string) {
   switch (status.toLowerCase()) {
@@ -33,6 +35,10 @@ function isOptOut(body: string) {
 
 function isOptIn(body: string) {
   return ["start", "unstop", "yes"].includes(body.trim().toLowerCase());
+}
+
+function isCarrierOptIn(body: string) {
+  return ["start", "unstop"].includes(body.trim().toLowerCase());
 }
 
 function isInterested(body: string) {
@@ -63,17 +69,35 @@ export async function POST(request: Request) {
     formData.get("MessageStatus") || formData.get("SmsStatus") || "",
   ).trim();
   const fromRaw = String(formData.get("From") || "").trim();
+  const toRaw = String(formData.get("To") || "").trim();
   const body = String(formData.get("Body") || "").trim();
 
   if (messageSid && messageStatus) {
     await handleDeliveryStatus(messageSid, messageStatus);
   }
 
-  if (fromRaw && body) {
-    await handleInboundMessage(fromRaw, body);
+  if (fromRaw && toRaw && body && (!messageStatus || messageStatus.toLowerCase() === "received")) {
+    if (!messageSid) return twiml();
+    if (isOptOut(body) || isCarrierOptIn(body)) {
+      await handleInboundMessage(fromRaw, body);
+    } else {
+      const conversation = await receiveConversationSms({ body, from: fromRaw, to: toRaw, sid: messageSid });
+      if (conversation.matched && "ambiguous" in conversation) {
+        return twiml("Please reply with the Well Kept conversation ID from your text before your message so we can route it to the right job.");
+      }
+      if (!conversation.matched) await handleInboundMessage(fromRaw, body);
+    }
+    return twiml();
   }
 
   return NextResponse.json({ received: true });
+}
+
+function twiml(message?: string) {
+  const escaped = message?.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+  return new Response(`<Response>${escaped ? `<Message>${escaped}</Message>` : ""}</Response>`, {
+    headers: { "Content-Type": "text/xml; charset=utf-8" },
+  });
 }
 
 function isValidTwilioRequest(request: Request, formData: FormData) {
@@ -94,6 +118,17 @@ function isValidTwilioRequest(request: Request, formData: FormData) {
 
 async function handleDeliveryStatus(messageSid: string, messageStatus: string) {
   const status = mapTwilioStatus(messageStatus);
+  const conversationStatus = status === NotificationStatus.DELIVERED
+    ? ConversationDeliveryStatus.DELIVERED
+    : status === NotificationStatus.FAILED
+      ? ConversationDeliveryStatus.FAILED
+      : status === NotificationStatus.SENT ? ConversationDeliveryStatus.SENT : null;
+  if (conversationStatus) {
+    await prisma.conversationMessage.updateMany({
+      where: { providerMessageId: messageSid },
+      data: { deliveryStatus: conversationStatus },
+    });
+  }
   const delivery = await prisma.notificationDelivery.findFirst({
     where: { providerMessageId: messageSid },
     include: {
@@ -117,6 +152,12 @@ async function handleDeliveryStatus(messageSid: string, messageStatus: string) {
           status === NotificationStatus.FAILED ? `Twilio status: ${messageStatus}` : null,
       },
     });
+
+    const conversationMessageId = delivery.payload && typeof delivery.payload === "object" && !Array.isArray(delivery.payload)
+      ? delivery.payload.conversationMessageId : null;
+    if (conversationStatus && typeof conversationMessageId === "string") {
+      await tx.conversationMessage.updateMany({ where: { id: conversationMessageId }, data: { deliveryStatus: conversationStatus } });
+    }
 
     if (delivery.jobOutreachId) {
       await tx.jobOutreach.update({

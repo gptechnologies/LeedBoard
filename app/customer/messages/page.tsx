@@ -17,22 +17,23 @@ export default async function CustomerMessagesPage() {
       cleanerLead: true,
       cleaner: { include: { cleanerProfile: true } },
       jobRequest: true,
+      messages: { orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 1 },
     },
     orderBy: { updatedAt: "desc" },
   });
   const conversations: HomeownerConversation[] = bids.map((bid) => {
     const name = getProviderName(bid);
     const isChosen = bid.status === BidStatus.ACCEPTED;
-    const isNew = bid.status === BidStatus.SUBMITTED && !bid.customerViewedAt;
+    const isNew = (bid.status === BidStatus.SUBMITTED || bid.messages[0]?.sender === "CLEANER") && !bid.customerViewedAt;
     return {
       avatar: getAvatar(name),
       href: `/customer/messages/${bid.id}`,
       id: bid.id,
       name,
-      preview: bid.message || `${getCleaningJobTitle(bid.jobRequest)} · ${getStatusLabel(bid.status)}`,
+      preview: bid.messages[0]?.body || bid.message || `${getCleaningJobTitle(bid.jobRequest)} · ${getStatusLabel(bid.status)}`,
       status: isChosen ? "Chosen" : isNew ? "New" : "Bid sent",
       statusTone: isChosen ? "chosen" : isNew ? "new" : "sent",
-      time: formatMessageTime(bid.updatedAt),
+      time: formatMessageTime(bid.messages[0]?.createdAt ?? bid.updatedAt),
     };
   });
 

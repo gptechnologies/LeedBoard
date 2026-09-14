@@ -8,9 +8,11 @@ export default async function CleanerLayout({ children }: { children: React.Reac
   const user = await requireUser(UserRole.CLEANER);
   const unreadActivityCount = await prisma.jobBid.count({
     where: {
-      cleanerId: user.id,
+      AND: [
+        { OR: [{ cleanerId: user.id }, { cleanerLead: { linkedCleanerUserId: user.id } }] },
+        { OR: [{ status: BidStatus.ACCEPTED }, { messages: { some: { sender: "CUSTOMER" } } }] },
+      ],
       cleanerViewedAt: null,
-      status: BidStatus.ACCEPTED,
     },
   });
 

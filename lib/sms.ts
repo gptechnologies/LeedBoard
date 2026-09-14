@@ -8,9 +8,38 @@ import {
 import { prisma } from "@/lib/prisma";
 import { formatTimingSummary } from "@/lib/marketplace";
 import { getCleaningJobTitle } from "@/lib/job-title";
-import { getJobReference } from "@/lib/providers";
+import { getConversationReference, getJobReference } from "@/lib/providers";
 
 const TWILIO_MESSAGES_URL = "https://api.twilio.com/2010-04-01/Accounts";
+
+export function isConversationSmsReady() {
+  return process.env.ENABLE_SMS_OUTREACH === "true" &&
+    Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_PHONE_NUMBER);
+}
+
+export async function sendConversationSms(to: string, body: string) {
+  const config = getTwilioMessagingConfig();
+  if (!isConversationSmsReady() || !config?.fromPhoneNumber) {
+    throw new Error("SMS messaging is not configured.");
+  }
+
+  const params = new URLSearchParams({ To: to, From: config.fromPhoneNumber, Body: body });
+  const callback = getTwilioStatusCallbackUrl();
+  if (callback) params.set("StatusCallback", callback);
+
+  const response = await fetch(`${TWILIO_MESSAGES_URL}/${config.accountSid}/Messages.json`, {
+    method: "POST",
+    headers: {
+      Authorization: getAuthorizationHeader(config.accountSid, config.authToken),
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: params,
+  });
+  if (!response.ok) throw new Error(`SMS delivery failed (${response.status}).`);
+  const result = (await response.json()) as { sid?: string };
+  if (!result.sid) throw new Error("SMS provider did not return a message ID.");
+  return result.sid;
+}
 
 function getTwilioMessagingConfig() {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -255,17 +284,15 @@ export async function sendProviderAcceptanceSms(bidId: string) {
   if (!bid?.cleanerLead || bid.cleanerLead.optedOutAt) return null;
 
   const customerName = `${bid.jobRequest.customer.firstName} ${bid.jobRequest.customer.lastName}`.trim();
-  const customerContact = bid.jobRequest.customer.phone || bid.jobRequest.customer.email;
   const reference = getJobReference(bid.jobRequest);
   const body = [
     `You're connected for Well Kept job ${reference}.`,
     "",
     `The homeowner accepted your offer.`,
     customerName ? `Homeowner: ${customerName}` : null,
-    customerContact ? `Contact: ${customerContact}` : null,
     `Address: ${bid.jobRequest.addressLine1}, ${bid.jobRequest.city}, ${bid.jobRequest.state} ${bid.jobRequest.postalCode}`,
     "",
-    "Contact the homeowner directly to confirm final details.",
+    `Reply to this number with ${getConversationReference(bid)} and your message to continue the conversation in Well Kept.`,
   ].filter(Boolean).join("\n");
 
   const delivery = await prisma.notificationDelivery.create({
@@ -291,8 +318,8 @@ export async function sendProviderAcceptanceSms(bidId: string) {
   }
 
   const bodyParams = new URLSearchParams({ To: bid.cleanerLead.phone, Body: body });
-  if (config.messagingServiceSid) bodyParams.set("MessagingServiceSid", config.messagingServiceSid);
-  else if (config.fromPhoneNumber) bodyParams.set("From", config.fromPhoneNumber);
+  if (config.fromPhoneNumber) bodyParams.set("From", config.fromPhoneNumber);
+  else if (config.messagingServiceSid) bodyParams.set("MessagingServiceSid", config.messagingServiceSid);
   const statusCallback = getTwilioStatusCallbackUrl();
   if (statusCallback) bodyParams.set("StatusCallback", statusCallback);
 

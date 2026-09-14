@@ -63,6 +63,21 @@ export function getJobReference(job: { id: string; publicReference?: string | nu
   return `WK-${job.id.slice(-6).toUpperCase()}`;
 }
 
+export function getConversationReference(bid: { id: string; jobRequest: { id: string; publicReference?: string | null } }) {
+  return `${getJobReference(bid.jobRequest)}-${bid.id.slice(-8).toUpperCase()}`;
+}
+
+export function resolveConversationReference<T extends { id: string; jobRequest: { id: string; publicReference?: string | null } }>(bids: T[], body: string) {
+  const reference = body.match(/\bWK-[A-Z0-9]{6}(?:-[A-Z0-9]{8})?\b/i)?.[0].toUpperCase() ?? null;
+  const matches = reference ? bids.filter((bid) =>
+    [getConversationReference(bid), getJobReference(bid.jobRequest)].some((value) => value.toUpperCase() === reference),
+  ) : bids;
+  const messageBody = reference
+    ? body.replace(new RegExp(`(?:Well Kept\\s+)?${reference}\\s*[:–-]?\\s*`, "i"), "").trim()
+    : body.trim();
+  return { matches, messageBody, reference };
+}
+
 export function createJobReference() {
   return `WK-${randomInt(100000, 1000000)}`;
 }

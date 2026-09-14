@@ -12,8 +12,10 @@ export const dynamic = "force-dynamic";
 export default async function CleanerMessagesPage() {
   const user = await requireUser(UserRole.CLEANER);
   const bids = await prisma.jobBid.findMany({
-    where: { cleanerId: user.id },
+    where: { OR: [{ cleanerId: user.id }, { cleanerLead: { linkedCleanerUserId: user.id } }] },
     include: {
+      cleanerLead: true,
+      messages: { orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 1 },
       jobRequest: {
         include: {
           customer: true,
@@ -21,7 +23,7 @@ export default async function CleanerMessagesPage() {
         },
       },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { updatedAt: "desc" },
     take: 20,
   });
 
@@ -53,11 +55,12 @@ export default async function CleanerMessagesPage() {
       detail: toInlineDetail(bid),
       id: bid.id,
       name: customerName,
-      preview: bid.message || "Your bid is in. Open the job to review its status.",
+      href: `/cleaner/messages/${bid.id}`,
+      preview: bid.messages[0]?.body || bid.message || "Your bid is in. Open the job to review its status.",
       service: getCleaningJobTitle(bid.jobRequest),
-      time: formatTimeAgo(bid.createdAt),
+      time: formatTimeAgo(bid.messages[0]?.createdAt ?? bid.createdAt),
       unread:
-        bid.status === BidStatus.ACCEPTED && !bid.cleanerViewedAt
+        (bid.status === BidStatus.ACCEPTED || bid.messages[0]?.sender === "CUSTOMER") && !bid.cleanerViewedAt
           ? 1
           : undefined,
     };

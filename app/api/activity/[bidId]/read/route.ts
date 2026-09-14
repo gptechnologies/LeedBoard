@@ -18,7 +18,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
     where:
       role === UserRole.CUSTOMER
         ? { id: bidId, jobRequest: { customerId: user.id } }
-        : { id: bidId, cleanerId: user.id },
+        : { id: bidId, OR: [{ cleanerId: user.id }, { cleanerLead: { linkedCleanerUserId: user.id } }] },
     data:
       role === UserRole.CUSTOMER
         ? { customerViewedAt: new Date() }

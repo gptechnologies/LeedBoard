@@ -2,6 +2,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
+    "test:conversation": "node --experimental-strip-types --test tests/conversation-routing.test.mjs",
     "postinstall": "prisma generate",
     "start": "next start",
     "db:generate": "prisma generate",

@@ -148,6 +148,23 @@ enum NotificationStatus {
   SKIPPED
 }
 
+enum ConversationSender {
+  CUSTOMER
+  CLEANER
+}
+
+enum ConversationChannel {
+  APP
+  SMS
+}
+
+enum ConversationDeliveryStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+}
+
 enum EntryMethod {
   HIDDEN_KEY
   DOOR_CODE
@@ -424,10 +441,26 @@ model JobBid {
   cleanerLead           CleanerLead?   @relation("CleanerLeadBids", fields: [cleanerLeadId], references: [id], onDelete: SetNull)
   acceptedForJobRequest JobRequest?    @relation("AcceptedJobBid")
   outreach              JobOutreach?
+  messages              ConversationMessage[]
 
   @@unique([jobRequestId, cleanerId])
   @@unique([jobRequestId, cleanerLeadId])
   @@index([cleanerLeadId])
+}
+
+model ConversationMessage {
+  id                String                     @id @default(cuid())
+  bidId             String
+  sender            ConversationSender
+  channel           ConversationChannel
+  body              String
+  deliveryStatus    ConversationDeliveryStatus?
+  providerMessageId String?                    @unique
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+  bid               JobBid                     @relation(fields: [bidId], references: [id], onDelete: Cascade)
+
+  @@index([bidId, createdAt, id])
 }
 
 model CleanerJobPass {

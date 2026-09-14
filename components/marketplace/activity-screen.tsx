@@ -158,15 +158,15 @@ export function ActivityScreen({
                   const rowClass = `wk-conversation-row wk-pressable${unread ? " is-unread" : ""}`;
                   return (
                     <div className={`wk-activity-item${expandedId === conversation.id ? " is-open" : ""}`} key={conversation.id}>
-                      {conversation.detail ? (
+                      {conversation.href ? (
+                        <Link className={rowClass} href={conversation.href} onClick={() => triggerHaptic("selection")}>
+                          <ConversationRowContent conversation={conversation} unread={Boolean(unread)} />
+                        </Link>
+                      ) : conversation.detail ? (
                         <button aria-expanded={expandedId === conversation.id} className={rowClass} onClick={() => toggleDetails(conversation.id, conversation.detail)} type="button">
                           <ConversationRowContent conversation={conversation} unread={Boolean(unread)} />
                           <ChevronDown aria-hidden="true" className="wk-activity-item__chevron" />
                         </button>
-                      ) : conversation.href ? (
-                        <Link className={rowClass} href={conversation.href} onClick={() => triggerHaptic("selection")}>
-                          <ConversationRowContent conversation={conversation} unread={Boolean(unread)} />
-                        </Link>
                       ) : (
                         <div className={rowClass}>
                           <ConversationRowContent conversation={conversation} unread={Boolean(unread)} />
