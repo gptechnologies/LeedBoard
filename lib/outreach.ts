@@ -2,6 +2,7 @@ import {
   JobOutreachStatus,
   OutreachChannel,
   OutreachEventType,
+  ProviderApprovalStatus,
   UserRole,
   type Prisma,
   type ServiceNeed,
@@ -10,7 +11,6 @@ import { randomBytes } from "node:crypto";
 import {
   buildAppUrl,
   buildCleanerJobPostedEmail,
-  createEmailDelivery,
   markEmailDeliveryFailed,
   markEmailDeliverySent,
   sendTransactionalEmail,
@@ -68,13 +68,14 @@ export async function createJobOutreachForJob(input: {
         cleanerProfile: {
           is: {
             isAvailable: true,
+            approvalStatus: ProviderApprovalStatus.APPROVED,
           },
         },
       },
       include: {
         cleanerProfile: true,
       },
-      take: 24,
+      take: 100,
     }),
     prisma.cleanerLead.findMany({
       where: {
@@ -99,10 +100,10 @@ export async function createJobOutreachForJob(input: {
     if (!profile) return false;
 
     const zipMatch =
-      profile.serviceAreaPostalCodes.length === 0 ||
+      profile.serviceAreaPostalCodes.length > 0 &&
       profile.serviceAreaPostalCodes.includes(input.postalCode);
     const serviceMatch =
-      profile.serviceNeeds.length === 0 ||
+      profile.serviceNeeds.length > 0 &&
       input.serviceNeeds.some((need) => profile.serviceNeeds.includes(need));
 
     return zipMatch && serviceMatch;
@@ -123,14 +124,8 @@ export async function createJobOutreachForJob(input: {
   const existingCleanerIds = new Set(existing.map((item) => item.cleanerUserId).filter(Boolean));
 
   const createdSmsOutreachIds: string[] = [];
-  const createdAppOutreaches: Array<{
-    cleanerUserId: string;
-    outreachId: string;
-  }> = [];
 
   await prisma.$transaction(async (tx) => {
-    let createdCount = 0;
-
     for (const cleaner of matchedCleaners) {
       if (existingCleanerIds.has(cleaner.id)) {
         continue;
@@ -157,11 +152,6 @@ export async function createJobOutreachForJob(input: {
         tx,
       });
 
-      createdAppOutreaches.push({
-        cleanerUserId: cleaner.id,
-        outreachId: outreach.id,
-      });
-      createdCount += 1;
     }
 
     const existingLeadOutreaches = await tx.jobOutreach.findMany({
@@ -181,6 +171,30 @@ export async function createJobOutreachForJob(input: {
     );
 
     for (const lead of externalLeads) {
+      if (lead.email && !existingLeadChannelKeys.has(`${lead.id}:${OutreachChannel.EMAIL}`)) {
+        const emailOutreach = await tx.jobOutreach.create({
+          data: {
+            jobRequestId: input.jobRequestId,
+            cleanerLeadId: lead.id,
+            channel: OutreachChannel.EMAIL,
+            status: JobOutreachStatus.PENDING,
+            interestToken: createInviteToken(),
+            interestTokenExpiresAt: getInviteTokenExpiresAt(),
+          },
+        });
+
+        await createOutreachEvent({
+          jobOutreachId: emailOutreach.id,
+          eventType: OutreachEventType.CREATED,
+          payload: {
+            channel: OutreachChannel.EMAIL,
+            cleanerLeadId: lead.id,
+          },
+          tx,
+        });
+
+      }
+
       if (smsOutreachEnabled && !existingLeadChannelKeys.has(`${lead.id}:${OutreachChannel.SMS}`)) {
         const smsOutreach = await tx.jobOutreach.create({
           data: {
@@ -204,45 +218,7 @@ export async function createJobOutreachForJob(input: {
         });
 
         createdSmsOutreachIds.push(smsOutreach.id);
-        createdCount += 1;
       }
-
-      if (!existingLeadChannelKeys.has(`${lead.id}:${OutreachChannel.MANUAL_CALL}`)) {
-        const callOutreach = await tx.jobOutreach.create({
-          data: {
-            jobRequestId: input.jobRequestId,
-            cleanerLeadId: lead.id,
-            channel: OutreachChannel.MANUAL_CALL,
-            status: JobOutreachStatus.PENDING,
-            interestToken: createInviteToken(),
-            interestTokenExpiresAt: getInviteTokenExpiresAt(),
-            notes: "Call to confirm time and location work, then send the invite link if interested.",
-          },
-        });
-
-        await createOutreachEvent({
-          jobOutreachId: callOutreach.id,
-          eventType: OutreachEventType.CREATED,
-          payload: {
-            channel: OutreachChannel.MANUAL_CALL,
-            cleanerLeadId: lead.id,
-          },
-          tx,
-        });
-
-        createdCount += 1;
-      }
-    }
-
-    if (createdCount > 0) {
-      await tx.jobRequest.update({
-        where: { id: input.jobRequestId },
-        data: {
-          cleanersNotifiedCount: {
-            increment: createdCount,
-          },
-        },
-      });
     }
   });
 
@@ -252,6 +228,27 @@ export async function createJobOutreachForJob(input: {
     }
   }
 
+  const [appOutreachesToSend, leadEmailOutreachesToSend] = await Promise.all([
+    prisma.jobOutreach.findMany({
+      where: {
+        jobRequestId: input.jobRequestId,
+        channel: OutreachChannel.APP,
+        cleanerUserId: { not: null },
+        status: { in: [JobOutreachStatus.PENDING, JobOutreachStatus.FAILED] },
+      },
+      select: { cleanerUserId: true, id: true },
+    }),
+    prisma.jobOutreach.findMany({
+      where: {
+        jobRequestId: input.jobRequestId,
+        channel: OutreachChannel.EMAIL,
+        cleanerLeadId: { not: null },
+        status: { in: [JobOutreachStatus.PENDING, JobOutreachStatus.FAILED] },
+      },
+      select: { cleanerLeadId: true, id: true },
+    }),
+  ]);
+
   const pushPayload = getNewJobPushPayload({
     city: input.city,
     jobId: input.jobRequestId,
@@ -259,19 +256,73 @@ export async function createJobOutreachForJob(input: {
     state: input.state,
   });
 
-  for (const outreach of createdAppOutreaches) {
-    await sendPushNotification({
+  for (const outreach of appOutreachesToSend) {
+    if (!outreach.cleanerUserId) continue;
+    const result = await sendPushNotification({
       userId: outreach.cleanerUserId,
-      jobOutreachId: outreach.outreachId,
+      jobOutreachId: outreach.id,
       jobRequestId: input.jobRequestId,
       payload: pushPayload,
     });
+
+    if (result.sent > 0) {
+      await markOutreachSent(outreach.id, "PUSH");
+    }
   }
 
   await sendJobPostedEmailsToCleaners({
     jobRequestId: input.jobRequestId,
-    outreaches: createdAppOutreaches,
+    outreaches: appOutreachesToSend.flatMap((outreach) => outreach.cleanerUserId
+      ? [{ cleanerUserId: outreach.cleanerUserId, outreachId: outreach.id }]
+      : []),
   });
+
+  await sendJobPostedEmailsToLeads({
+    jobRequestId: input.jobRequestId,
+    outreaches: leadEmailOutreachesToSend.flatMap((outreach) => outreach.cleanerLeadId
+      ? [{ cleanerLeadId: outreach.cleanerLeadId, outreachId: outreach.id }]
+      : []),
+  });
+
+  const [targetedCount, sentOutreaches, failedCount] = await Promise.all([
+    prisma.jobOutreach.count({
+      where: {
+        jobRequestId: input.jobRequestId,
+        channel: { in: [OutreachChannel.APP, OutreachChannel.EMAIL, OutreachChannel.SMS] },
+      },
+    }),
+    prisma.jobOutreach.findMany({
+      where: {
+        jobRequestId: input.jobRequestId,
+        channel: { in: [OutreachChannel.APP, OutreachChannel.EMAIL, OutreachChannel.SMS] },
+        status: {
+          in: [
+            JobOutreachStatus.SENT,
+            JobOutreachStatus.DELIVERED,
+            JobOutreachStatus.INTERESTED,
+            JobOutreachStatus.BID_SUBMITTED,
+          ],
+        },
+      },
+      select: { cleanerLeadId: true, cleanerUserId: true },
+    }),
+    prisma.jobOutreach.count({
+      where: {
+        jobRequestId: input.jobRequestId,
+        status: JobOutreachStatus.FAILED,
+      },
+    }),
+  ]);
+  const sentCount = new Set(sentOutreaches.map((outreach) =>
+    outreach.cleanerUserId ? `user:${outreach.cleanerUserId}` : `lead:${outreach.cleanerLeadId}`,
+  )).size;
+
+  return {
+    eligibleCount: matchedCleaners.length + externalLeads.filter((lead) => Boolean(lead.email) || smsOutreachEnabled).length,
+    failedCount,
+    sentCount,
+    targetedCount,
+  };
 }
 
 async function sendJobPostedEmailsToCleaners(input: {
@@ -321,9 +372,9 @@ async function sendJobPostedEmailsToCleaners(input: {
   const emailContent = buildCleanerJobPostedEmail({
     city: job.city,
     homeFacts: formatHomeFacts({
-      bathroomCount: job.homeProfile?.bathroomCount ?? null,
-      bedroomCount: job.homeProfile?.bedroomCount ?? null,
-      estimatedSquareFeet: job.homeProfile?.estimatedSquareFeet ?? null,
+      bathroomCount: job.snapshotBathroomCount ?? job.homeProfile?.bathroomCount ?? null,
+      bedroomCount: job.snapshotBedroomCount ?? job.homeProfile?.bedroomCount ?? null,
+      estimatedSquareFeet: job.snapshotEstimatedSquareFeet ?? job.homeProfile?.estimatedSquareFeet ?? null,
     }),
     jobUrl,
     notes: job.notes,
@@ -343,12 +394,22 @@ async function sendJobPostedEmailsToCleaners(input: {
       purpose: "cleaner_job_posted",
       subject: emailContent.subject,
     };
-    const delivery = await createEmailDelivery({
-      toEmail: cleaner.email,
-      payload,
-      jobOutreachId: outreach.outreachId,
-      jobRequestId: job.id,
-      userId: cleaner.id,
+    const dedupeKey = `job-posted:${job.id}:${cleaner.id}:email`;
+    const delivery = await prisma.notificationDelivery.upsert({
+      where: { dedupeKey },
+      update: {
+        failureReason: null,
+        status: "PENDING",
+      },
+      create: {
+        channel: "EMAIL",
+        dedupeKey,
+        toEmail: cleaner.email,
+        payload,
+        jobOutreachId: outreach.outreachId,
+        jobRequestId: job.id,
+        userId: cleaner.id,
+      },
     });
 
     try {
@@ -356,7 +417,7 @@ async function sendJobPostedEmailsToCleaners(input: {
         to: cleaner.email,
         subject: emailContent.subject,
         text: emailContent.text,
-        idempotencyKey: `job-posted-${delivery.id}`,
+        idempotencyKey: dedupeKey,
       });
 
       await markEmailDeliverySent({
@@ -372,6 +433,7 @@ async function sendJobPostedEmailsToCleaners(input: {
           providerMessageId: result.providerMessageId,
         },
       });
+      await markOutreachSent(outreach.outreachId, "EMAIL");
     } catch (error) {
       const failureReason =
         error instanceof Error ? error.message : "Unable to send job posted email.";
@@ -387,8 +449,131 @@ async function sendJobPostedEmailsToCleaners(input: {
           reason: failureReason,
         },
       });
+      await markOutreachFailed(outreach.outreachId, failureReason);
     }
   }
+}
+
+async function sendJobPostedEmailsToLeads(input: {
+  jobRequestId: string;
+  outreaches: Array<{
+    cleanerLeadId: string;
+    outreachId: string;
+  }>;
+}) {
+  if (input.outreaches.length === 0) return;
+
+  const [job, leads] = await Promise.all([
+    prisma.jobRequest.findUnique({
+      where: { id: input.jobRequestId },
+    }),
+    prisma.cleanerLead.findMany({
+      where: { id: { in: input.outreaches.map((item) => item.cleanerLeadId) } },
+      select: { email: true, id: true },
+    }),
+  ]);
+  if (!job) return;
+
+  const leadById = new Map(leads.map((lead) => [lead.id, lead]));
+
+  for (const outreach of input.outreaches) {
+    const lead = leadById.get(outreach.cleanerLeadId);
+    if (!lead?.email) continue;
+
+    const row = await prisma.jobOutreach.findUnique({
+      where: { id: outreach.outreachId },
+      select: { interestToken: true },
+    });
+    if (!row) continue;
+
+    const jobUrl = buildAppUrl(`/invite/cleaner/${row.interestToken}`);
+    const content = buildCleanerJobPostedEmail({
+      city: job.city,
+      homeFacts: formatHomeFacts({
+        bathroomCount: job.snapshotBathroomCount,
+        bedroomCount: job.snapshotBedroomCount,
+        estimatedSquareFeet: job.snapshotEstimatedSquareFeet,
+      }),
+      jobUrl,
+      notes: job.notes,
+      postalCode: job.postalCode,
+      state: job.state,
+      timing: formatTimingSummary(job),
+    });
+    const dedupeKey = `job-posted:${job.id}:${lead.id}:lead-email`;
+    const payload: Prisma.InputJsonObject = {
+      jobUrl,
+      purpose: "provider_job_posted",
+      subject: content.subject,
+    };
+    const delivery = await prisma.notificationDelivery.upsert({
+      where: { dedupeKey },
+      update: { failureReason: null, status: "PENDING" },
+      create: {
+        channel: "EMAIL",
+        cleanerLeadId: lead.id,
+        dedupeKey,
+        jobOutreachId: outreach.outreachId,
+        jobRequestId: job.id,
+        payload,
+        toEmail: lead.email,
+      },
+    });
+
+    try {
+      const result = await sendTransactionalEmail({
+        idempotencyKey: dedupeKey,
+        subject: content.subject,
+        text: content.text,
+        to: lead.email,
+      });
+      await markEmailDeliverySent({
+        deliveryId: delivery.id,
+        providerMessageId: result.providerMessageId,
+      });
+      await createOutreachEvent({
+        jobOutreachId: outreach.outreachId,
+        eventType: OutreachEventType.SENT,
+        payload: { channel: "EMAIL", providerMessageId: result.providerMessageId },
+      });
+      await markOutreachSent(outreach.outreachId, "EMAIL");
+    } catch (error) {
+      const failureReason = error instanceof Error ? error.message : "Unable to send provider email.";
+      await markEmailDeliveryFailed({ deliveryId: delivery.id, failureReason });
+      await createOutreachEvent({
+        jobOutreachId: outreach.outreachId,
+        eventType: OutreachEventType.FAILED,
+        payload: { channel: "EMAIL", reason: failureReason },
+      });
+      await markOutreachFailed(outreach.outreachId, failureReason);
+    }
+  }
+}
+
+async function markOutreachSent(outreachId: string, channel: string) {
+  await prisma.jobOutreach.update({
+    where: { id: outreachId },
+    data: {
+      failureReason: null,
+      lastAttemptAt: new Date(),
+      status: JobOutreachStatus.SENT,
+    },
+  });
+  void channel;
+}
+
+async function markOutreachFailed(outreachId: string, failureReason: string) {
+  await prisma.jobOutreach.updateMany({
+    where: {
+      id: outreachId,
+      status: { notIn: [JobOutreachStatus.SENT, JobOutreachStatus.DELIVERED, JobOutreachStatus.BID_SUBMITTED] },
+    },
+    data: {
+      failureReason,
+      lastAttemptAt: new Date(),
+      status: JobOutreachStatus.FAILED,
+    },
+  });
 }
 
 function formatHomeFacts(input: {

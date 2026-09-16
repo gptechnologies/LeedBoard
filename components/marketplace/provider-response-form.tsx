@@ -14,8 +14,6 @@ const offerTypes = [
   { value: OfferType.FIXED_PRICE, label: "Fixed price", detail: "One total price" },
   { value: OfferType.ESTIMATE, label: "Estimate", detail: "A price or range" },
   { value: OfferType.HOURLY, label: "Hourly", detail: "Rate per hour" },
-  { value: OfferType.FREE_QUOTE, label: "Free quote", detail: "See the home first" },
-  { value: OfferType.NEEDS_DETAILS, label: "Need details", detail: "Ask one question" },
 ];
 
 export function ProviderResponseForm({
@@ -82,18 +80,6 @@ export function ProviderResponseForm({
           </div>
         ) : null}
 
-        {offerType === OfferType.NEEDS_DETAILS ? (
-          <div className="provider-field">
-            <label htmlFor="providerQuestion">What do you need to know?</label>
-            <textarea
-              id="providerQuestion"
-              name="providerQuestion"
-              required
-              maxLength={300}
-              placeholder="For example: Are the floors mostly hardwood or carpet?"
-            />
-          </div>
-        ) : null}
       </section>
 
       <section className="provider-form-section">

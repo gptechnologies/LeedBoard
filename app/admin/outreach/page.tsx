@@ -44,7 +44,10 @@ export default async function AdminOutreachPage() {
             <div className="market-kicker">Admin</div>
             <h1>Outreach Queue</h1>
           </div>
-          <span className="market-count-pill">{outreaches.length} rows</span>
+          <div className="market-card__actions market-card__actions--start">
+            <Link href="/admin/attention" className="button-link secondary">Jobs needing help</Link>
+            <span className="market-count-pill">{outreaches.length} rows</span>
+          </div>
         </header>
 
         {outreaches.length === 0 ? (

@@ -18,7 +18,7 @@ export default async function CustomerDashboard() {
     <div className="wk-app-screen wk-homeowner-hub-screen">
       <AppScreenHeader brandHref="/customer" />
       <div className="wk-screen-content wk-homeowner-hub">
-        <HomeownerJobsWorkspace jobs={activeJobs} />
+        <HomeownerJobsWorkspace homeownerPhone={user.phone} jobs={activeJobs} />
       </div>
     </div>
   );

@@ -9,6 +9,8 @@ type CleanerDefaultsFormProps = {
     standardFlatRateCents: number | null;
     standardDeepCleanFlatRateCents: number | null;
     defaultEtaMinutes: number | null;
+    phone: string | null;
+    serviceAreaPostalCodes: string[];
   };
 };
 
@@ -20,6 +22,31 @@ export function CleanerDefaultsForm({ defaults }: CleanerDefaultsFormProps) {
           <CardTitle>Standard bid defaults</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="field">
+          <label htmlFor="providerPhone">Mobile number</label>
+          <Input
+            autoComplete="tel"
+            defaultValue={defaults.phone ?? ""}
+            id="providerPhone"
+            inputMode="tel"
+            name="phone"
+            placeholder="(555) 555-0123"
+            required
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="serviceAreaPostalCodes">Service ZIPs</label>
+          <Input
+            defaultValue={defaults.serviceAreaPostalCodes.join(", ")}
+            id="serviceAreaPostalCodes"
+            inputMode="numeric"
+            name="serviceAreaPostalCodes"
+            placeholder="10001, 10002, 10003"
+            required
+          />
+        </div>
+      </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="field">
           <label htmlFor="standardHourlyRate">Hourly rate</label>

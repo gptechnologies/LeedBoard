@@ -2,7 +2,7 @@ import { UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { parseHomeProfileForm } from "@/lib/marketplace-form";
 import { prisma } from "@/lib/prisma";
-import { requireApiUser } from "@/lib/session";
+import { normalizePhone, requireApiUser } from "@/lib/session";
 
 function redirectWithError(request: Request, message: string) {
   return NextResponse.redirect(
@@ -22,6 +22,12 @@ export async function POST(request: Request) {
   try {
     const input = parseHomeProfileForm(formData);
     const homeProfileId = String(formData.get("homeProfileId") || "").trim();
+    const phoneValue = String(formData.get("phone") || "").trim();
+    const phone = phoneValue ? normalizePhone(phoneValue) : null;
+
+    if (phone !== user.phone) {
+      await prisma.user.update({ where: { id: user.id }, data: { phone } });
+    }
 
     if (homeProfileId) {
       const existing = await prisma.homeProfile.findFirst({

@@ -37,7 +37,8 @@ function money(value: FormDataEntryValue | null, label: string, required = false
 
 function parseOfferType(value: FormDataEntryValue | null) {
   const raw = String(value || "");
-  if (!Object.values(OfferType).includes(raw as OfferType)) {
+  const supportedOfferTypes: OfferType[] = [OfferType.FIXED_PRICE, OfferType.ESTIMATE, OfferType.HOURLY];
+  if (!supportedOfferTypes.includes(raw as OfferType)) {
     throw new Error("Choose an offer type.");
   }
   return raw as OfferType;
@@ -108,10 +109,6 @@ export async function POST(request: Request, { params }: { params: Params }) {
     if (priceMinCents && priceMaxCents && priceMaxCents < priceMinCents) {
       throw new Error("The maximum estimate must be greater than the starting estimate.");
     }
-    if (offerType === OfferType.NEEDS_DETAILS && !providerQuestion) {
-      throw new Error("Add the question you need answered.");
-    }
-
     const needsCustomTime =
       !requestedScheduleAccepted || outreach.jobRequest.timingPreference === TimingPreference.ASAP;
     const arrivalDate = needsCustomTime

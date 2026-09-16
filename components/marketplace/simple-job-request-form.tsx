@@ -93,6 +93,8 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
   const [notes, setNotes] = useState("");
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [submitError, setSubmitError] = useState("");
+  const [clientRequestId] = useState(() => crypto.randomUUID());
+  const [cleanType, setCleanType] = useState<JobCleanType>(JobCleanType.STANDARD_CLEAN);
 
   const selectedHome = homeProfiles.find((home) => formatAddress(home) === fullAddress.trim()) ?? null;
   const activeAddress = selectedHome
@@ -137,7 +139,7 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
       }
 
       triggerHaptic("success");
-      window.location.assign("/customer?posted=1");
+      window.location.assign(`/customer/jobs/${result.jobId}?posted=1`);
     } catch (error) {
       setSubmitState("idle");
       setSubmitError(error instanceof Error ? error.message : "We couldn’t post your request. Try again.");
@@ -156,6 +158,7 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
       variants={composerContainerVariants}
     >
       <input type="hidden" name="title" value="Home Cleaning" />
+      <input type="hidden" name="clientRequestId" value={clientRequestId} />
       <input type="hidden" name="homeProfileId" value={selectedHome?.id ?? ""} />
       <input type="hidden" name="addressLine1" value={activeAddress.addressLine1} />
       <input type="hidden" name="addressLine2" value={activeAddress.addressLine2} />
@@ -166,7 +169,7 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
       <input type="hidden" name="entryNotes" value={entryNotes.trim()} />
       <input type="hidden" name="suppliesSource" value={suppliesSource} />
       <input type="hidden" name="cleanLevel" value={CleanLevel.MEDIUM} />
-      <input type="hidden" name="cleanType" value={JobCleanType.STANDARD_CLEAN} />
+      <input type="hidden" name="cleanType" value={cleanType} />
       <input type="hidden" name="currentCondition" value={HomeCondition.NORMAL_LIVED_IN} />
       <input type="hidden" name="selectionPriority" value={BidSelectionPriority.BEST_OVERALL} />
       {[ServiceNeed.GENERAL_CLEANING, ServiceNeed.KITCHEN, ServiceNeed.BATHROOMS, ServiceNeed.FLOORS, ServiceNeed.DUSTING].map((need) => (
@@ -225,6 +228,10 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
         variants={composerItemVariants}
       >
               <ComposerHeading number="02">When should cleaners arrive?</ComposerHeading>
+              <div className="wk-composer-quick-dates" aria-label="Quick date choices">
+                <button type="button" onClick={() => setRequestedDate(getLocalDate(0))}>Today</button>
+                <button type="button" onClick={() => setRequestedDate(getLocalDate(1))}>Tomorrow</button>
+              </div>
               <div className="wk-composer-schedule-grid">
                 <label className="wk-composer-control">
                   <CalendarDays aria-hidden="true" />
@@ -279,6 +286,22 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
         variants={composerItemVariants}
       >
               <ComposerHeading number="03">Anything cleaners should know?</ComposerHeading>
+              <div className="wk-composer-clean-types" aria-label="Cleaning type">
+                {[
+                  [JobCleanType.STANDARD_CLEAN, "Standard"],
+                  [JobCleanType.DEEP_CLEAN, "Deep clean"],
+                  [JobCleanType.MOVE_OUT_CLEAN, "Move in/out"],
+                ].map(([value, label]) => (
+                  <button
+                    className={cleanType === value ? "is-selected" : ""}
+                    key={value}
+                    onClick={() => setCleanType(value as JobCleanType)}
+                    type="button"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
               <label className="wk-composer-notes">
                 <span className="sr-only">Notes for cleaners</span>
                 <textarea

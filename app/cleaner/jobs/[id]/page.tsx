@@ -47,6 +47,9 @@ export default async function CleanerJobDetailPage({
       notes: true,
       status: true,
       createdAt: true,
+      snapshotBathroomCount: true,
+      snapshotBedroomCount: true,
+      snapshotEstimatedSquareFeet: true,
       homeProfile: {
         select: {
           bedroomCount: true,
@@ -74,10 +77,10 @@ export default async function CleanerJobDetailPage({
   const timingLabel = formatTimingSummary(job);
   const item: NearbyJobSwipeItem = {
     areaLabel: `${job.city}, ${job.state}`,
-    bathroomCount: job.homeProfile?.bathroomCount ?? null,
-    bedroomCount: job.homeProfile?.bedroomCount ?? null,
+    bathroomCount: job.snapshotBathroomCount ?? job.homeProfile?.bathroomCount ?? null,
+    bedroomCount: job.snapshotBedroomCount ?? job.homeProfile?.bedroomCount ?? null,
     bidCount: job._count.bids,
-    estimatedSquareFeet: job.homeProfile?.estimatedSquareFeet ?? null,
+    estimatedSquareFeet: job.snapshotEstimatedSquareFeet ?? job.homeProfile?.estimatedSquareFeet ?? null,
     id: job.id,
     job,
     priceLabel: formatCleanerPriceLabel({

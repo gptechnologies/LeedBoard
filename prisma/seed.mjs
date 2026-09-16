@@ -12,6 +12,7 @@ import {
   ServiceNeed,
   TimingPreference,
   UserRole,
+  ProviderApprovalStatus,
 } from "@prisma/client";
 
 const connectionString = process.env.DIRECT_DATABASE_URL ?? process.env.DATABASE_URL;
@@ -291,10 +292,12 @@ async function main() {
           upsert: {
             update: {
               isAvailable: true,
+              approvalStatus: ProviderApprovalStatus.APPROVED,
               ...cleaner.profile,
             },
             create: {
               isAvailable: true,
+              approvalStatus: ProviderApprovalStatus.APPROVED,
               ...cleaner.profile,
             },
           },

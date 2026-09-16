@@ -41,8 +41,8 @@ export default async function HomePage() {
             <Link href="/signup?role=CUSTOMER" className="button-link">
               Sign up as Homeowner
             </Link>
-            <Link href="/signup?role=CLEANER" className="button-link secondary">
-              Sign up as Cleaner
+            <Link href="/login" className="button-link secondary">
+              Cleaner sign in
             </Link>
           </div>
         </div>
@@ -83,16 +83,16 @@ export default async function HomePage() {
             </div>
             <ol className="landing-flow-list">
               <li>
-                <strong>Sign up with your website or Google Business Profile</strong>
-                <span>Show homeowners who you are and where you work.</span>
+                <strong>Join by invitation</strong>
+                <span>We review local providers before they can receive jobs.</span>
               </li>
               <li>
                 <strong>Bid on Jobs</strong>
                 <span>See hot leads from people actively looking for home cleaning.</span>
               </li>
               <li>
-                <strong>Get paid automatically</strong>
-                <span>Complete the job and receive payment after completion.</span>
+                <strong>Connect directly</strong>
+                <span>Once chosen, coordinate details and payment directly with the homeowner.</span>
               </li>
             </ol>
           </article>

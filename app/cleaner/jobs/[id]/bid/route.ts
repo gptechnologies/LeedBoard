@@ -1,4 +1,4 @@
-import { BidStatus, JobRequestStatus, UserRole } from "@prisma/client";
+import { BidStatus, JobRequestStatus, ProviderApprovalStatus, UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { parseBidForm } from "@/lib/marketplace-form";
 import { notifyHomeownerOfBid } from "@/lib/marketplace-notifications";
@@ -32,6 +32,9 @@ export async function POST(request: Request, { params }: { params: Params }) {
   try {
     if (!user.cleanerProfile?.isAvailable) {
       return redirectWithError(request, id, "Pause removed. Set your availability first.");
+    }
+    if (user.cleanerProfile.approvalStatus !== ProviderApprovalStatus.APPROVED) {
+      return redirectWithError(request, id, "Your provider profile must be approved before you can bid.");
     }
 
     const bid = await prisma.$transaction(async (tx) => {

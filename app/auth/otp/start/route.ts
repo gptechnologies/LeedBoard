@@ -40,6 +40,10 @@ export async function POST(request: Request) {
   const channel = "email";
   const destination = String(formData.get("email") || formData.get("destination") || "");
 
+  if (mode === "signup" && role === UserRole.CLEANER && !inviteToken) {
+    return toError(request, "Cleaner signup is invite-only.", role, mode, channel);
+  }
+
   try {
     const result = await sendOtp(destination, channel);
     const search = new URLSearchParams({

@@ -72,9 +72,12 @@ export type HomeownerWorkspaceJob = {
   notes: string | null;
   bids: WorkspaceBid[];
   acceptedBid: WorkspaceBid | null;
+  outreachState: "PENDING" | "IN_PROGRESS" | "CONTACTED" | "NEEDS_ATTENTION" | "FAILED";
+  cleanersNotifiedCount: number;
+  attentionReason: string | null;
 };
 
-export function HomeownerJobsWorkspace({ jobs }: { jobs: HomeownerWorkspaceJob[] }) {
+export function HomeownerJobsWorkspace({ homeownerPhone, jobs }: { homeownerPhone: string | null; jobs: HomeownerWorkspaceJob[] }) {
   const router = useRouter();
   const [current, setCurrent] = useState(0);
 
@@ -106,7 +109,7 @@ export function HomeownerJobsWorkspace({ jobs }: { jobs: HomeownerWorkspaceJob[]
 
         {jobs.length > 0 ? (
           <HomeownerOpenJobsCarousel className="homeowner-my-jobs__carousel" onSelectionChange={setCurrent}>
-            {jobs.map((job) => <HomeownerJobCard job={job} key={job.id} />)}
+            {jobs.map((job) => <HomeownerJobCard homeownerPhone={homeownerPhone} job={job} key={job.id} />)}
           </HomeownerOpenJobsCarousel>
         ) : (
           <EmptyJobsWorkspace />
@@ -116,7 +119,7 @@ export function HomeownerJobsWorkspace({ jobs }: { jobs: HomeownerWorkspaceJob[]
   );
 }
 
-function HomeownerJobCard({ job }: { job: HomeownerWorkspaceJob }) {
+function HomeownerJobCard({ homeownerPhone, job }: { homeownerPhone: string | null; job: HomeownerWorkspaceJob }) {
   const reference = job.publicReference ?? `WK-${job.id.slice(-6).toUpperCase()}`;
   const offers = useMemo(() => sortOffers(job.bids, job.selectionPriority), [job.bids, job.selectionPriority]);
   const [expandedBidId, setExpandedBidId] = useState<string | null>(offers[0]?.id ?? null);
@@ -153,7 +156,7 @@ function HomeownerJobCard({ job }: { job: HomeownerWorkspaceJob }) {
 
       <div className="homeowner-job-summary__status-area">
         {isOpen && offers.length === 0 ? (
-          <CleanerBroadcastAnimation />
+          <CleanerBroadcastAnimation job={job} />
         ) : isOpen ? (
           <section className="homeowner-card-offers" aria-labelledby={`offers-heading-${job.id}`}>
             <div className="homeowner-card-offers__heading">
@@ -170,6 +173,7 @@ function HomeownerJobCard({ job }: { job: HomeownerWorkspaceJob }) {
                   bid={bid}
                   expanded={expandedBidId === bid.id}
                   job={job}
+                  homeownerPhone={homeownerPhone}
                   key={bid.id}
                   onToggle={() => setExpandedBidId((value) => value === bid.id ? null : bid.id)}
                   recommended={index === 0}
@@ -190,7 +194,8 @@ function HomeownerJobCard({ job }: { job: HomeownerWorkspaceJob }) {
   );
 }
 
-function CleanerBroadcastAnimation() {
+function CleanerBroadcastAnimation({ job }: { job: HomeownerWorkspaceJob }) {
+  const needsHelp = job.outreachState === "NEEDS_ATTENTION";
   return (
     <div className="homeowner-cleaner-broadcast" aria-live="polite">
       <div className="homeowner-cleaner-radar" aria-hidden="true">
@@ -206,16 +211,20 @@ function CleanerBroadcastAnimation() {
         <span className="homeowner-cleaner-radar__center"><Sparkles /></span>
       </div>
       <div className="homeowner-cleaner-broadcast__copy">
-        <span><i aria-hidden="true" /> Live now</span>
-        <strong>Notifying<br />Cleaners</strong>
-        <p>We’re reaching out to nearby cleaners. You’ll see bids here soon.</p>
-        <div className="homeowner-cleaner-broadcast__dots" aria-hidden="true"><i /><i /><i /></div>
+        <span><i aria-hidden="true" /> {needsHelp ? "Search update" : "Live now"}</span>
+        <strong>{needsHelp ? <>Expanding<br />the search</> : <>Notifying<br />Cleaners</>}</strong>
+        <p>{needsHelp
+          ? "We didn’t find an available nearby cleaner yet. Our team can help expand the search."
+          : job.cleanersNotifiedCount > 0
+            ? `We notified ${job.cleanersNotifiedCount} nearby ${job.cleanersNotifiedCount === 1 ? "cleaner" : "cleaners"}. You’ll see bids here soon.`
+            : "We’re reaching out to nearby cleaners. You’ll see bids here soon."}</p>
+        {needsHelp ? <a href="mailto:support@wellkept.com">Contact Well Kept</a> : <div className="homeowner-cleaner-broadcast__dots" aria-hidden="true"><i /><i /><i /></div>}
       </div>
     </div>
   );
 }
 
-function OfferRow({ bid, expanded, job, onToggle, recommended }: { bid: WorkspaceBid; expanded: boolean; job: HomeownerWorkspaceJob; onToggle: () => void; recommended: boolean }) {
+function OfferRow({ bid, expanded, homeownerPhone, job, onToggle, recommended }: { bid: WorkspaceBid; expanded: boolean; homeownerPhone: string | null; job: HomeownerWorkspaceJob; onToggle: () => void; recommended: boolean }) {
   const provider = getProvider(bid);
   const timing = formatBidTiming(bid);
 
@@ -239,7 +248,7 @@ function OfferRow({ bid, expanded, job, onToggle, recommended }: { bid: Workspac
           <p>{bid.message || bid.providerQuestion || "This cleaner shared their availability for your job."}</p>
           <div className="homeowner-offer__actions">
             <Link href={`/customer/messages/${bid.id}`}>Message</Link>
-            <ProviderSelectionDrawer bidId={bid.id} jobId={job.id} jobTitle={job.title} price={formatBidAmount(bid)} providerName={provider.name} timing={timing} />
+            <ProviderSelectionDrawer bidId={bid.id} homeownerPhone={homeownerPhone} jobId={job.id} jobTitle={job.title} price={formatBidAmount(bid)} providerName={provider.name} timing={timing} />
           </div>
         </div>
       ) : null}
@@ -260,7 +269,7 @@ function AcceptedProviderPanel({ bid, job }: { bid: WorkspaceBid; job: Homeowner
         <div><dt>Price</dt><dd>{formatBidAmount(bid)}</dd></div>
       </dl>
       <div className="homeowner-accepted-provider__actions">
-        <Link href={`/customer/messages/${bid.id}`}>Open conversation <ChevronRight aria-hidden="true" /></Link>
+        <Link href={`/customer/messages/${bid.id}`}>View connection details <ChevronRight aria-hidden="true" /></Link>
       </div>
     </section>
   );

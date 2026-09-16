@@ -79,8 +79,8 @@ export default async function CustomerJobDetailPage({
         </header>
         {query.posted === "1" ? (
           <div className="notice success" role="status">
-            <strong>Job published.</strong> Nearby cleaners can review it now. We’ll email you when
-            an offer arrives.
+            <strong>Job published.</strong> We’re notifying matching nearby cleaners now. We’ll email
+            you when an offer arrives.
           </div>
         ) : null}
         {query.updated === "1" ? (

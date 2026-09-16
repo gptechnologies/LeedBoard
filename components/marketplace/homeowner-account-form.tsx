@@ -24,7 +24,7 @@ type AccountHome = {
 
 type ParsedAddress = Pick<AccountHome, "addressLine1" | "addressLine2" | "city" | "state" | "postalCode">;
 
-export function HomeownerAccountForm({ home }: { home: AccountHome }) {
+export function HomeownerAccountForm({ home, phone }: { home: AccountHome; phone: string | null }) {
   const initialAddress = formatAddress(home);
   const [address, setAddress] = useState(initialAddress);
   const [bedrooms, setBedrooms] = useState<number | null>(home.bedroomCount);
@@ -67,6 +67,19 @@ export function HomeownerAccountForm({ home }: { home: AccountHome }) {
         </div>
 
         <div className="wk-account-list">
+          <div className="wk-account-row wk-account-row--wide">
+            <label htmlFor="account-phone">Mobile number</label>
+            <input
+              autoComplete="tel"
+              defaultValue={phone ?? ""}
+              id="account-phone"
+              inputMode="tel"
+              name="phone"
+              placeholder="(555) 555-0123"
+              type="tel"
+            />
+          </div>
+
           <div className="wk-account-row">
             <label htmlFor="account-bedrooms">Bedrooms</label>
             <NumberStepper

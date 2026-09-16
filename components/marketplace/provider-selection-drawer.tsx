@@ -24,6 +24,7 @@ export function ProviderSelectionDrawer({
   price,
   providerName,
   timing,
+  homeownerPhone,
   triggerLabel = "Choose Provider",
 }: {
   bidId: string;
@@ -32,12 +33,14 @@ export function ProviderSelectionDrawer({
   price: string;
   providerName: string;
   timing: string;
+  homeownerPhone?: string | null;
   triggerLabel?: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [state, setState] = useState<"idle" | "confirming" | "selected">("idle");
   const [error, setError] = useState("");
+  const [phone, setPhone] = useState(homeownerPhone ?? "");
 
   async function chooseProvider() {
     setState("confirming");
@@ -45,6 +48,7 @@ export function ProviderSelectionDrawer({
 
     const formData = new FormData();
     formData.set("bidId", bidId);
+    formData.set("phone", phone);
 
     try {
       const response = await fetch(`/customer/jobs/${jobId}/accept-bid`, {
@@ -107,12 +111,28 @@ export function ProviderSelectionDrawer({
             Well Kept connects you with the provider. Payment is handled directly with them.
           </p>
 
+          {!homeownerPhone ? (
+            <label className="wk-provider-drawer__phone">
+              <span>Your mobile number</span>
+              <input
+                autoComplete="tel"
+                inputMode="tel"
+                onChange={(event) => setPhone(event.target.value)}
+                placeholder="(555) 555-0123"
+                required
+                type="tel"
+                value={phone}
+              />
+              <small>Shared with {providerName} only after you confirm.</small>
+            </label>
+          ) : null}
+
           {error ? <p className="wk-form-error" role="alert">{error}</p> : null}
 
           <DrawerFooter>
             <Button
               className="wk-pressable h-11"
-              disabled={state !== "idle"}
+              disabled={state !== "idle" || !phone.trim()}
               onClick={chooseProvider}
               type="button"
             >

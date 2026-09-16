@@ -4078,6 +4078,71 @@ a.wk-profile-row:hover {
   line-height: 1.45;
 }
 
+.wk-provider-drawer__phone {
+  display: grid;
+  gap: 6px;
+  margin: 12px 20px 0;
+}
+
+.wk-provider-drawer__phone > span {
+  color: var(--wk-charcoal);
+  font-size: 0.8rem;
+  font-weight: 760;
+}
+
+.wk-provider-drawer__phone input {
+  min-height: 44px;
+  border: 1px solid var(--wk-line);
+  border-radius: 12px;
+  padding: 0 12px;
+  background: white;
+  color: var(--wk-charcoal);
+}
+
+.wk-provider-drawer__phone small {
+  color: var(--wk-muted);
+  font-size: 0.7rem;
+}
+
+.wk-connection-handoff {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--wk-line);
+  border-radius: 18px;
+  padding: 18px;
+  background: var(--wk-paper);
+}
+
+.wk-connection-handoff header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.wk-connection-handoff header > span {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--wk-sage);
+  color: var(--wk-forest);
+}
+
+.wk-connection-handoff header svg { width: 19px; height: 19px; }
+.wk-connection-handoff header p,
+.wk-connection-handoff header h2,
+.wk-connection-handoff > p { margin: 0; }
+.wk-connection-handoff header p { color: var(--wk-forest); font-size: 0.68rem; font-weight: 760; text-transform: uppercase; letter-spacing: 0.08em; }
+.wk-connection-handoff header h2 { color: var(--wk-charcoal); font-family: var(--serif); font-size: 1.35rem; line-height: 1.1; }
+.wk-connection-handoff > p { color: var(--wk-muted); font-size: 0.82rem; line-height: 1.5; }
+.wk-connection-handoff dl { display: grid; gap: 1px; margin: 0; overflow: hidden; border: 1px solid var(--wk-line); border-radius: 12px; background: var(--wk-line); }
+.wk-connection-handoff dl > div { padding: 12px; background: white; }
+.wk-connection-handoff dt { display: flex; align-items: center; gap: 6px; color: var(--wk-muted); font-size: 0.7rem; }
+.wk-connection-handoff dt svg { width: 14px; height: 14px; }
+.wk-connection-handoff dd { margin: 5px 0 0; color: var(--wk-charcoal); font-weight: 680; line-height: 1.45; }
+.wk-connection-handoff a { color: var(--wk-forest); }
+
 .wk-provider-drawer > .wk-form-error {
   margin: 12px 20px 0;
 }

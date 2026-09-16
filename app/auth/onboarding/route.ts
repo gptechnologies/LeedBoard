@@ -1,4 +1,4 @@
-import { UserRole } from "@prisma/client";
+import { ProviderApprovalStatus, UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getRequiredString } from "@/lib/auth";
@@ -39,6 +39,16 @@ export async function POST(request: Request) {
   }
 
   try {
+    if (role === UserRole.CLEANER) {
+      const validInvite = inviteToken
+        ? await prisma.jobOutreach.findFirst({
+            where: { interestToken: inviteToken, interestTokenExpiresAt: { gt: new Date() } },
+            select: { id: true },
+          })
+        : null;
+      if (!validInvite) throw new Error("Cleaner signup requires a valid invitation.");
+    }
+
     const firstName = getRequiredString(formData.get("firstName"), "First name");
     const lastName = getRequiredString(formData.get("lastName"), "Last name");
     const submittedEmail = String(formData.get("email") || "").trim().toLowerCase() || null;
@@ -62,6 +72,7 @@ export async function POST(request: Request) {
           bio,
           businessName,
           website,
+          approvalStatus: ProviderApprovalStatus.PENDING,
           isAvailable: true,
           serviceAreaPostalCodes: [],
           serviceNeeds: [],
@@ -71,6 +82,7 @@ export async function POST(request: Request) {
           bio,
           businessName,
           website,
+          approvalStatus: ProviderApprovalStatus.PENDING,
           isAvailable: true,
           serviceAreaPostalCodes: [],
           serviceNeeds: [],

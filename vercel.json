@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/internal/outreach/process",
+      "schedule": "* * * * *"
+    }
+  ]
+}

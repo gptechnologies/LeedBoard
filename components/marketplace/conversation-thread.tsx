@@ -113,7 +113,7 @@ export function ConversationThread({
         </div>;
       }) : <p className="wk-conversation-empty">No messages yet. Start the conversation below.</p>}
     </section>
-    <form className="wk-conversation-compose" onSubmit={handleSubmit}>
+    {!disabled ? <form className="wk-conversation-compose" onSubmit={handleSubmit}>
       <label className="sr-only" htmlFor={`message-${bidId}`}>Write a message</label>
       <textarea
         id={`message-${bidId}`}
@@ -126,7 +126,7 @@ export function ConversationThread({
         value={draft}
       />
       <button aria-label="Send message" disabled={disabled || sending || !draft.trim() || Boolean(smsOnly && !smsReady)} type="submit"><Send aria-hidden="true" /><span>Send</span></button>
-    </form>
+    </form> : null}
     {error ? <p className="wk-conversation-error" role="alert">{error}</p> : null}
     {smsOnly ? <p className="wk-conversation-channel">{smsReady ? "Replies are sent as texts to this cleaner and appear here." : "Text messaging is not connected yet."}{conversationRef ? ` Text reference: ${conversationRef}` : ""}</p> : null}
     {disabled ? <p className="wk-conversation-channel">This conversation is closed.</p> : null}

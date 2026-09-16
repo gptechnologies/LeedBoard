@@ -128,6 +128,8 @@ export default async function CleanerAccountPage({ searchParams }: CleanerAccoun
                 standardFlatRateCents: profile?.standardFlatRateCents ?? null,
                 standardDeepCleanFlatRateCents: profile?.standardDeepCleanFlatRateCents ?? null,
                 defaultEtaMinutes: profile?.defaultEtaMinutes ?? null,
+                phone: user.phone,
+                serviceAreaPostalCodes: profile?.serviceAreaPostalCodes ?? [],
               }}
             />
             <PushNotificationToggle

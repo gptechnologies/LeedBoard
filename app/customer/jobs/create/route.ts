@@ -1,7 +1,7 @@
-import { JobRequestStatus, PropertyType, UserRole } from "@prisma/client";
-import { NextResponse } from "next/server";
+import { JobRequestStatus, Prisma, PropertyType, UserRole } from "@prisma/client";
+import { after, NextResponse } from "next/server";
 import { parseJobRequestForm } from "@/lib/marketplace-form";
-import { createJobOutreachForJob } from "@/lib/outreach";
+import { processJobOutreach } from "@/lib/outreach-worker";
 import { prisma } from "@/lib/prisma";
 import { requireApiUser } from "@/lib/session";
 import { createJobReference } from "@/lib/providers";
@@ -32,8 +32,29 @@ export async function POST(request: Request) {
   }
 
   const formData = await request.formData();
+  const clientRequestId = String(formData.get("clientRequestId") ?? "").trim();
 
   try {
+    if (clientRequestId.length > 100) {
+      return respondWithError(request, "Unable to post this request. Refresh and try again.");
+    }
+
+    if (clientRequestId) {
+      const existingJob = await prisma.jobRequest.findUnique({
+        where: {
+          customerId_clientRequestId: {
+            customerId: user.id,
+            clientRequestId,
+          },
+        },
+        select: { id: true },
+      });
+
+      if (existingJob) {
+        return respondWithJob(request, existingJob.id);
+      }
+    }
+
     const input = parseJobRequestForm(formData);
     const saveHome = formData.get("saveHome") === "true";
     const homeProfile = input.homeProfileId
@@ -83,28 +104,49 @@ export async function POST(request: Request) {
           status: JobRequestStatus.OPEN,
           customerId: user.id,
           homeProfileId: linkedHome?.id ?? null,
+          clientRequestId: clientRequestId || null,
           customerCompletedJobsSnapshot: priorCompletedJobs,
           customerMemberSinceSnapshot: user.createdAt,
+          snapshotPropertyType: linkedHome?.propertyType ?? null,
+          snapshotBedroomCount: linkedHome?.bedroomCount ?? null,
+          snapshotBathroomCount: linkedHome?.bathroomCount ?? null,
+          snapshotEstimatedSquareFeet: linkedHome?.estimatedSquareFeet ?? null,
+          snapshotStoryCount: linkedHome?.storyCount ?? null,
+          snapshotHasPets: linkedHome ? linkedHome.hasPets : null,
         },
       });
     });
 
-    await createJobOutreachForJob({
-      city: job.city,
-      jobRequestId: job.id,
-      postalCode: job.postalCode,
-      serviceNeeds: job.serviceNeeds,
-      state: job.state,
-    });
-
-    if (request.headers.get("X-Well-Kept-Client") === "1") {
-      return NextResponse.json({ jobId: job.id });
+    after(() => processJobOutreach(job.id));
+    return respondWithJob(request, job.id);
+  } catch (error) {
+    if (
+      clientRequestId &&
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      const existingJob = await prisma.jobRequest.findUnique({
+        where: {
+          customerId_clientRequestId: {
+            customerId: user.id,
+            clientRequestId,
+          },
+        },
+        select: { id: true },
+      });
+      if (existingJob) return respondWithJob(request, existingJob.id);
     }
 
-    return NextResponse.redirect(new URL("/customer?posted=1", request.url), 303);
-  } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unable to post your job right now.";
     return respondWithError(request, message);
   }
+}
+
+function respondWithJob(request: Request, jobId: string) {
+  if (request.headers.get("X-Well-Kept-Client") === "1") {
+    return NextResponse.json({ jobId });
+  }
+
+  return NextResponse.redirect(new URL(`/customer/jobs/${jobId}?posted=1`, request.url), 303);
 }

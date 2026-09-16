@@ -219,6 +219,48 @@ export function buildCleanerBidAcceptedEmail(input: {
   };
 }
 
+export function buildConnectionSummaryEmail(input: {
+  address: string;
+  homeownerName: string;
+  homeownerPhone: string;
+  jobTitle: string;
+  price: string;
+  providerName: string;
+  providerPhone: string;
+  recipientName: string;
+  timing: string;
+  transcript: Array<{ at: Date; body: string; sender: "Homeowner" | "Provider" }>;
+}) {
+  const transcript = input.transcript.length
+    ? input.transcript.map((message) =>
+        `[${message.at.toLocaleString("en-US", { timeZone: "America/New_York" })}] ${message.sender}: ${message.body}`,
+      )
+    : ["No messages were exchanged before confirmation."];
+
+  return {
+    subject: `Connection confirmed for ${input.jobTitle}`,
+    text: [
+      `Hi ${input.recipientName},`,
+      "",
+      `${input.homeownerName} confirmed ${input.providerName} for this job. Well Kept messaging is now closed so you can coordinate directly.`,
+      "",
+      `Job: ${input.jobTitle}`,
+      `When: ${input.timing}`,
+      `Price: ${input.price}`,
+      `Address: ${input.address}`,
+      "",
+      "Contact details",
+      `${input.homeownerName} (homeowner): ${input.homeownerPhone}`,
+      `${input.providerName} (provider): ${input.providerPhone}`,
+      "",
+      "Conversation summary",
+      ...transcript,
+      "",
+      "Payment and any further coordination are handled directly between the homeowner and provider.",
+    ].join("\n"),
+  };
+}
+
 export function buildJobCompletedEmail(input: {
   activityUrl: string;
   jobTitle: string;

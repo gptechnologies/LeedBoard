@@ -44,7 +44,7 @@ export async function sendAppMessage(input: { bidId: string; body: string; role:
     include: { cleanerLead: true, cleaner: true, jobRequest: true },
   });
   if (!bid) return { error: "Conversation not found.", status: 404 } as const;
-  if (bid.status === BidStatus.DECLINED || bid.status === BidStatus.WITHDRAWN ||
+  if (bid.conversationClosedAt || bid.status === BidStatus.ACCEPTED || bid.status === BidStatus.DECLINED || bid.status === BidStatus.WITHDRAWN ||
     bid.jobRequest.status === JobRequestStatus.CANCELLED || bid.jobRequest.status === JobRequestStatus.EXPIRED) {
     return { error: "This conversation is closed.", status: 400 } as const;
   }
@@ -108,7 +108,8 @@ export async function receiveConversationSms(input: { body: string; from: string
 
   const bids = await prisma.jobBid.findMany({
     where: {
-      status: { in: [BidStatus.SUBMITTED, BidStatus.ACCEPTED] },
+      status: BidStatus.SUBMITTED,
+      conversationClosedAt: null,
       jobRequest: { status: { in: [JobRequestStatus.OPEN, JobRequestStatus.AWARDED] } },
       OR: [
         { cleanerLead: { phone: from } },

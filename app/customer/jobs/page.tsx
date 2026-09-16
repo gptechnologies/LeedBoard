@@ -24,7 +24,7 @@ export default async function CustomerJobsPage({ searchParams }: { searchParams:
           <div className="notice success" role="status">Job cancelled. Cleaners can no longer send offers.</div>
         ) : null}
         {query.error ? <div className="notice error" role="alert">{query.error}</div> : null}
-        <HomeownerJobsWorkspace jobs={activeJobs} />
+        <HomeownerJobsWorkspace homeownerPhone={user.phone} jobs={activeJobs} />
       </div>
     </div>
   );

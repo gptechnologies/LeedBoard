@@ -1,4 +1,4 @@
-import { JobRequestStatus, UserRole } from "@prisma/client";
+import { BidStatus, ConversationCloseReason, JobRequestStatus, UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiUser } from "@/lib/session";
@@ -17,15 +17,22 @@ export async function POST(
   if (user instanceof NextResponse) return user;
 
   const { id } = await context.params;
-  const result = await prisma.jobRequest.updateMany({
-    where: {
-      id,
-      customerId: user.id,
-      status: JobRequestStatus.OPEN,
-    },
-    data: {
-      status: JobRequestStatus.CANCELLED,
-    },
+  const result = await prisma.$transaction(async (tx) => {
+    const updated = await tx.jobRequest.updateMany({
+      where: { id, customerId: user.id, status: JobRequestStatus.OPEN },
+      data: { status: JobRequestStatus.CANCELLED },
+    });
+    if (updated.count === 1) {
+      await tx.jobBid.updateMany({
+        where: { jobRequestId: id, status: BidStatus.SUBMITTED },
+        data: {
+          status: BidStatus.DECLINED,
+          conversationClosedAt: new Date(),
+          conversationCloseReason: ConversationCloseReason.JOB_CANCELLED,
+        },
+      });
+    }
+    return updated;
   });
 
   if (result.count === 0) {

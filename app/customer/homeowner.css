@@ -1111,6 +1111,7 @@
 .homeowner-job-summary .homeowner-cleaner-broadcast__copy > span { border-color: oklch(92% 0.08 140 / 0.36); color: oklch(94% 0.08 140); }
 .homeowner-job-summary .homeowner-cleaner-broadcast__copy > strong { color: white; font-size: clamp(1.5rem, 6vw, 1.9rem); font-weight: 510; }
 .homeowner-cleaner-broadcast__copy > p { max-width: 21ch; margin: 0; color: oklch(95% 0.02 132 / 0.72); font-size: 0.7rem; line-height: 1.45; }
+.homeowner-cleaner-broadcast__copy > a { color: white; font-size: 0.72rem; font-weight: 700; text-underline-offset: 3px; }
 .homeowner-job-summary .homeowner-cleaner-broadcast__dots i { background: oklch(95% 0.03 135 / 0.28); }
 .homeowner-job-summary .homeowner-cleaner-broadcast__dots i:first-child { background: oklch(80% 0.18 143); }
 
@@ -2983,6 +2984,31 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 9px;
+}
+
+.wk-composer-quick-dates,
+.wk-composer-clean-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.wk-composer-quick-dates button,
+.wk-composer-clean-types button {
+  min-height: 36px;
+  border: 1px solid oklch(98% 0.018 135 / 0.22);
+  border-radius: 999px;
+  padding: 7px 13px;
+  background: oklch(98% 0.018 135 / 0.08);
+  color: oklch(98% 0.01 130);
+  font-size: 0.75rem;
+  font-weight: 650;
+  box-shadow: none;
+}
+
+.wk-composer-clean-types button.is-selected {
+  border-color: oklch(90% 0.1 140 / 0.75);
+  background: oklch(86% 0.11 142 / 0.24);
 }
 
 .wk-composer-schedule-grid .wk-composer-control,

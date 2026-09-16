@@ -27,9 +27,10 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
             <div className="market-kicker">Admin</div>
             <h1>Cleaner Leads</h1>
           </div>
-          <Link href="/admin/outreach" className="button-link secondary">
-            Outreach
-          </Link>
+          <div className="market-card__actions market-card__actions--start">
+            <Link href="/admin/providers" className="button-link secondary">Provider approvals</Link>
+            <Link href="/admin/outreach" className="button-link secondary">Outreach</Link>
+          </div>
         </header>
 
         {params.error ? <div className="notice error">{params.error}</div> : null}

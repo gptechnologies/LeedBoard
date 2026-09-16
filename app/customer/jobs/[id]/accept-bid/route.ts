@@ -1,10 +1,9 @@
-import { BidStatus, JobRequestStatus, UserRole } from "@prisma/client";
-import { NextResponse } from "next/server";
+import { BidStatus, ConversationCloseReason, JobRequestStatus, UserRole } from "@prisma/client";
+import { after, NextResponse } from "next/server";
 import { getRequiredString } from "@/lib/auth";
-import { notifyCleanerOfAcceptance } from "@/lib/marketplace-notifications";
+import { getConnectionSummaryDeliveries, sendConnectionSummaryEmails } from "@/lib/marketplace-notifications";
 import { prisma } from "@/lib/prisma";
-import { requireApiUser } from "@/lib/session";
-import { sendProviderAcceptanceSms } from "@/lib/sms";
+import { normalizePhone, requireApiUser } from "@/lib/session";
 
 function respondWithError(request: Request, jobId: string, message: string) {
   if (request.headers.get("X-Well-Kept-Client") === "1") {
@@ -30,6 +29,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
   const formData = await request.formData();
   try {
     const bidId = getRequiredString(formData.get("bidId"), "Bid");
+    const homeownerPhone = user.phone || normalizePhone(getRequiredString(formData.get("phone"), "Mobile number"));
 
     const match = await prisma.$transaction(async (tx) => {
       const job = await tx.jobRequest.findFirst({
@@ -39,7 +39,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
           status: JobRequestStatus.OPEN,
         },
         include: {
-          bids: true,
+          bids: { include: { cleaner: true, cleanerLead: true } },
         },
       });
 
@@ -53,6 +53,18 @@ export async function POST(request: Request, { params }: { params: Params }) {
         throw new Error("That bid is no longer available.");
       }
 
+      const providerPhone = bid.cleanerLead?.phone || bid.cleaner?.phone;
+      const providerEmail = bid.cleanerLead?.email || bid.cleaner?.email;
+      if (!providerPhone || !providerEmail) {
+        throw new Error("This provider is missing contact details. Please choose another bid or contact support.");
+      }
+
+      if (!user.phone) {
+        await tx.user.update({ where: { id: user.id }, data: { phone: homeownerPhone } });
+      }
+
+      const acceptedAt = new Date();
+
       const claimed = await tx.jobRequest.updateMany({
         where: {
           id: job.id,
@@ -62,7 +74,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
         data: {
           status: JobRequestStatus.AWARDED,
           acceptedBidId: bid.id,
-          acceptedAt: new Date(),
+          acceptedAt,
         },
       });
 
@@ -72,7 +84,11 @@ export async function POST(request: Request, { params }: { params: Params }) {
 
       await tx.jobBid.update({
         where: { id: bid.id },
-        data: { status: BidStatus.ACCEPTED },
+        data: {
+          status: BidStatus.ACCEPTED,
+          conversationClosedAt: acceptedAt,
+          conversationCloseReason: ConversationCloseReason.ACCEPTED,
+        },
       });
 
       await tx.jobBid.updateMany({
@@ -83,28 +99,60 @@ export async function POST(request: Request, { params }: { params: Params }) {
         },
         data: {
           status: BidStatus.DECLINED,
+          conversationClosedAt: acceptedAt,
+          conversationCloseReason: ConversationCloseReason.NOT_SELECTED,
         },
       });
 
-      return tx.jobRequest.findUniqueOrThrow({
+      const match = await tx.jobRequest.findUniqueOrThrow({
         where: { id: job.id },
         include: {
           homeProfile: { select: { propertyType: true } },
-          acceptedBid: { include: { cleaner: true } },
+          customer: true,
+          acceptedBid: {
+            include: {
+              cleaner: true,
+              cleanerLead: true,
+              messages: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] },
+            },
+          },
         },
       });
+      if (!match.acceptedBid) throw new Error("The selected bid could not be loaded.");
+      const deliveries = getConnectionSummaryDeliveries({
+        bid: match.acceptedBid,
+        customer: match.customer,
+        job: match,
+      });
+      for (const delivery of deliveries) {
+        await tx.notificationDelivery.upsert({
+          where: { dedupeKey: delivery.dedupeKey },
+          update: {},
+          create: {
+            channel: "EMAIL",
+            dedupeKey: delivery.dedupeKey,
+            jobRequestId: delivery.jobRequestId,
+            payload: {
+              emailText: delivery.content.text,
+              purpose: delivery.purpose,
+              subject: delivery.content.subject,
+            },
+            status: "PENDING",
+            toEmail: delivery.toEmail,
+            userId: delivery.userId,
+          },
+        });
+      }
+      return match;
     });
 
     if (!match.acceptedBid) throw new Error("The selected bid could not be loaded.");
 
-    await notifyCleanerOfAcceptance({
-      bidId: match.acceptedBid.id,
-      cleaner: match.acceptedBid.cleaner,
+    after(() => sendConnectionSummaryEmails({
+      bid: match.acceptedBid!,
+      customer: match.customer,
       job: match,
-    });
-    await sendProviderAcceptanceSms(match.acceptedBid.id).catch((error) => {
-      console.error("Unable to send provider acceptance SMS", error);
-    });
+    }));
 
     if (request.headers.get("X-Well-Kept-Client") === "1") {
       return NextResponse.json({ bidId: match.acceptedBid.id });

@@ -7,6 +7,7 @@ import { CompletionFeedback } from "@/components/marketplace/completion-feedback
 import { ActivityReadMarker } from "@/components/marketplace/activity-read-marker";
 import { AppScreenHeader } from "@/components/marketplace/app-screen-header";
 import { ConversationThread } from "@/components/marketplace/conversation-thread";
+import { ConnectionHandoff } from "@/components/marketplace/connection-handoff";
 import { StatusPill } from "@/components/marketplace/status-pill";
 import { getCleaningJobTitle } from "@/lib/job-title";
 import { initialBidMessage, toThreadMessage } from "@/lib/conversation";
@@ -112,10 +113,20 @@ export default async function CleanerMessageThreadPage({
             bidId={bid.id}
             chosenAt={bid.status === BidStatus.ACCEPTED ? bid.jobRequest.acceptedAt?.toISOString() : null}
             otherInitials={`${bid.jobRequest.customer.firstName.charAt(0)}${bid.jobRequest.customer.lastName.charAt(0)}`.toUpperCase()}
-            disabled={bid.status === BidStatus.DECLINED || bid.status === BidStatus.WITHDRAWN || bid.jobRequest.status === JobRequestStatus.CANCELLED || bid.jobRequest.status === JobRequestStatus.EXPIRED}
+            disabled={Boolean(bid.conversationClosedAt) || bid.status === BidStatus.ACCEPTED || bid.status === BidStatus.DECLINED || bid.status === BidStatus.WITHDRAWN || bid.jobRequest.status === JobRequestStatus.CANCELLED || bid.jobRequest.status === JobRequestStatus.EXPIRED}
             initialMessages={[...initialBidMessage(bid), ...bid.messages.map(toThreadMessage)]}
             role="cleaner"
           />
+
+          {bid.status === BidStatus.ACCEPTED ? (
+            <ConnectionHandoff
+              address={[bid.jobRequest.addressLine1, bid.jobRequest.addressLine2, `${bid.jobRequest.city}, ${bid.jobRequest.state} ${bid.jobRequest.postalCode}`].filter(Boolean).join(", ")}
+              homeownerName={homeownerName}
+              homeownerPhone={bid.jobRequest.customer.phone}
+              providerName={cleanerName}
+              providerPhone={user.phone}
+            />
+          ) : null}
 
           {isCompleted ? (
             <article className="message-event message-event--system">
@@ -124,15 +135,6 @@ export default async function CleanerMessageThreadPage({
             </article>
           ) : null}
 
-          {bid.status === BidStatus.ACCEPTED && !isCompleted ? (
-            <form action={`/cleaner/jobs/${bid.jobRequestId}/complete`} method="post" className="market-bottom-action">
-              <div>
-                <strong>Finish the job</strong>
-                <span>Mark complete after the cleaning is done.</span>
-              </div>
-              <button type="submit">Mark Complete</button>
-            </form>
-          ) : null}
         </div>
       </section>
     </div>

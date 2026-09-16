@@ -67,13 +67,8 @@ export function OtpStartForm({ error, inviteToken, mode, returnTo, role }: OtpSt
           <LockKeyhole aria-hidden="true" size={16} />
           <span>No password needed</span>
         </div>
-        <Link
-          className="auth-switch-role"
-          href={mode === "signup" ? `/signup?role=${role === "CUSTOMER" ? "CLEANER" : "CUSTOMER"}` : "/login"}
-        >
-          {mode === "signup"
-            ? `Create a ${role === "CUSTOMER" ? "cleaner" : "homeowner"} account instead`
-            : "Use a different account type"}
+        <Link className="auth-switch-role" href={mode === "signup" ? "/login" : "/login"}>
+          {mode === "signup" ? "Already have an account? Sign in" : "Use a different account type"}
         </Link>
       </form>
 

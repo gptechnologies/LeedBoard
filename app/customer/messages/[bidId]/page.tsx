@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { ActivityReadMarker } from "@/components/marketplace/activity-read-marker";
 import { AppScreenHeader } from "@/components/marketplace/app-screen-header";
 import { ConversationThread } from "@/components/marketplace/conversation-thread";
+import { ConnectionHandoff } from "@/components/marketplace/connection-handoff";
 import { ProviderSelectionDrawer } from "@/components/marketplace/provider-selection-drawer";
 import { getCleaningJobTitle } from "@/lib/job-title";
 import { initialBidMessage, toThreadMessage } from "@/lib/conversation";
@@ -78,18 +79,28 @@ export default async function CustomerMessageThreadPage({ params }: { params: Pa
           chosenText={completed ? "Thanks again—the cleaning is complete." : undefined}
           otherInitials={providerInitials}
           conversationRef={getConversationReference(bid)}
-          disabled={bid.status === BidStatus.DECLINED || bid.status === BidStatus.WITHDRAWN || job.status === JobRequestStatus.CANCELLED || job.status === JobRequestStatus.EXPIRED}
+          disabled={Boolean(bid.conversationClosedAt) || bid.status === BidStatus.ACCEPTED || bid.status === BidStatus.DECLINED || bid.status === BidStatus.WITHDRAWN || job.status === JobRequestStatus.CANCELLED || job.status === JobRequestStatus.EXPIRED}
           initialMessages={[...initialBidMessage(bid), ...bid.messages.map(toThreadMessage)]}
           role="customer"
           smsOnly={!bid.cleanerId && !bid.cleanerLead?.linkedCleanerUserId && Boolean(bid.cleanerLeadId)}
           smsReady={isConversationSmsReady() && !bid.cleanerLead?.optedOutAt}
         />
 
+        {accepted ? (
+          <ConnectionHandoff
+            address={formatAddress(job)}
+            homeownerName={`${user.firstName} ${user.lastName}`.trim()}
+            homeownerPhone={user.phone}
+            providerName={cleanerName}
+            providerPhone={bid.cleanerLead?.phone || bid.cleaner?.phone || null}
+          />
+        ) : null}
+
         <div className="wk-conversation-actions">
           {accepted ? (
             <div className="wk-conversation-chosen"><Check aria-hidden="true" /> Cleaner chosen</div>
           ) : (
-            <ProviderSelectionDrawer bidId={bid.id} jobId={job.id} jobTitle={job.title} price={formatBidAmount(bid)} providerName={cleanerName} timing={formatBidTiming(bid)} triggerLabel="Choose this cleaner" />
+            <ProviderSelectionDrawer bidId={bid.id} homeownerPhone={user.phone} jobId={job.id} jobTitle={job.title} price={formatBidAmount(bid)} providerName={cleanerName} timing={formatBidTiming(bid)} triggerLabel="Choose this cleaner" />
           )}
         </div>
       </div>

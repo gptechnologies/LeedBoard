@@ -1,4 +1,4 @@
-import { UserRole } from "@prisma/client";
+import { ProviderApprovalStatus, UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiUser } from "@/lib/session";
@@ -17,6 +17,7 @@ export async function POST(request: Request) {
     update: { isAvailable },
     create: {
       userId: user.id,
+      approvalStatus: ProviderApprovalStatus.PENDING,
       isAvailable,
     },
   });

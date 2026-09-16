@@ -575,6 +575,9 @@ export async function getCleanerHomeData(cleanerId: string) {
     notes: true,
     status: true,
     createdAt: true,
+    snapshotBathroomCount: true,
+    snapshotBedroomCount: true,
+    snapshotEstimatedSquareFeet: true,
     homeProfile: {
       select: {
         bedroomCount: true,
@@ -600,10 +603,7 @@ export async function getCleanerHomeData(cleanerId: string) {
         status: JobRequestStatus.OPEN,
         bids: { none: { cleanerId } },
         cleanerPasses: { none: { cleanerId } },
-        OR: [
-          { postalCode: { in: profile.serviceAreaPostalCodes } },
-          { bids: { none: {} } },
-        ],
+        postalCode: { in: profile.serviceAreaPostalCodes },
       },
       select: cleanerJobSelect,
       orderBy: { createdAt: "desc" },
@@ -621,11 +621,9 @@ export async function getCleanerHomeData(cleanerId: string) {
   ]);
 
   const matchingOpenJobs = openJobs.filter((job) => {
-    const zipMatch =
-      profile.serviceAreaPostalCodes.length === 0 ||
+    const zipMatch = profile.serviceAreaPostalCodes.length > 0 &&
       profile.serviceAreaPostalCodes.includes(job.postalCode);
-    const serviceMatch =
-      profile.serviceNeeds.length === 0 ||
+    const serviceMatch = profile.serviceNeeds.length > 0 &&
       job.serviceNeeds.some((need) => profile.serviceNeeds.includes(need));
 
     return zipMatch && serviceMatch;

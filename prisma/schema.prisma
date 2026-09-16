@@ -101,9 +101,32 @@ enum CleanerLeadSource {
 
 enum OutreachChannel {
   APP
+  EMAIL
   SMS
   VAPI_CALL
   MANUAL_CALL
+}
+
+enum ProviderApprovalStatus {
+  PENDING
+  APPROVED
+  PAUSED
+  BLOCKED
+}
+
+enum OutreachState {
+  PENDING
+  IN_PROGRESS
+  CONTACTED
+  NEEDS_ATTENTION
+  FAILED
+}
+
+enum ConversationCloseReason {
+  ACCEPTED
+  NOT_SELECTED
+  JOB_CANCELLED
+  JOB_EXPIRED
 }
 
 enum JobOutreachStatus {
@@ -304,6 +327,7 @@ model CleanerProfile {
   id                             String        @id @default(cuid())
   userId                         String        @unique
   isAvailable                    Boolean       @default(true)
+  approvalStatus                 ProviderApprovalStatus @default(APPROVED)
   bio                            String?
   avatarUrl                      String?
   businessName                   String?
@@ -366,6 +390,7 @@ enum PropertyType {
 
 model JobRequest {
   id                            String               @id @default(cuid())
+  clientRequestId               String?
   publicReference               String?              @unique
   title                         String
   addressLine1                  String
@@ -393,6 +418,20 @@ model JobRequest {
   customerCompletedJobsSnapshot Int                  @default(0)
   customerMemberSinceSnapshot   DateTime?
   cleanersNotifiedCount         Int                  @default(0)
+  outreachState                 OutreachState        @default(PENDING)
+  outreachAttemptCount          Int                  @default(0)
+  outreachStartedAt             DateTime?
+  outreachCompletedAt           DateTime?
+  outreachNextAttemptAt         DateTime?
+  outreachFailureReason         String?
+  needsAttentionAt              DateTime?
+  attentionReason               String?
+  snapshotPropertyType          PropertyType?
+  snapshotBedroomCount          Int?
+  snapshotBathroomCount         Float?
+  snapshotEstimatedSquareFeet   Int?
+  snapshotStoryCount            Int?
+  snapshotHasPets               Boolean?
   viewCount                     Int                  @default(0)
   status                        JobRequestStatus     @default(OPEN)
   acceptedAt                    DateTime?
@@ -408,6 +447,9 @@ model JobRequest {
   bids                          JobBid[]             @relation("JobRequestBids")
   outreaches                    JobOutreach[]
   cleanerPasses                 CleanerJobPass[]
+
+  @@unique([customerId, clientRequestId])
+  @@index([outreachState, outreachNextAttemptAt])
 }
 
 model JobBid {
@@ -431,6 +473,8 @@ model JobBid {
   status                BidStatus      @default(SUBMITTED)
   customerViewedAt      DateTime?
   cleanerViewedAt       DateTime?
+  conversationClosedAt  DateTime?
+  conversationCloseReason ConversationCloseReason?
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
   jobRequestId          String

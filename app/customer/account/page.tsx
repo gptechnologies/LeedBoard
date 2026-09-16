@@ -58,7 +58,7 @@ export default async function CustomerAccountPage({ searchParams }: CustomerAcco
         {query.saved === "1" ? <p className="wk-account-notice is-success" role="status">Home details saved.</p> : null}
         {query.error ? <p className="wk-account-notice is-error" role="alert">{query.error}</p> : null}
 
-        <HomeownerAccountForm home={home} />
+        <HomeownerAccountForm home={home} phone={user.phone} />
       </div>
     </div>
   );

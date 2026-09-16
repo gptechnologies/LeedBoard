@@ -80,7 +80,7 @@ export default async function CustomerJobBidsPage({
     job.bids.filter((bid) => bid.status === BidStatus.SUBMITTED),
     job.selectionPriority,
   );
-  const visibleBids = activeBids.slice(0, 3);
+  const visibleBids = activeBids;
   const primaryHighlight = getPrimaryBidHighlight(job.selectionPriority);
 
   return (
@@ -123,6 +123,7 @@ export default async function CustomerJobBidsPage({
                       </Link>
                       <ProviderSelectionDrawer
                         bidId={bid.id}
+                        homeownerPhone={user.phone}
                         jobId={job.id}
                         jobTitle={job.title}
                         price={formatBidAmount(bid)}
@@ -141,11 +142,6 @@ export default async function CustomerJobBidsPage({
                 />
               </div>
             ))}
-            {activeBids.length > visibleBids.length ? (
-              <div className="notice">
-                Showing the top {visibleBids.length} bids ranked for {getBidSelectionPriorityLabel(job.selectionPriority).toLowerCase()}.
-              </div>
-            ) : null}
           </div>
         ) : null}
 
