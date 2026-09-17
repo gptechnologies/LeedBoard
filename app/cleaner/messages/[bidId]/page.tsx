@@ -111,7 +111,6 @@ export default async function CleanerMessageThreadPage({
           <ConversationThread
             bidId={bid.id}
             chosenAt={bid.status === BidStatus.ACCEPTED ? bid.jobRequest.acceptedAt?.toISOString() : null}
-            otherInitials={`${bid.jobRequest.customer.firstName.charAt(0)}${bid.jobRequest.customer.lastName.charAt(0)}`.toUpperCase()}
             disabled={bid.status === BidStatus.DECLINED || bid.status === BidStatus.WITHDRAWN || bid.jobRequest.status === JobRequestStatus.CANCELLED || bid.jobRequest.status === JobRequestStatus.EXPIRED}
             initialMessages={[...initialBidMessage(bid), ...bid.messages.map(toThreadMessage)]}
             role="cleaner"

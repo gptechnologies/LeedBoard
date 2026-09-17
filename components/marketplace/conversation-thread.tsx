@@ -11,7 +11,6 @@ export function ConversationThread({
   initialMessages,
   chosenAt,
   chosenText,
-  otherInitials,
   conversationRef,
   role,
   smsOnly,
@@ -22,7 +21,6 @@ export function ConversationThread({
   initialMessages: ThreadMessage[];
   chosenAt?: string | null;
   chosenText?: string;
-  otherInitials: string;
   conversationRef?: string;
   role: "customer" | "cleaner";
   smsOnly?: boolean;
@@ -99,7 +97,6 @@ export function ConversationThread({
         return <div className="wk-message-group" key={message.id}>
           {day !== previousDay ? <p className="wk-conversation-day">{day}</p> : null}
           <article className={`wk-chat-line ${isOwnMessage ? "is-customer" : "is-provider"}`}>
-            {!isOwnMessage ? <span aria-hidden="true">{otherInitials}</span> : null}
             <div>
               <p>{message.body}</p>
               <time dateTime={message.createdAt}>
