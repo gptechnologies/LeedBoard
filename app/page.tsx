@@ -1,6 +1,6 @@
-import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { LandingRoleSelector } from "@/components/landing-role-selector";
 import { getCurrentUser, getRoleHome } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -27,77 +27,15 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="landing-page stack">
-      <section className="hero hero-premium landing-hero">
-        <div className="landing-hero__copy stack">
-          <div className="eyebrow">New York home cleaning marketplace</div>
-          <h1>Post your cleaning job. Compare bids from trusted New York cleaners.</h1>
-          <p>
-            Well Kept connects people who need a clean home or apartment with
-            professional cleaners ready to bid on the job. Post what you need,
-            compare real offers, and confirm the cleaner that fits your schedule.
-          </p>
-          <div className="hero-actions landing-audience-actions">
-            <Link href="/signup?role=CUSTOMER" className="button-link">
-              Sign up as Homeowner
-            </Link>
-            <Link href="/signup?role=CLEANER" className="button-link secondary">
-              Sign up as Cleaner
-            </Link>
-          </div>
+    <div className="landing-page">
+      <h1 className="sr-only">Well Kept home cleaning marketplace</h1>
+      <div className="landing-page__content">
+        <div className="landing-wordmark" aria-label="Well Kept — Keep your place well">
+          <span>Well Kept<i aria-hidden="true">✦</i></span>
+          <small>Keep your place well</small>
         </div>
-      </section>
-
-      <section className="landing-flow-grid" aria-labelledby="marketplace-flow-heading">
-        <div className="landing-section-heading">
-          <div className="eyebrow">How Well Kept works</div>
-          <h2 id="marketplace-flow-heading">One marketplace for clean homes and booked calendars.</h2>
-        </div>
-
-        <div className="landing-flow-columns">
-          <article className="landing-flow-card glass-card">
-            <div>
-              <span className="step-number">For homeowners</span>
-              <h3>Get your home or apartment cleaned without searching around.</h3>
-            </div>
-            <ol className="landing-flow-list">
-              <li>
-                <strong>Post a Job</strong>
-                <span>Tell cleaners what you need, where you are, and when you want it done.</span>
-              </li>
-              <li>
-                <strong>Compare Bids</strong>
-                <span>Review bids from professional cleaners looking for work in your area.</span>
-              </li>
-              <li>
-                <strong>Confirm your cleaner</strong>
-                <span>Pick the right offer and enjoy a clean home.</span>
-              </li>
-            </ol>
-          </article>
-
-          <article className="landing-flow-card glass-card">
-            <div>
-              <span className="step-number">For cleaners</span>
-              <h3>Turn local cleaning demand into paid work.</h3>
-            </div>
-            <ol className="landing-flow-list">
-              <li>
-                <strong>Sign up with your website or Google Business Profile</strong>
-                <span>Show homeowners who you are and where you work.</span>
-              </li>
-              <li>
-                <strong>Bid on Jobs</strong>
-                <span>See hot leads from people actively looking for home cleaning.</span>
-              </li>
-              <li>
-                <strong>Get paid automatically</strong>
-                <span>Complete the job and receive payment after completion.</span>
-              </li>
-            </ol>
-          </article>
-        </div>
-      </section>
+        <LandingRoleSelector />
+      </div>
     </div>
   );
 }
