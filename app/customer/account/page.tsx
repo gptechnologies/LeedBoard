@@ -1,5 +1,4 @@
 import { EntryMethod, UserRole } from "@prisma/client";
-import { Mail, Phone } from "lucide-react";
 import Link from "next/link";
 
 import { AppNavigationMenu } from "@/components/marketplace/app-navigation-menu";
@@ -45,28 +44,12 @@ export default async function CustomerAccountPage({ searchParams }: CustomerAcco
         <AppNavigationMenu />
       </header>
 
-      <div className="wk-screen-content wk-account-content">
-        <section className="wk-account-identity" aria-labelledby="account-address-heading">
-          <h1 id="account-address-heading">{home.addressLine1 || "Your home"}</h1>
-          <p>{home.city ? `${home.city}, ${home.state} ${home.postalCode}` : "Add your address and home details below"}</p>
-          <div className="wk-account-contact-list">
-            <span><Mail aria-hidden="true" />{user.email || "Email not added"}</span>
-            <span><Phone aria-hidden="true" />{user.phone ? formatPhone(user.phone) : "Phone not added"}</span>
-          </div>
-        </section>
-
+      <main className="wk-screen-content wk-account-content">
         {query.saved === "1" ? <p className="wk-account-notice is-success" role="status">Home details saved.</p> : null}
         {query.error ? <p className="wk-account-notice is-error" role="alert">{query.error}</p> : null}
 
-        <HomeownerAccountForm home={home} phone={user.phone} />
-      </div>
+        <HomeownerAccountForm home={home} phone={user.phone} startEditing={Boolean(query.error)} />
+      </main>
     </div>
   );
-}
-
-function formatPhone(value: string) {
-  const digits = value.replace(/\D/g, "");
-  const local = digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits;
-  if (local.length !== 10) return value;
-  return `(${local.slice(0, 3)}) ${local.slice(3, 6)}-${local.slice(6)}`;
 }

@@ -1,8 +1,8 @@
 "use client";
 
 import { EntryMethod } from "@prisma/client";
-import { Minus, Plus, Save } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { Bath, BedDouble, Box, ChevronRight, ClipboardList, Home, MapPin, Minus, PawPrint, Pencil, Plus, Ruler, Save, Sparkles, X } from "lucide-react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type AccountHome = {
   id: string | null;
@@ -24,8 +24,10 @@ type AccountHome = {
 
 type ParsedAddress = Pick<AccountHome, "addressLine1" | "addressLine2" | "city" | "state" | "postalCode">;
 
-export function HomeownerAccountForm({ home, phone }: { home: AccountHome; phone: string | null }) {
+export function HomeownerAccountForm({ home, phone, startEditing = false }: { home: AccountHome; phone: string | null; startEditing?: boolean }) {
   const initialAddress = formatAddress(home);
+  const [editing, setEditing] = useState(startEditing);
+  const [showBuilderMessage, setShowBuilderMessage] = useState(false);
   const [address, setAddress] = useState(initialAddress);
   const [bedrooms, setBedrooms] = useState<number | null>(home.bedroomCount);
   const [bathrooms, setBathrooms] = useState<number | null>(home.bathroomCount);
@@ -35,6 +37,25 @@ export function HomeownerAccountForm({ home, phone }: { home: AccountHome; phone
     () => address.trim() === initialAddress ? pickAddress(home) : parseAddress(address),
     [address, home, initialAddress],
   );
+
+  useEffect(() => {
+    if (!showBuilderMessage) return;
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setShowBuilderMessage(false);
+    }
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [showBuilderMessage]);
+
+  function toggleEditing() {
+    if (editing) {
+      setAddress(initialAddress);
+      setBedrooms(home.bedroomCount);
+      setBathrooms(home.bathroomCount);
+      setAddressError("");
+    }
+    setEditing(!editing);
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     if (!parsedAddress) {
@@ -49,6 +70,18 @@ export function HomeownerAccountForm({ home, phone }: { home: AccountHome; phone
 
   return (
     <>
+      <HomeProfileCard home={home} onBuild={() => setShowBuilderMessage(true)} />
+
+      <section aria-labelledby="home-summary-heading" className="wk-home-summary-card">
+        <div className="wk-home-summary-heading">
+          <h2 id="home-summary-heading">Home summary</h2>
+          <button className="wk-home-summary-edit wk-pressable" onClick={toggleEditing} type="button">
+            {editing ? "Cancel" : "Edit"}
+            {editing ? <X aria-hidden="true" /> : <Pencil aria-hidden="true" />}
+          </button>
+        </div>
+
+        {editing ? (
       <form action="/customer/my-home/save" className="wk-account-editor" method="post" onSubmit={handleSubmit}>
         {home.id ? <input name="homeProfileId" type="hidden" value={home.id} /> : null}
         <input name="label" type="hidden" value={home.label || "My Home"} />
@@ -61,10 +94,6 @@ export function HomeownerAccountForm({ home, phone }: { home: AccountHome; phone
         <input name="bathroomCount" type="hidden" value={bathrooms ?? ""} />
         <input name="storyCount" type="hidden" value={home.storyCount ?? ""} />
         <input name="entryMethod" type="hidden" value={home.entryMethod} />
-
-        <div className="wk-account-section-heading">
-          <span>Home details</span>
-        </div>
 
         <div className="wk-account-list">
           <div className="wk-account-row wk-account-row--wide">
@@ -177,7 +206,68 @@ export function HomeownerAccountForm({ home, phone }: { home: AccountHome; phone
           {saving ? "Saving…" : "Save changes"}
         </button>
       </form>
+        ) : (
+          <div className="wk-home-summary-list">
+            <SummaryRow icon={MapPin} label="Location" onClick={() => setEditing(true)} value={initialAddress || "Add your address"} />
+            <SummaryRow icon={PawPrint} label="Pets" onClick={() => setEditing(true)} value={home.hasPets ? "Pets in the home" : "No pets"} />
+            <SummaryRow icon={ClipboardList} label="Entry notes" onClick={() => setEditing(true)} value={home.entryNotes.trim() || "Add entry instructions"} />
+            <SummaryRow icon={Sparkles} label="Cleaning specifics" onClick={() => setEditing(true)} value={home.notes.trim() || "Add cleaning priorities"} />
+          </div>
+        )}
+      </section>
+
+      {showBuilderMessage ? (
+        <div className="wk-builder-backdrop" onClick={() => setShowBuilderMessage(false)}>
+          <div aria-labelledby="builder-message-heading" aria-modal="true" className="wk-builder-dialog" onClick={(event) => event.stopPropagation()} role="dialog">
+            <button aria-label="Close" autoFocus className="wk-builder-close" onClick={() => setShowBuilderMessage(false)} type="button"><X aria-hidden="true" /></button>
+            <Box aria-hidden="true" className="wk-builder-dialog-icon" />
+            <h2 id="builder-message-heading">Home builder coming soon</h2>
+            <p>You’ll be able to add and explore rooms here.</p>
+            <button className="wk-builder-done wk-pressable" onClick={() => setShowBuilderMessage(false)} type="button">Got it</button>
+          </div>
+        </div>
+      ) : null}
     </>
+  );
+}
+
+function HomeProfileCard({ home, onBuild }: { home: AccountHome; onBuild: () => void }) {
+  const stats = [
+    home.bedroomCount !== null ? { Icon: BedDouble, text: `${home.bedroomCount} ${home.bedroomCount === 1 ? "bedroom" : "bedrooms"}` } : null,
+    home.bathroomCount !== null ? { Icon: Bath, text: `${home.bathroomCount} ${home.bathroomCount === 1 ? "bathroom" : "bathrooms"}` } : null,
+    home.estimatedSquareFeet !== null ? { Icon: Ruler, text: `${home.estimatedSquareFeet.toLocaleString()} sq ft` } : null,
+    home.hasPets ? { Icon: PawPrint, text: "Pets" } : null,
+  ].filter((stat): stat is { Icon: typeof BedDouble; text: string } => stat !== null);
+
+  return (
+    <section aria-labelledby="your-home-heading" className="wk-home-profile-card">
+      <div className="wk-home-profile-heading">
+        <div>
+          <h1 id="your-home-heading">Your home</h1>
+          <p>Visualize and manage your home details<br className="wk-home-description-break" /> for a better clean.</p>
+        </div>
+        <span aria-hidden="true" className="wk-home-profile-motto">✦<small>A cleaner<br />tomorrow</small></span>
+      </div>
+      <img alt="Isometric illustration of a home with a bedroom, living room, kitchen, and bathroom" className="wk-home-illustration" src="/images/home-isometric.webp" />
+      <button className="wk-build-home-button wk-pressable" onClick={onBuild} type="button">
+        <Box aria-hidden="true" />
+        <span>Build your home</span>
+        <ChevronRight aria-hidden="true" />
+      </button>
+      {stats.length > 0 ? <div aria-label="Home details" className="wk-home-stats">
+        {stats.map(({ Icon, text }) => <span className="wk-home-stat" key={text}><Icon aria-hidden="true" />{text}</span>)}
+      </div> : null}
+    </section>
+  );
+}
+
+function SummaryRow({ icon: Icon, label, onClick, value }: { icon: typeof Home; label: string; onClick: () => void; value: string }) {
+  return (
+    <button className="wk-home-summary-row" onClick={onClick} type="button">
+      <span className="wk-home-summary-row-icon"><Icon aria-hidden="true" /></span>
+      <span className="wk-home-summary-row-copy"><strong>{label}</strong><span>{value}</span></span>
+      <ChevronRight aria-hidden="true" className="wk-home-summary-row-chevron" />
+    </button>
   );
 }
 
