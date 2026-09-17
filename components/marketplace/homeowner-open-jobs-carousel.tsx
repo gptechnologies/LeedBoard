@@ -6,8 +6,6 @@ import {
   CarouselApi,
   CarouselContent,
   CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
 } from "@/components/ui/carousel";
 import { cn } from "@/lib/utils";
 
@@ -68,11 +66,6 @@ export function HomeownerOpenJobsCarousel({
       setApi={setApi}
       tabIndex={0}
     >
-      <div className="customer-open-jobs-controls">
-        <CarouselPrevious className="static translate-y-0" />
-        <CarouselNext className="static translate-y-0" />
-      </div>
-
       <CarouselContent className="-ml-2">
         {slides.map((slide, index) => (
           <CarouselItem className="basis-full pl-2" key={index}>
@@ -81,11 +74,15 @@ export function HomeownerOpenJobsCarousel({
         ))}
       </CarouselContent>
 
-      <div className="customer-open-jobs-dots" aria-hidden="true">
+      <div className="customer-open-jobs-dots" role="group" aria-label="Choose a job">
         {slides.map((_, index) => (
-          <span
+          <button
+            aria-current={index === current ? "true" : undefined}
+            aria-label={`Show job ${index + 1} of ${slides.length}`}
             className={index === current ? "active" : ""}
             key={index}
+            onClick={() => api?.scrollTo(index)}
+            type="button"
           />
         ))}
       </div>

@@ -994,17 +994,37 @@
   line-height: 1;
 }
 
-.homeowner-my-jobs__position,
-.homeowner-my-jobs__dots { display: flex; align-items: center; }
-.homeowner-my-jobs__position { gap: 13px; color: var(--home-muted); font-size: 0.72rem; font-weight: 650; font-variant-numeric: tabular-nums; }
-.homeowner-my-jobs__dots { gap: 7px; }
-.homeowner-my-jobs__dots i { width: 7px; height: 7px; border-radius: 50%; background: oklch(43% 0.055 145 / 0.25); }
-.homeowner-my-jobs__dots i.is-active { background: var(--home-green); box-shadow: 0 0 0 3px oklch(60% 0.09 145 / 0.11); }
-
-.homeowner-my-jobs__carousel .customer-open-jobs-dots { display: none; }
-.homeowner-my-jobs__carousel .customer-open-jobs-controls { justify-content: flex-end; gap: 8px; margin: 0 2px 10px; }
-.homeowner-my-jobs__carousel .customer-open-jobs-controls [data-slot="carousel-previous"],
-.homeowner-my-jobs__carousel .customer-open-jobs-controls [data-slot="carousel-next"] { width: 44px; height: 44px; min-width: 44px; min-height: 44px; border-color: var(--home-line); background: var(--home-surface); box-shadow: none; }
+.homeowner-my-jobs__carousel .customer-open-jobs-dots {
+  align-items: center;
+  gap: 4px;
+  margin-top: 12px;
+}
+.homeowner-my-jobs__carousel .customer-open-jobs-dots button {
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.homeowner-my-jobs__carousel .customer-open-jobs-dots button::after {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: oklch(43% 0.055 145 / 0.25);
+  content: "";
+}
+.homeowner-my-jobs__carousel .customer-open-jobs-dots button.active::after {
+  background: var(--home-green);
+  box-shadow: 0 0 0 3px oklch(60% 0.09 145 / 0.11);
+}
+.homeowner-my-jobs__carousel .customer-open-jobs-dots button:focus-visible {
+  outline: 2px solid var(--home-green);
+  outline-offset: 2px;
+}
 .homeowner-my-jobs__carousel [data-slot="carousel-item"] { display: flex; }
 
 .homeowner-job-summary {
