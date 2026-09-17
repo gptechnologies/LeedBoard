@@ -31,7 +31,7 @@ export default async function HomePage() {
       <h1 className="sr-only">Well Kept home cleaning marketplace</h1>
       <div className="landing-page__content">
         <div className="landing-wordmark" aria-label="Well Kept — Keep your place well">
-          <span>Well Kept<i aria-hidden="true">✦</i></span>
+          <span>Well Kept</span>
           <small>Keep your place well</small>
         </div>
         <LandingRoleSelector />
