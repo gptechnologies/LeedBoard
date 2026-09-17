@@ -1168,6 +1168,42 @@
 .homeowner-job-summary .homeowner-accepted-provider dd,
 .homeowner-job-summary .homeowner-accepted-provider__actions a { color: white; }
 
+@media (max-width: 520px) {
+  .homeowner-jobs-workspace { gap: 20px; }
+  .homeowner-jobs-workspace__create { min-height: 74px; }
+  .homeowner-my-jobs { gap: 10px; }
+  .homeowner-my-jobs__carousel .customer-open-jobs-dots { margin-top: 8px; }
+  .homeowner-job-summary { gap: 11px; padding: 16px; }
+  .homeowner-job-summary .homeowner-job-summary__metadata > div { min-height: 42px; padding-block: 5px; }
+  .homeowner-job-summary__status-area { padding-top: 9px; }
+
+  .homeowner-job-summary .homeowner-accepted-provider {
+    gap: 8px;
+    border-radius: 16px;
+    padding: 12px 13px;
+  }
+  .homeowner-accepted-provider__heading { grid-template-columns: 34px minmax(0, 1fr); gap: 8px; }
+  .homeowner-accepted-provider__heading > span { width: 34px; height: 34px; }
+  .homeowner-accepted-provider__heading > span svg { width: 18px; height: 18px; }
+  .homeowner-job-summary .homeowner-accepted-provider .homeowner-kicker { color: oklch(94% 0.02 132 / 0.72); font-size: 0.55rem; }
+  .homeowner-job-summary .homeowner-accepted-provider h3 { margin-top: 1px; font-size: 1.2rem; }
+  .homeowner-accepted-provider dl { gap: 7px; }
+  .homeowner-accepted-provider dl > div { padding-left: 7px; }
+  .homeowner-accepted-provider dd { margin-top: 1px; }
+  .homeowner-accepted-provider__actions a { min-height: 30px; }
+
+  .homeowner-my-jobs__carousel .homeowner-cleaner-broadcast {
+    grid-template-columns: 106px minmax(0, 1fr);
+    gap: 10px;
+    min-height: 128px;
+    padding: 0;
+  }
+  .homeowner-my-jobs__carousel .homeowner-cleaner-radar { width: 106px; height: 106px; }
+  .homeowner-cleaner-broadcast__copy { gap: 4px; }
+  .homeowner-job-summary .homeowner-cleaner-broadcast__copy > strong { font-size: 1.3rem; }
+  .homeowner-cleaner-broadcast__copy > p { max-width: none; font-size: 0.67rem; line-height: 1.3; }
+}
+
 .wk-account-brand { display: grid; gap: 6px; }
 .wk-account-brand > p { margin: 0; color: var(--home-green); font-size: 0.54rem; font-weight: 650; letter-spacing: 0.27em; line-height: 1; text-transform: uppercase; }
 .wk-account-section-heading { justify-content: flex-start; padding-top: 2px; }
