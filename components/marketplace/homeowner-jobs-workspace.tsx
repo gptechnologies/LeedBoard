@@ -12,7 +12,6 @@ import {
   MapPin,
   Plus,
   Sparkles,
-  Tag,
   UserRound,
 } from "lucide-react";
 
@@ -114,70 +113,68 @@ function HomeownerJobCard({ job }: { job: HomeownerWorkspaceJob }) {
   const isOpen = job.status === "OPEN";
 
   return (
-    <article className="homeowner-job-summary" aria-labelledby={`job-heading-${job.id}`}>
-      <header className="homeowner-job-summary__intro">
-        <span className="homeowner-job-summary__service-mark" aria-hidden="true"><Sparkles /></span>
-        <div>
-          <p className="homeowner-job-summary__posted"><i aria-hidden="true" />{formatPosted(job.createdAt)}</p>
-          <h2 id={`job-heading-${job.id}`}>{formatJobTiming(job)}</h2>
-          <p className="homeowner-job-summary__location">{job.city}, {job.state} {job.postalCode}</p>
-        </div>
-      </header>
-
-      <dl className="homeowner-job-summary__metadata">
-        <div>
-          <MapPin aria-hidden="true" />
-          <dt>Address</dt>
-          <dd>{formatAddress(job)}</dd>
-        </div>
-        <div>
-          <FileText aria-hidden="true" />
-          <dt>Notes</dt>
-          <dd>{job.notes || "No extra notes"}</dd>
-        </div>
-        <div>
-          <Tag aria-hidden="true" />
-          <dt>Job ID</dt>
-          <dd>{reference}</dd>
-        </div>
-      </dl>
-
-      <div className="homeowner-job-summary__status-area">
-        {isOpen && offers.length === 0 ? (
-          <CleanerBroadcastAnimation />
-        ) : isOpen ? (
-          <section className="homeowner-card-offers" aria-labelledby={`offers-heading-${job.id}`}>
-            <div className="homeowner-card-offers__heading">
-              <div>
-                <span><i aria-hidden="true" /> Live now</span>
-                <h3 id={`offers-heading-${job.id}`}>{offers.length} {offers.length === 1 ? "offer" : "offers"} ready</h3>
-              </div>
-              <Link href={`/customer/jobs/${job.id}/bids`}>See all <ChevronRight aria-hidden="true" /></Link>
-            </div>
-            <p>Cleaners are responding to your request. Compare their timing and price below.</p>
-            <div className="homeowner-offers-list">
-              {offers.map((bid, index) => (
-                <OfferRow
-                  bid={bid}
-                  expanded={expandedBidId === bid.id}
-                  job={job}
-                  key={bid.id}
-                  onToggle={() => setExpandedBidId((value) => value === bid.id ? null : bid.id)}
-                  recommended={index === 0}
-                />
-              ))}
-            </div>
-          </section>
-        ) : job.acceptedBid ? (
-          <AcceptedProviderPanel bid={job.acceptedBid} job={job} />
-        ) : (
-          <div className="homeowner-job-booked-summary">
-            <span aria-hidden="true"><Check /></span>
-            <div><p>Job update</p><strong>{job.status === "COMPLETED" ? "Cleaning complete" : "This job is no longer active"}</strong></div>
+    <div className="homeowner-job-slide">
+      <p className="homeowner-job-summary__posted"><i aria-hidden="true" />{formatPosted(job.createdAt)}</p>
+      <article className="homeowner-job-summary" aria-labelledby={`job-heading-${job.id}`}>
+        <p className="homeowner-job-summary__reference">Job ID <span>{reference}</span></p>
+        <header className="homeowner-job-summary__intro">
+          <span className="homeowner-job-summary__service-mark" aria-hidden="true"><Sparkles /></span>
+          <div>
+            <h2 id={`job-heading-${job.id}`}>{formatJobTiming(job)}</h2>
+            <p className="homeowner-job-summary__location">{job.city}, {job.state} {job.postalCode}</p>
           </div>
-        )}
-      </div>
-    </article>
+        </header>
+
+        <dl className="homeowner-job-summary__metadata">
+          <div>
+            <MapPin aria-hidden="true" />
+            <dt>Address</dt>
+            <dd>{formatAddress(job)}</dd>
+          </div>
+          <div>
+            <FileText aria-hidden="true" />
+            <dt>Notes</dt>
+            <dd>{job.notes || "No extra notes"}</dd>
+          </div>
+        </dl>
+
+        <div className="homeowner-job-summary__status-area">
+          {isOpen && offers.length === 0 ? (
+            <CleanerBroadcastAnimation />
+          ) : isOpen ? (
+            <section className="homeowner-card-offers" aria-labelledby={`offers-heading-${job.id}`}>
+              <div className="homeowner-card-offers__heading">
+                <div>
+                  <span><i aria-hidden="true" /> Live now</span>
+                  <h3 id={`offers-heading-${job.id}`}>{offers.length} {offers.length === 1 ? "offer" : "offers"} ready</h3>
+                </div>
+                <Link href={`/customer/jobs/${job.id}/bids`}>See all <ChevronRight aria-hidden="true" /></Link>
+              </div>
+              <p>Cleaners are responding to your request. Compare their timing and price below.</p>
+              <div className="homeowner-offers-list">
+                {offers.map((bid, index) => (
+                  <OfferRow
+                    bid={bid}
+                    expanded={expandedBidId === bid.id}
+                    job={job}
+                    key={bid.id}
+                    onToggle={() => setExpandedBidId((value) => value === bid.id ? null : bid.id)}
+                    recommended={index === 0}
+                  />
+                ))}
+              </div>
+            </section>
+          ) : job.acceptedBid ? (
+            <AcceptedProviderPanel bid={job.acceptedBid} job={job} />
+          ) : (
+            <div className="homeowner-job-booked-summary">
+              <span aria-hidden="true"><Check /></span>
+              <div><p>Job update</p><strong>{job.status === "COMPLETED" ? "Cleaning complete" : "This job is no longer active"}</strong></div>
+            </div>
+          )}
+        </div>
+      </article>
+    </div>
   );
 }
 
@@ -242,17 +239,19 @@ function AcceptedProviderPanel({ bid, job }: { bid: WorkspaceBid; job: Homeowner
   const provider = getProvider(bid);
   return (
     <section className="homeowner-accepted-provider" aria-labelledby={`accepted-provider-${job.id}`}>
-      <div className="homeowner-accepted-provider__heading">
-        <span aria-hidden="true"><Check /></span>
-        <div><p className="homeowner-kicker">Cleaner chosen</p><h3 id={`accepted-provider-${job.id}`}>{provider.name}</h3></div>
+      <div className="homeowner-accepted-provider__main">
+        <div className="homeowner-accepted-provider__heading">
+          <span aria-hidden="true"><Check /></span>
+          <div><p className="homeowner-kicker">Cleaner chosen</p><h3 id={`accepted-provider-${job.id}`}>{provider.name}</h3></div>
+        </div>
+        <div className="homeowner-accepted-provider__actions">
+          <Link href={`/customer/messages/${bid.id}`}>Open conversation <ChevronRight aria-hidden="true" /></Link>
+        </div>
       </div>
-      <dl>
+      <dl className="homeowner-accepted-provider__facts">
         <div><dt>Arrival</dt><dd>{formatBidTiming(bid)}</dd></div>
         <div><dt>Price</dt><dd>{formatBidAmount(bid)}</dd></div>
       </dl>
-      <div className="homeowner-accepted-provider__actions">
-        <Link href={`/customer/messages/${bid.id}`}>Open conversation <ChevronRight aria-hidden="true" /></Link>
-      </div>
     </section>
   );
 }

@@ -23,6 +23,7 @@ export function HomeownerOpenJobsCarousel({
   const slides = Children.toArray(children).filter(Boolean);
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
+  const [currentHeight, setCurrentHeight] = useState<number | null>(null);
   const onSelectionChangeRef = useRef(onSelectionChange);
 
   useEffect(() => {
@@ -52,6 +53,17 @@ export function HomeownerOpenJobsCarousel({
     };
   }, [api, initialIndex, slides.length]);
 
+  useEffect(() => {
+    const selectedSlide = api?.slideNodes()[current];
+    if (!selectedSlide) return;
+
+    const updateHeight = () => setCurrentHeight(selectedSlide.getBoundingClientRect().height);
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(selectedSlide);
+    return () => observer.disconnect();
+  }, [api, current]);
+
   if (slides.length === 0) return null;
 
   if (slides.length === 1) {
@@ -66,7 +78,7 @@ export function HomeownerOpenJobsCarousel({
       setApi={setApi}
       tabIndex={0}
     >
-      <CarouselContent className="-ml-2">
+      <CarouselContent className="-ml-2 items-start" style={currentHeight ? { height: currentHeight } : undefined}>
         {slides.map((slide, index) => (
           <CarouselItem className="basis-full pl-2" key={index}>
             {slide}
