@@ -79,7 +79,6 @@ export type HomeownerWorkspaceJob = {
 
 export function HomeownerJobsWorkspace({ homeownerPhone, jobs }: { homeownerPhone: string | null; jobs: HomeownerWorkspaceJob[] }) {
   const router = useRouter();
-  const [current, setCurrent] = useState(0);
 
   useEffect(() => {
     if (!jobs.some((job) => job.status === "OPEN")) return;
@@ -97,18 +96,10 @@ export function HomeownerJobsWorkspace({ homeownerPhone, jobs }: { homeownerPhon
       <section className="homeowner-my-jobs" aria-labelledby="my-jobs-heading">
         <div className="homeowner-my-jobs__heading">
           <h1 id="my-jobs-heading">My jobs</h1>
-          {jobs.length > 1 ? (
-            <div className="homeowner-my-jobs__position" aria-live="polite">
-              <span aria-hidden="true" className="homeowner-my-jobs__dots">
-                {jobs.map((job, index) => <i className={index === current ? "is-active" : ""} key={job.id} />)}
-              </span>
-              <span>{current + 1} of {jobs.length}</span>
-            </div>
-          ) : null}
         </div>
 
         {jobs.length > 0 ? (
-          <HomeownerOpenJobsCarousel className="homeowner-my-jobs__carousel" onSelectionChange={setCurrent}>
+          <HomeownerOpenJobsCarousel className="homeowner-my-jobs__carousel">
             {jobs.map((job) => <HomeownerJobCard homeownerPhone={homeownerPhone} job={job} key={job.id} />)}
           </HomeownerOpenJobsCarousel>
         ) : (
