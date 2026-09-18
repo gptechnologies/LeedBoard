@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getConversationReference, getProviderPhone, resolveConversationReference } from "@/lib/providers";
 import { normalizePhone } from "@/lib/session";
 import { isConversationSmsReady, sendConversationSms } from "@/lib/sms";
+import { expireDueJobs, expireJobIfDue } from "@/lib/job-lifecycle";
 
 export type ThreadMessage = {
   id: string;
@@ -37,6 +38,8 @@ export function initialBidMessage(bid: { id: string; message: string | null; cre
 }
 
 export async function sendAppMessage(input: { bidId: string; body: string; role: UserRole; userId: string }) {
+  const owned = await prisma.jobBid.findUnique({ where: { id: input.bidId }, select: { jobRequestId: true } });
+  if (owned) await expireJobIfDue(owned.jobRequestId);
   const bid = await prisma.jobBid.findFirst({
     where: input.role === UserRole.CUSTOMER
       ? { id: input.bidId, jobRequest: { customerId: input.userId } }
@@ -45,7 +48,7 @@ export async function sendAppMessage(input: { bidId: string; body: string; role:
   });
   if (!bid) return { error: "Conversation not found.", status: 404 } as const;
   if (bid.status === BidStatus.DECLINED || bid.status === BidStatus.WITHDRAWN ||
-    bid.jobRequest.status === JobRequestStatus.CANCELLED || bid.jobRequest.status === JobRequestStatus.EXPIRED) {
+    bid.jobRequest.status === JobRequestStatus.CANCELLED || bid.jobRequest.status === JobRequestStatus.EXPIRED || bid.jobRequest.status === JobRequestStatus.DELETED) {
     return { error: "This conversation is closed.", status: 400 } as const;
   }
 
@@ -56,22 +59,38 @@ export async function sendAppMessage(input: { bidId: string; body: string; role:
   }
 
   const sender = input.role === UserRole.CUSTOMER ? ConversationSender.CUSTOMER : ConversationSender.CLEANER;
-  const message = await prisma.$transaction(async (tx) => {
-    const created = await tx.conversationMessage.create({
-      data: {
-        bidId: bid.id,
-        sender,
-        channel: ConversationChannel.APP,
-        body: input.body,
-        deliveryStatus: smsOnly ? ConversationDeliveryStatus.PENDING : null,
-      },
+  let message;
+  try {
+    message = await prisma.$transaction(async (tx) => {
+      const available = await tx.jobRequest.updateMany({
+        where: {
+          id: bid.jobRequestId,
+          OR: [
+            { status: JobRequestStatus.OPEN, acceptanceDeadline: { gt: new Date() } },
+            { status: { in: [JobRequestStatus.AWARDED, JobRequestStatus.COMPLETED] }, acceptedBidId: bid.id },
+          ],
+        },
+        data: { updatedAt: new Date() },
+      });
+      if (available.count !== 1) throw new Error("This conversation is closed.");
+      const created = await tx.conversationMessage.create({
+        data: {
+          bidId: bid.id,
+          sender,
+          channel: ConversationChannel.APP,
+          body: input.body,
+          deliveryStatus: smsOnly ? ConversationDeliveryStatus.PENDING : null,
+        },
+      });
+      await tx.jobBid.update({
+        where: { id: bid.id },
+        data: input.role === UserRole.CUSTOMER ? { cleanerViewedAt: null } : { customerViewedAt: null },
+      });
+      return created;
     });
-    await tx.jobBid.update({
-      where: { id: bid.id },
-      data: input.role === UserRole.CUSTOMER ? { cleanerViewedAt: null } : { customerViewedAt: null },
-    });
-    return created;
-  });
+  } catch {
+    return { error: "This conversation is closed.", status: 400 } as const;
+  }
 
   if (smsOnly && phone) {
     try {
@@ -93,6 +112,7 @@ export async function sendAppMessage(input: { bidId: string; body: string; role:
 
 export async function receiveConversationSms(input: { body: string; from: string; to: string; sid: string }) {
   if (!isConversationSmsReady()) return { matched: false } as const;
+  await expireDueJobs();
   let from: string;
   let to: string;
   try {

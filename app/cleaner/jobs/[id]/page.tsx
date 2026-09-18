@@ -10,6 +10,7 @@ import { AppScreenHeader } from "@/components/marketplace/app-screen-header";
 import { formatCleanerPriceLabel, formatTimingSummary } from "@/lib/marketplace";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
+import { expireJobIfDue } from "@/lib/job-lifecycle";
 
 export const dynamic = "force-dynamic";
 
@@ -25,10 +26,12 @@ export default async function CleanerJobDetailPage({
 }) {
   const user = await requireUser(UserRole.CLEANER);
   const { id } = await params;
+  await expireJobIfDue(id);
   const query = await searchParams;
   const job = await prisma.jobRequest.findFirst({
     where: { id },
     select: {
+      acceptanceDeadline: true,
       id: true,
       title: true,
       city: true,
@@ -70,6 +73,7 @@ export default async function CleanerJobDetailPage({
   if (!job || (job.status !== JobRequestStatus.OPEN && job.bids.length === 0)) notFound();
   const existingBid = job.bids[0] ?? null;
   if (existingBid) redirect(`/cleaner/messages/${existingBid.id}`);
+  if (job.status !== JobRequestStatus.OPEN) notFound();
 
   const timingLabel = formatTimingSummary(job);
   const item: NearbyJobSwipeItem = {

@@ -8,7 +8,7 @@ import {
   getEstimatedCompletionTime,
 } from "@/lib/bid-summary";
 
-export function BidReceivedTime({ createdAt }: { createdAt: Date }) {
+export function BidReceivedTime({ createdAt, perspective = "received" }: { createdAt: Date; perspective?: "received" | "submitted" }) {
   const [relativeTime, setRelativeTime] = useState(() => formatBidReceivedAge(createdAt));
   const timestamp = createdAt.getTime();
 
@@ -19,11 +19,12 @@ export function BidReceivedTime({ createdAt }: { createdAt: Date }) {
     return () => window.clearInterval(interval);
   }, [createdAt, timestamp]);
 
-  return <time className="wk-bid-received-time" dateTime={createdAt.toISOString()}>Bid received · {relativeTime}</time>;
+  return <time className="wk-bid-received-time" dateTime={createdAt.toISOString()}>Bid {perspective} · {relativeTime}</time>;
 }
 
 export function BidSummary({
   cleanerName,
+  identityLabel,
   jobId,
   address,
   jobDate,
@@ -33,6 +34,7 @@ export function BidSummary({
   estimatedTotal,
 }: {
   cleanerName: string;
+  identityLabel?: string;
   jobId: string;
   address: string;
   jobDate: Date | null;
@@ -50,7 +52,7 @@ export function BidSummary({
     <section className="wk-bid-summary" aria-label="Bid summary">
       <div className="wk-bid-summary__details">
         <div className="wk-bid-summary__identity">
-          <strong>{cleanerName}</strong>
+          <strong>{identityLabel ?? cleanerName}</strong>
           <span>Job ID: {jobId}</span>
           <p>{address}</p>
         </div>

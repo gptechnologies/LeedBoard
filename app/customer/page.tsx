@@ -11,7 +11,7 @@ export default async function CustomerDashboard() {
   const user = await requireUser(UserRole.CUSTOMER);
   const { jobs } = await getCustomerHomeData(user.id);
   const activeJobs = jobs.filter(
-    (job) => job.status === JobRequestStatus.OPEN || job.status === JobRequestStatus.AWARDED,
+    (job) => job.status === JobRequestStatus.OPEN || job.status === JobRequestStatus.AWARDED || job.status === JobRequestStatus.EXPIRED,
   );
 
   return (

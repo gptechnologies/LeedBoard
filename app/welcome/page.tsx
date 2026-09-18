@@ -30,8 +30,7 @@ export default async function WelcomePage({ searchParams }: WelcomePageProps) {
     redirect(getPostAuthPath({ inviteToken: params.inviteToken, returnTo, role: user.role }));
   }
 
-  const selectedRole =
-    params.role === UserRole.CLEANER ? UserRole.CLEANER : UserRole.CUSTOMER;
+  const selectedRole = user.role;
   const isCleaner = selectedRole === UserRole.CLEANER;
 
   return (
@@ -49,7 +48,6 @@ export default async function WelcomePage({ searchParams }: WelcomePageProps) {
       {params.error ? <div className="notice error">{params.error}</div> : null}
 
       <form action="/auth/onboarding" method="post" className="stack">
-        <input type="hidden" name="role" value={selectedRole} />
         {params.inviteToken ? (
           <input type="hidden" name="inviteToken" value={params.inviteToken} />
         ) : null}

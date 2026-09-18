@@ -33,6 +33,7 @@ type HomeSnapshot = {
 } | null;
 
 export type NearbyJobDeckJob = {
+  acceptanceDeadline: Date | null;
   city: string;
   cleanLevel: CleanLevel;
   cleanType: JobCleanType | null;

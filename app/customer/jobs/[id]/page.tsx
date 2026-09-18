@@ -8,6 +8,7 @@ import { AppScreenHeader } from "@/components/marketplace/app-screen-header";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { notFound } from "next/navigation";
+import { expireJobIfDue } from "@/lib/job-lifecycle";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ export default async function CustomerJobDetailPage({
 }) {
   const user = await requireUser(UserRole.CUSTOMER);
   const { id } = await params;
+  await expireJobIfDue(id);
   const query = await searchParams;
   const job = await prisma.jobRequest.findFirst({
     where: {
@@ -68,6 +70,7 @@ export default async function CustomerJobDetailPage({
   if (!job) {
     notFound();
   }
+  if (job.status === JobRequestStatus.DELETED) notFound();
 
   return (
     <div className="wk-app-screen wk-homeowner-detail-screen">
@@ -97,7 +100,9 @@ export default async function CustomerJobDetailPage({
           job={job}
         />
 
-        {job.acceptedBid ? (
+        {job.status === JobRequestStatus.EXPIRED ? (
+          <section className="wk-conversation-closed" role="status"><strong>Job ended</strong><span>No cleaner was selected before the deadline.</span><Link href={`/customer/jobs/new?repost=${job.id}`}>Post again</Link></section>
+        ) : job.acceptedBid ? (
           <section className="stack">
             <div className="market-section-heading">
               <h2>Accepted bid</h2>

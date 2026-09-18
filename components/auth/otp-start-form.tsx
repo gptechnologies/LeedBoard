@@ -8,7 +8,7 @@ type OtpStartFormProps = {
   error?: string;
   inviteToken?: string;
   mode: "login" | "signup";
-  role: "CUSTOMER" | "CLEANER";
+  role?: "CUSTOMER" | "CLEANER";
   returnTo?: string;
 };
 
@@ -20,12 +20,12 @@ export function OtpStartForm({ error, inviteToken, mode, returnTo, role }: OtpSt
     : "Welcome back";
   const intro = mode === "signup"
     ? `Use your email to create a ${roleLabel} account.`
-    : `Sign in to your ${roleLabel} account with a one-time code.`;
+    : "Sign in with a one-time code. We'll take you to your account.";
 
   return (
     <section className="auth-shell auth-passcode-card">
       <div className="auth-intro">
-        <span className="eyebrow">{role === "CUSTOMER" ? "Homeowner" : "Cleaner"}</span>
+        <span className="eyebrow">{mode === "login" ? "Sign in" : role === "CUSTOMER" ? "Homeowner" : "Cleaner"}</span>
         <h1>{heading}</h1>
         <p>{intro}</p>
       </div>
@@ -34,7 +34,7 @@ export function OtpStartForm({ error, inviteToken, mode, returnTo, role }: OtpSt
 
       <form action="/auth/otp/start" method="post" className="auth-passcode-form">
         <input type="hidden" name="mode" value={mode} />
-        <input type="hidden" name="role" value={role} />
+        {role ? <input type="hidden" name="role" value={role} /> : null}
         <input type="hidden" name="channel" value="email" />
         {inviteToken ? <input type="hidden" name="inviteToken" value={inviteToken} /> : null}
         {returnTo ? <input type="hidden" name="returnTo" value={returnTo} /> : null}
@@ -67,14 +67,9 @@ export function OtpStartForm({ error, inviteToken, mode, returnTo, role }: OtpSt
           <LockKeyhole aria-hidden="true" size={16} />
           <span>No password needed</span>
         </div>
-        <Link
-          className="auth-switch-role"
-          href={mode === "signup" ? `/signup?role=${role === "CUSTOMER" ? "CLEANER" : "CUSTOMER"}` : "/login"}
-        >
-          {mode === "signup"
-            ? `Create a ${role === "CUSTOMER" ? "cleaner" : "homeowner"} account instead`
-            : "Use a different account type"}
-        </Link>
+        {mode === "signup" ? <Link className="auth-switch-role" href={`/signup?role=${role === "CUSTOMER" ? "CLEANER" : "CUSTOMER"}`}>
+          Create a {role === "CUSTOMER" ? "cleaner" : "homeowner"} account instead
+        </Link> : null}
       </form>
 
       <p className="auth-legal">

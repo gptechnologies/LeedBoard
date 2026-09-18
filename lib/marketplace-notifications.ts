@@ -103,13 +103,61 @@ export async function notifyHomeownerOfCompletion(input: {
   });
 }
 
+export async function notifyCleanersOfJobClosure(jobId: string, reason: "deleted" | "expired") {
+  try {
+    const bids = await prisma.jobBid.findMany({
+      where: { jobRequestId: jobId },
+      include: { cleaner: { select: { id: true, email: true } }, cleanerLead: { include: { linkedCleanerUser: { select: { id: true, email: true } } } }, outreach: { select: { interestToken: true } } },
+    });
+    await Promise.all(bids.map(async (bid) => {
+      const cleaner = bid.cleaner ?? bid.cleanerLead?.linkedCleanerUser;
+      const email = cleaner?.email ?? bid.cleanerLead?.email;
+      if (!email) return;
+      const updatePath = cleaner ? `/cleaner/messages/${bid.id}` : bid.outreach ? `/invite/cleaner/${bid.outreach.interestToken}` : `/login`;
+      await sendMarketplaceEmail({
+        content: {
+          subject: reason === "deleted" ? "A Well Kept job was removed" : "A Well Kept job has ended",
+          text: `${reason === "deleted" ? "The homeowner closed this job." : "The homeowner didn't select a cleaner before the acceptance deadline."}\n\nYour offer and conversation are saved for your records. View the update: ${buildAppUrl(updatePath)}`,
+        },
+        dedupeKey: `job-${reason}:${jobId}:${bid.id}`,
+        jobRequestId: jobId,
+        purpose: `job_${reason}`,
+        toEmail: email,
+        userId: cleaner?.id ?? null,
+      });
+    }));
+  } catch (error) {
+    console.error("Unable to notify cleaners of job closure", error);
+  }
+}
+
+export async function notifyHomeownerOfJobExpiration(jobId: string) {
+  try {
+    const job = await prisma.jobRequest.findUnique({ where: { id: jobId }, select: { id: true, title: true, customer: { select: { id: true, email: true } } } });
+    if (!job?.customer.email) return;
+    await sendMarketplaceEmail({
+      content: {
+        subject: "Your Well Kept job has ended",
+        text: `No cleaner was selected before the acceptance deadline for ${job.title}. Your previous details are saved, and you can post again with a new date: ${buildAppUrl(`/customer/jobs/new?repost=${job.id}`)}`,
+      },
+      dedupeKey: `job-expired-homeowner:${job.id}`,
+      jobRequestId: job.id,
+      purpose: "job_expired_homeowner",
+      toEmail: job.customer.email,
+      userId: job.customer.id,
+    });
+  } catch (error) {
+    console.error("Unable to notify homeowner of job expiration", error);
+  }
+}
+
 async function sendMarketplaceEmail(input: {
   content: { subject: string; text: string };
   dedupeKey: string;
   jobRequestId: string;
   purpose: string;
   toEmail: string;
-  userId: string;
+  userId: string | null;
 }) {
   let delivery;
 

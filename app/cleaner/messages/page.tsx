@@ -6,11 +6,13 @@ import { getCleaningJobTitle } from "@/lib/job-title";
 import { formatBidAmount, formatBidTiming, formatTimingSummary, getBidStatusLabel, getEntryMethodLabel } from "@/lib/marketplace";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
+import { expireDueJobs } from "@/lib/job-lifecycle";
 
 export const dynamic = "force-dynamic";
 
 export default async function CleanerMessagesPage() {
   const user = await requireUser(UserRole.CLEANER);
+  await expireDueJobs();
   const bids = await prisma.jobBid.findMany({
     where: { OR: [{ cleanerId: user.id }, { cleanerLead: { linkedCleanerUserId: user.id } }] },
     include: {
@@ -30,13 +32,14 @@ export default async function CleanerMessagesPage() {
   const toInlineDetail = (bid: (typeof bids)[number]): ActivityInlineDetail => {
     const accepted = bid.status === BidStatus.ACCEPTED;
     const completed = bid.jobRequest.status === JobRequestStatus.COMPLETED;
+    const closed = bid.jobRequest.status === JobRequestStatus.EXPIRED || bid.jobRequest.status === JobRequestStatus.DELETED;
     const address = accepted
       ? [bid.jobRequest.addressLine1, bid.jobRequest.addressLine2, `${bid.jobRequest.city}, ${bid.jobRequest.state} ${bid.jobRequest.postalCode}`].filter(Boolean).join(", ")
       : `${bid.jobRequest.city}, ${bid.jobRequest.state} ${bid.jobRequest.postalCode}`;
     return {
       canCompleteJobId: accepted && bid.jobRequest.status === JobRequestStatus.AWARDED ? bid.jobRequest.id : undefined,
       fields: [
-        { label: "Status", value: completed ? "Completed" : getBidStatusLabel(bid.status) },
+        { label: "Status", value: closed ? bid.jobRequest.status === JobRequestStatus.EXPIRED ? "Expired" : "Job removed" : completed ? "Completed" : getBidStatusLabel(bid.status) },
         { label: "Your bid", value: formatBidAmount(bid) },
         { label: "Arrival", value: formatBidTiming(bid) },
         { label: accepted ? "Address" : "Area", value: address },
@@ -56,17 +59,17 @@ export default async function CleanerMessagesPage() {
       id: bid.id,
       name: customerName,
       href: `/cleaner/messages/${bid.id}`,
-      preview: bid.messages[0]?.body || bid.message || "Your bid is in. Open the job to review its status.",
+      preview: bid.jobRequest.status === JobRequestStatus.EXPIRED ? "Job ended · No cleaner was selected." : bid.jobRequest.status === JobRequestStatus.DELETED ? "Job removed · The homeowner closed this job." : bid.messages[0]?.body || bid.message || "Your bid is in. Open the job to review its status.",
       service: getCleaningJobTitle(bid.jobRequest),
       time: formatTimeAgo(bid.messages[0]?.createdAt ?? bid.createdAt),
       unread:
-        (bid.status === BidStatus.ACCEPTED || bid.messages[0]?.sender === "CUSTOMER") && !bid.cleanerViewedAt
+        (bid.status === BidStatus.ACCEPTED || bid.messages[0]?.sender === "CUSTOMER" || bid.jobRequest.status === JobRequestStatus.EXPIRED || bid.jobRequest.status === JobRequestStatus.DELETED) && !bid.cleanerViewedAt
           ? 1
           : undefined,
     };
   });
   const activeJobs: ActivityJob[] = bids
-    .filter((bid) => bid.jobRequest.status !== JobRequestStatus.COMPLETED)
+    .filter((bid) => bid.jobRequest.status === JobRequestStatus.OPEN || bid.jobRequest.status === JobRequestStatus.AWARDED)
     .map((bid) => ({
       action: bid.status === BidStatus.ACCEPTED ? "Review active job" : "Bid sent",
       detail: toInlineDetail(bid),

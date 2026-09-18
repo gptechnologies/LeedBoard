@@ -78,8 +78,11 @@ export async function POST(request: Request) {
       orderBy: { updatedAt: "desc" },
     });
 
-    if (existingUser && !currentUser && existingUser.role !== role) {
+    if (mode === "signup" && existingUser && !currentUser && existingUser.role !== role) {
       throw new Error("That email is connected to a different Well Kept account type.");
+    }
+    if (mode === "login" && !existingUser) {
+      throw new Error("No account is connected to that email. Choose a Join option to create one.");
     }
     const user =
       existingUser ??

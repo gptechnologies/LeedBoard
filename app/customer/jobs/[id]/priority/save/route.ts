@@ -12,6 +12,7 @@ import {
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiUser } from "@/lib/session";
+import { expireJobIfDue } from "@/lib/job-lifecycle";
 
 type Params = Promise<{
   id: string;
@@ -120,6 +121,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
   }
 
   const { id } = await params;
+  await expireJobIfDue(id);
   const formData = await request.formData();
   const cleanType = parseEnumValue(
     formData.get("cleanType"),
@@ -143,6 +145,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
       id,
       customerId: user.id,
       status: JobRequestStatus.OPEN,
+      acceptanceDeadline: { gt: new Date() },
     },
     data: {
       cleanType,

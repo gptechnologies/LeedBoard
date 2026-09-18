@@ -13,6 +13,7 @@ import { notifyHomeownerOfBid } from "@/lib/marketplace-notifications";
 import { isOutreachExpired } from "@/lib/outreach";
 import { prisma } from "@/lib/prisma";
 import { getProviderName } from "@/lib/providers";
+import { expireJobIfDue } from "@/lib/job-lifecycle";
 
 type Params = Promise<{ token: string }>;
 
@@ -79,7 +80,9 @@ export async function POST(request: Request, { params }: { params: Params }) {
     if (!outreach || isOutreachExpired(outreach)) {
       throw new Error("This offer link has expired.");
     }
-    if (outreach.jobRequest.status !== JobRequestStatus.OPEN) {
+    await expireJobIfDue(outreach.jobRequestId);
+    const freshJob = await prisma.jobRequest.findUnique({ where: { id: outreach.jobRequestId }, select: { status: true, acceptanceDeadline: true } });
+    if (freshJob?.status !== JobRequestStatus.OPEN || !freshJob.acceptanceDeadline || freshJob.acceptanceDeadline <= new Date()) {
       throw new Error("This job is no longer accepting offers.");
     }
     if (!outreach.cleanerLeadId && !outreach.cleanerUserId) {
@@ -131,6 +134,8 @@ export async function POST(request: Request, { params }: { params: Params }) {
     }
 
     const bid = await prisma.$transaction(async (tx) => {
+      const claim = await tx.jobRequest.updateMany({ where: { id: outreach.jobRequestId, status: JobRequestStatus.OPEN, acceptanceDeadline: { gt: new Date() } }, data: { updatedAt: new Date() } });
+      if (claim.count !== 1) throw new Error("This job is no longer accepting offers.");
       const data = {
         offerType,
         source: OfferSource.PROVIDER_FORM,

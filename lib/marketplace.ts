@@ -21,6 +21,7 @@ import {
   serviceNeedOptions,
 } from "@/lib/marketplace-constants";
 import { prisma } from "@/lib/prisma";
+import { expireDueJobs } from "@/lib/job-lifecycle";
 
 export function getServiceNeedLabel(value: ServiceNeed) {
   return serviceNeedOptions.find((option) => option.value === value)?.label ?? value;
@@ -244,6 +245,8 @@ export function getJobRequestStatusLabel(status: JobRequestStatus) {
       return "Cancelled";
     case JobRequestStatus.EXPIRED:
       return "Expired";
+    case JobRequestStatus.DELETED:
+      return "Removed";
     default:
       return "Accepting Bids";
   }
@@ -488,9 +491,10 @@ export async function getCustomerHomeProfiles(customerId: string) {
 }
 
 export async function getCustomerHomeData(customerId: string) {
+  await expireDueJobs();
   const [jobs, homeProfile] = await Promise.all([
     prisma.jobRequest.findMany({
-      where: { customerId },
+      where: { customerId, status: { in: [JobRequestStatus.OPEN, JobRequestStatus.AWARDED, JobRequestStatus.EXPIRED] } },
       include: {
         bids: {
           where: { status: BidStatus.SUBMITTED },
@@ -538,6 +542,7 @@ export async function getCustomerHomeData(customerId: string) {
 }
 
 export async function getCleanerHomeData(cleanerId: string) {
+  await expireDueJobs();
   const cleaner = await prisma.user.findUnique({
     where: { id: cleanerId },
     include: {
@@ -557,6 +562,7 @@ export async function getCleanerHomeData(cleanerId: string) {
   const profile = cleaner.cleanerProfile;
 
   const cleanerJobSelect = {
+    acceptanceDeadline: true,
     id: true,
     title: true,
     city: true,
@@ -598,6 +604,7 @@ export async function getCleanerHomeData(cleanerId: string) {
     prisma.jobRequest.findMany({
       where: {
         status: JobRequestStatus.OPEN,
+        acceptanceDeadline: { gt: new Date() },
         bids: { none: { cleanerId } },
         cleanerPasses: { none: { cleanerId } },
         OR: [
@@ -612,6 +619,8 @@ export async function getCleanerHomeData(cleanerId: string) {
     prisma.jobRequest.findMany({
       where: {
         cleanerPasses: { some: { cleanerId } },
+        status: JobRequestStatus.OPEN,
+        acceptanceDeadline: { gt: new Date() },
         bids: { none: { cleanerId } },
       },
       select: cleanerJobSelect,

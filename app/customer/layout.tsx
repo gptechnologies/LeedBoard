@@ -2,10 +2,12 @@ import { UserRole } from "@prisma/client";
 import { RoleSwipeShell } from "@/components/marketplace/role-swipe-shell";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
+import { expireDueJobs } from "@/lib/job-lifecycle";
 import "./homeowner.css";
 
 export default async function CustomerLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser(UserRole.CUSTOMER);
+  await expireDueJobs();
 
   const unreadActivityCount = await prisma.jobBid.count({
     where: {

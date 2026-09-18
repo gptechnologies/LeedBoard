@@ -5,6 +5,7 @@ import { notifyCleanerOfAcceptance } from "@/lib/marketplace-notifications";
 import { prisma } from "@/lib/prisma";
 import { requireApiUser } from "@/lib/session";
 import { sendProviderAcceptanceSms } from "@/lib/sms";
+import { expireJobIfDue } from "@/lib/job-lifecycle";
 
 function respondWithError(request: Request, jobId: string, message: string) {
   if (request.headers.get("X-Well-Kept-Client") === "1") {
@@ -29,6 +30,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
   const { id } = await params;
   const formData = await request.formData();
   try {
+    await expireJobIfDue(id);
     const bidId = getRequiredString(formData.get("bidId"), "Bid");
 
     const match = await prisma.$transaction(async (tx) => {
@@ -37,6 +39,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
           id,
           customerId: user.id,
           status: JobRequestStatus.OPEN,
+          acceptanceDeadline: { gt: new Date() },
         },
         include: {
           bids: true,
@@ -58,6 +61,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
           id: job.id,
           customerId: user.id,
           status: JobRequestStatus.OPEN,
+          acceptanceDeadline: { gt: new Date() },
         },
         data: {
           status: JobRequestStatus.AWARDED,

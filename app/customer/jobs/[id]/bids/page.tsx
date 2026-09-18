@@ -16,6 +16,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { notFound, redirect } from "next/navigation";
+import { expireJobIfDue } from "@/lib/job-lifecycle";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,7 @@ export default async function CustomerJobBidsPage({
 }) {
   const user = await requireUser(UserRole.CUSTOMER);
   const { id } = await params;
+  await expireJobIfDue(id);
   const query = await searchParams;
   const job = await prisma.jobRequest.findFirst({
     where: {

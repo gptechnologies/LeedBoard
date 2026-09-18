@@ -35,7 +35,7 @@ export const CleanerSearchingJobsState = memo(function CleanerSearchingJobsState
 
       <div className="wk-cleaner-searching__activity" aria-label="Job search status">
         <span><i aria-hidden="true" /> Service area active</span>
-        <span>Updates every 30 seconds</span>
+        <span>Updates every 15 seconds</span>
       </div>
 
       <button

@@ -5,6 +5,7 @@ import { notifyHomeownerOfBid } from "@/lib/marketplace-notifications";
 import { attributeBidToOutreach } from "@/lib/outreach";
 import { prisma } from "@/lib/prisma";
 import { requireApiUser } from "@/lib/session";
+import { expireJobIfDue } from "@/lib/job-lifecycle";
 
 function redirectWithError(request: Request, jobId: string, message: string) {
   if (request.headers.get("X-Well-Kept-Client") === "1") {
@@ -30,6 +31,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
   const formData = await request.formData();
 
   try {
+    await expireJobIfDue(id);
     if (!user.cleanerProfile?.isAvailable) {
       return redirectWithError(request, id, "Pause removed. Set your availability first.");
     }
@@ -45,6 +47,11 @@ export async function POST(request: Request, { params }: { params: Params }) {
       if (!job) {
         throw new Error("That job is no longer accepting bids.");
       }
+      const claimed = await tx.jobRequest.updateMany({
+        where: { id: job.id, status: JobRequestStatus.OPEN, acceptanceDeadline: { gt: new Date() } },
+        data: { updatedAt: new Date() },
+      });
+      if (claimed.count !== 1) throw new Error("The acceptance deadline has passed. This job has ended.");
 
       const input = parseBidForm(formData, job.timingPreference === "ASAP");
 

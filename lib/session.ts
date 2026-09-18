@@ -97,7 +97,7 @@ export function getPostAuthPath(input: {
 }) {
   const returnTo = getSafeReturnTo(input.returnTo);
   if (returnTo) return returnTo;
-  if (input.inviteToken) return `/invite/cleaner/${encodeURIComponent(input.inviteToken)}`;
+  if (input.inviteToken && input.role === UserRole.CLEANER) return `/invite/cleaner/${encodeURIComponent(input.inviteToken)}`;
   return getRoleHome(input.role);
 }
 

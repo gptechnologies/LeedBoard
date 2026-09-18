@@ -38,22 +38,32 @@ export function CleanerJobsFeed({
   const [pullDistance, setPullDistance] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [index, setIndex] = useState(0);
-  const current = jobs[index] ?? null;
+  const [now, setNow] = useState(() => Date.now());
+  const visibleJobs = jobs.filter((item) => !item.job.acceptanceDeadline || new Date(item.job.acceptanceDeadline).getTime() > now);
+  const current = visibleJobs[index] ?? null;
   const refreshReady = pullDistance >= refreshThreshold;
 
   useEffect(() => {
-    setIndex((currentIndex) => Math.min(currentIndex, Math.max(jobs.length - 1, 0)));
-  }, [jobs.length]);
+    setIndex((currentIndex) => Math.min(currentIndex, Math.max(visibleJobs.length - 1, 0)));
+  }, [visibleJobs.length]);
 
   useEffect(() => {
-    if (jobs.length > 0) return;
+    const nextDeadline = jobs.reduce<number | null>((nearest, item) => {
+      const value = item.job.acceptanceDeadline ? new Date(item.job.acceptanceDeadline).getTime() : null;
+      return value && value > now && (nearest === null || value < nearest) ? value : nearest;
+    }, null);
+    if (nextDeadline === null) return;
+    const timer = window.setTimeout(() => { setNow(Date.now()); router.refresh(); }, Math.max(0, nextDeadline - Date.now() + 25));
+    return () => window.clearTimeout(timer);
+  }, [jobs, now, router]);
 
+  useEffect(() => {
     const interval = window.setInterval(() => {
       router.refresh();
-    }, 30_000);
+    }, 15_000);
 
     return () => window.clearInterval(interval);
-  }, [jobs.length, router]);
+  }, [router]);
 
   useEffect(() => {
     return () => {
@@ -107,7 +117,7 @@ export function CleanerJobsFeed({
   }
 
   function moveJob(direction: -1 | 1) {
-    const next = Math.min(Math.max(index + direction, 0), jobs.length - 1);
+    const next = Math.min(Math.max(index + direction, 0), visibleJobs.length - 1);
     if (next === index) return;
     setIndex(next);
     triggerHaptic("light");
@@ -120,7 +130,7 @@ export function CleanerJobsFeed({
         {error ? <div className="notice error">{error}</div> : null}
         {passed ? <div className="wk-provider-toast" role="status">Job moved to Passed.</div> : null}
         <section
-          className={`cleaner-jobs-section${isRefreshing ? " is-refreshing" : ""}${jobs.length === 0 ? " is-empty" : ""}`}
+          className={`cleaner-jobs-section${isRefreshing ? " is-refreshing" : ""}${visibleJobs.length === 0 ? " is-empty" : ""}`}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
@@ -144,13 +154,13 @@ export function CleanerJobsFeed({
                 </div>
               )}
               index={index}
-              jobs={jobs}
+              jobs={visibleJobs}
               onIndexChange={setIndex}
             />
           ) : (
             <CleanerSearchingJobsState isRefreshing={isRefreshing} onRefresh={refreshJobs} />
           )}
-          {jobs.length > 1 ? (
+          {visibleJobs.length > 1 ? (
             <div className="wk-provider-deck-nav" aria-label="Browse nearby jobs" role="group">
               <button
                 aria-label="Previous job"
@@ -160,10 +170,10 @@ export function CleanerJobsFeed({
               >
                 <ChevronLeft aria-hidden="true" />
               </button>
-              <JobCounter count={jobs.length} index={index} />
+              <JobCounter count={visibleJobs.length} index={index} />
               <button
                 aria-label="Next job"
-                disabled={index === jobs.length - 1}
+                disabled={index === visibleJobs.length - 1}
                 onClick={() => moveJob(1)}
                 type="button"
               >

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { requireApiUser } from "@/lib/session";
+import { expireJobIfDue } from "@/lib/job-lifecycle";
 
 type Params = Promise<{ id: string }>;
 
@@ -11,10 +12,12 @@ export async function POST(request: Request, { params }: { params: Params }) {
   if (user instanceof NextResponse) return user;
 
   const { id } = await params;
+  await expireJobIfDue(id);
   const job = await prisma.jobRequest.findFirst({
     where: {
       id,
       status: JobRequestStatus.OPEN,
+      acceptanceDeadline: { gt: new Date() },
       bids: { none: { cleanerId: user.id } },
     },
     select: { id: true },

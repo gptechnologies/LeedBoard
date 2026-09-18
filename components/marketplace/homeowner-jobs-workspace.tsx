@@ -17,6 +17,7 @@ import {
 
 import { HomeownerOpenJobsCarousel } from "@/components/marketplace/homeowner-open-jobs-carousel";
 import { ProviderSelectionDrawer } from "@/components/marketplace/provider-selection-drawer";
+import { JobOptionsSheet } from "@/components/marketplace/job-options-sheet";
 
 type WorkspaceBid = {
   id: string;
@@ -115,6 +116,7 @@ function HomeownerJobCard({ job }: { job: HomeownerWorkspaceJob }) {
   return (
     <div className="homeowner-job-slide">
       <p className="homeowner-job-summary__posted"><i aria-hidden="true" />{formatPosted(job.createdAt)}</p>
+      <JobOptionsSheet hasBids={job.bids.length > 0} jobId={job.id} status={job.status}>
       <article className="homeowner-job-summary" aria-labelledby={`job-heading-${job.id}`}>
         <p className="homeowner-job-summary__reference">Job ID <span>{reference}</span></p>
         <header className="homeowner-job-summary__intro">
@@ -164,6 +166,8 @@ function HomeownerJobCard({ job }: { job: HomeownerWorkspaceJob }) {
                 ))}
               </div>
             </section>
+          ) : job.status === "EXPIRED" ? (
+            <div className="homeowner-job-ended" role="status"><strong>Job ended</strong><p>No cleaner was selected before the deadline.</p><Link href={`/customer/jobs/new?repost=${job.id}`}>Post again <ChevronRight aria-hidden="true" /></Link></div>
           ) : job.acceptedBid ? (
             <AcceptedProviderPanel bid={job.acceptedBid} job={job} />
           ) : (
@@ -174,6 +178,7 @@ function HomeownerJobCard({ job }: { job: HomeownerWorkspaceJob }) {
           )}
         </div>
       </article>
+      </JobOptionsSheet>
     </div>
   );
 }

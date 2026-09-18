@@ -2,6 +2,7 @@
 
 import { ConversationSender, type ConversationChannel } from "@prisma/client";
 import { Check, Send } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
 import type { ThreadMessage } from "@/lib/conversation";
@@ -11,6 +12,8 @@ export function ConversationThread({
   initialMessages,
   chosenAt,
   chosenText,
+  chosenDisplay,
+  closedReason,
   conversationRef,
   role,
   smsOnly,
@@ -21,17 +24,21 @@ export function ConversationThread({
   initialMessages: ThreadMessage[];
   chosenAt?: string | null;
   chosenText?: string;
+  chosenDisplay?: "bubble" | "system";
+  closedReason?: string | null;
   conversationRef?: string;
   role: "customer" | "cleaner";
   smsOnly?: boolean;
   smsReady?: boolean;
   disabled?: boolean;
 }) {
+  const router = useRouter();
   const [messages, setMessages] = useState(initialMessages);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [currentChosenAt, setCurrentChosenAt] = useState(chosenAt);
+  const [currentClosedReason, setCurrentClosedReason] = useState(closedReason ?? null);
   const bidNote = initialMessages.find((message) => message.id === `bid-${bidId}`);
   const knownIds = useRef(new Set(initialMessages.map((message) => message.id)));
 
@@ -41,8 +48,10 @@ export function ConversationThread({
       try {
         const response = await fetch(`/api/conversations/${bidId}/messages?role=${role}`, { cache: "no-store" });
         if (!response.ok) return;
-        const data = await response.json() as { messages: ThreadMessage[]; chosenAt: string | null };
+        const data = await response.json() as { messages: ThreadMessage[]; chosenAt: string | null; closedReason: string | null };
+        if (data.chosenAt !== currentChosenAt || data.closedReason !== currentClosedReason) router.refresh();
         setCurrentChosenAt(data.chosenAt);
+        setCurrentClosedReason(data.closedReason);
         const other = role === "customer" ? ConversationSender.CLEANER : ConversationSender.CUSTOMER;
         if (data.messages.some((message) => message.sender === other && !knownIds.current.has(message.id))) {
           void fetch(`/api/activity/${bidId}/read`, {
@@ -53,22 +62,22 @@ export function ConversationThread({
         setMessages(bidNote ? [bidNote, ...data.messages] : data.messages);
       } catch { /* A temporary connection issue should not clear the conversation. */ }
     };
-    const interval = window.setInterval(refresh, 7000);
+    const interval = window.setInterval(refresh, 5000);
     window.addEventListener("focus", refresh);
     return () => { window.clearInterval(interval); window.removeEventListener("focus", refresh); };
-  }, [bidId, bidNote, role]);
+  }, [bidId, bidNote, role, router, currentChosenAt, currentClosedReason]);
 
-  const timeline: Array<ThreadMessage & { chosen?: boolean }> = [...messages];
+  const timeline: Array<ThreadMessage & { chosen?: boolean; system?: boolean }> = [...messages];
   if (currentChosenAt) timeline.push({
     id: `chosen-${bidId}`, sender: ConversationSender.CUSTOMER, channel: "APP" as ConversationChannel,
-    body: chosenText || "Great, I’ve chosen you for this job.", deliveryStatus: null, createdAt: currentChosenAt, chosen: true,
+    body: chosenDisplay === "system" ? "Your bid was accepted" : chosenText || "Great, I’ve chosen you for this job.", deliveryStatus: null, createdAt: currentChosenAt, chosen: true, system: chosenDisplay === "system",
   });
   timeline.sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const body = draft.trim();
-    if (!body || sending) return;
+    if (!body || sending || currentClosedReason || disabled) return;
     setSending(true);
     setError("");
     try {
@@ -96,17 +105,18 @@ export function ConversationThread({
         const isOwnMessage = message.sender === (role === "cleaner" ? ConversationSender.CLEANER : ConversationSender.CUSTOMER);
         return <div className="wk-message-group" key={message.id}>
           {day !== previousDay ? <p className="wk-conversation-day">{day}</p> : null}
-          <article className={`wk-chat-line ${isOwnMessage ? "is-customer" : "is-provider"}`}>
+          {message.system ? <p className="wk-conversation-system-event" role="status">{message.body} · {formatSystemTime(message.createdAt)}</p> : <article className={`wk-chat-line ${isOwnMessage ? "is-own" : "is-incoming"}`}>
             <div>
               <p>{message.body}</p>
               <time dateTime={message.createdAt}>
                 {message.chosen ? <>Chosen <Check aria-hidden="true" /> · </> : null}
                 {formatTime(message.createdAt)}
+                {!message.chosen && isOwnMessage && (message.deliveryStatus === null || message.deliveryStatus === "SENT" || message.deliveryStatus === "DELIVERED") ? " · Sent ✓" : null}
                 {message.deliveryStatus === "FAILED" ? " · Text failed" : null}
                 {message.deliveryStatus === "PENDING" ? " · Sending text" : null}
               </time>
             </div>
-          </article>
+          </article>}
         </div>;
       }) : <p className="wk-conversation-empty">No messages yet. Start the conversation below.</p>}
     </section>
@@ -117,20 +127,21 @@ export function ConversationThread({
         maxLength={2000}
         onChange={(event) => setDraft(event.target.value)}
         onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }}
-        placeholder={smsOnly && !smsReady ? "SMS will be available when messaging is connected" : "Write a message…"}
-        disabled={disabled || (smsOnly && !smsReady)}
+        placeholder={currentClosedReason ?? (smsOnly && !smsReady ? "SMS will be available when messaging is connected" : "Write a message…")}
+        disabled={disabled || Boolean(currentClosedReason) || (smsOnly && !smsReady)}
         rows={1}
         value={draft}
       />
-      <button aria-label="Send message" disabled={disabled || sending || !draft.trim() || Boolean(smsOnly && !smsReady)} type="submit"><Send aria-hidden="true" /><span>Send</span></button>
+      <button aria-label="Send message" disabled={disabled || Boolean(currentClosedReason) || sending || !draft.trim() || Boolean(smsOnly && !smsReady)} type="submit"><Send aria-hidden="true" /><span>Send</span></button>
     </form>
     {error ? <p className="wk-conversation-error" role="alert">{error}</p> : null}
     {smsOnly ? <p className="wk-conversation-channel">{smsReady ? "Replies are sent as texts to this cleaner and appear here." : "Text messaging is not connected yet."}{conversationRef ? ` Text reference: ${conversationRef}` : ""}</p> : null}
-    {disabled ? <p className="wk-conversation-channel">This conversation is closed.</p> : null}
+    {currentClosedReason || disabled ? <p className="wk-conversation-channel">{currentClosedReason ?? "This conversation is closed."}</p> : null}
   </div>;
 }
 
 function formatTime(value: string) { return new Date(value).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }); }
+function formatSystemTime(value: string) { return new Date(value).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }); }
 function dayLabel(value: string) {
   const formatter = new Intl.DateTimeFormat("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "America/New_York" });
   const day = formatter.format(new Date(value));

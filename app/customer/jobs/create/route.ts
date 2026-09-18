@@ -5,6 +5,7 @@ import { createJobOutreachForJob } from "@/lib/outreach";
 import { prisma } from "@/lib/prisma";
 import { requireApiUser } from "@/lib/session";
 import { createJobReference } from "@/lib/providers";
+import { getAcceptanceDeadline } from "@/lib/job-deadline";
 
 function respondWithError(request: Request, message: string) {
   if (request.headers.get("X-Well-Kept-Client") === "1") {
@@ -75,9 +76,17 @@ export async function POST(request: Request) {
         : null;
       const linkedHome = homeProfile ?? savedHome;
 
+      const createdAt = new Date();
       return tx.jobRequest.create({
         data: {
           ...input,
+          createdAt,
+          acceptanceDeadline: getAcceptanceDeadline({
+            acceptanceDeadline: null,
+            createdAt,
+            requestedDate: input.requestedDate,
+            requestedWindowStart: input.requestedWindowStart,
+          }),
           publicReference: createJobReference(),
           title: getJobTitle(input.title, linkedHome?.propertyType),
           status: JobRequestStatus.OPEN,

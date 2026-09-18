@@ -5,6 +5,7 @@ import { formatBidAmount, formatBidTiming, formatTimingSummary } from "@/lib/mar
 import { isOutreachExpired } from "@/lib/outreach";
 import { prisma } from "@/lib/prisma";
 import { getJobReference, getProviderName } from "@/lib/providers";
+import { expireJobIfDue } from "@/lib/job-lifecycle";
 
 export const dynamic = "force-dynamic";
 
@@ -43,11 +44,13 @@ export default async function ProviderResponsePage({
   });
 
   if (!outreach) notFound();
+  await expireJobIfDue(outreach.jobRequestId);
+  const jobStatus = await prisma.jobRequest.findUnique({ where: { id: outreach.jobRequestId }, select: { status: true } });
 
   const job = outreach.jobRequest;
   const reference = getJobReference(job);
   const providerName = getProviderName(outreach);
-  const expired = isOutreachExpired(outreach) || job.status !== JobRequestStatus.OPEN;
+  const expired = isOutreachExpired(outreach) || jobStatus?.status !== JobRequestStatus.OPEN;
   const selected = outreach.bid?.status === BidStatus.ACCEPTED;
   const submitted =
     query.edit !== "1" &&

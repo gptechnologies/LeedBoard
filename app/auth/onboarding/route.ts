@@ -26,17 +26,8 @@ export async function POST(request: Request) {
   const formData = await request.formData();
   const inviteToken = String(formData.get("inviteToken") || "").trim();
   const returnTo = getSafeReturnTo(String(formData.get("returnTo") || "")) ?? undefined;
-  const roleValue = getRequiredString(formData.get("role"), "Role");
-  const role =
-    roleValue === UserRole.CLEANER
-      ? UserRole.CLEANER
-      : roleValue === UserRole.CUSTOMER
-        ? UserRole.CUSTOMER
-        : null;
-
-  if (!role) {
-    return toError(request, "Please choose a valid account type.", undefined, inviteToken, returnTo);
-  }
+  const account = await prisma.user.findUniqueOrThrow({ where: { id: identity.userId }, select: { role: true } });
+  const role = account.role;
 
   try {
     const firstName = getRequiredString(formData.get("firstName"), "First name");
@@ -48,7 +39,6 @@ export async function POST(request: Request) {
     const user = await prisma.user.update({
       where: { id: identity.userId },
       data: {
-        role,
         firstName,
         lastName,
         email: submittedEmail,

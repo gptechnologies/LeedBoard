@@ -37,6 +37,26 @@ type HomeChoice = {
   suppliesSource: SuppliesSource;
 };
 
+export type RepostSource = {
+  addressLine1: string;
+  addressLine2: string | null;
+  city: string;
+  state: string;
+  postalCode: string;
+  homeProfileId: string | null;
+  entryMethod: EntryMethod;
+  entryNotes: string | null;
+  suppliesSource: SuppliesSource;
+  cleanLevel: CleanLevel;
+  cleanType: JobCleanType | null;
+  currentCondition: HomeCondition | null;
+  selectionPriority: BidSelectionPriority;
+  serviceNeeds: ServiceNeed[];
+  notes: string | null;
+  requestedWindowStart: string | null;
+  requestedWindowEnd: string | null;
+};
+
 type AddressState = {
   addressLine1: string;
   addressLine2: string;
@@ -82,19 +102,20 @@ const composerItemVariants: Variants = {
   },
 };
 
-export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoice[] }) {
+export function SimpleJobRequestForm({ homeProfiles, repostSource }: { homeProfiles: HomeChoice[]; repostSource?: RepostSource | null }) {
   const reduceMotion = useReducedMotion();
   const [activeSection, setActiveSection] = useState<ActiveSection>(1);
-  const [fullAddress, setFullAddress] = useState(() => homeProfiles[0] ? formatAddress(homeProfiles[0]) : "");
+  const [fullAddress, setFullAddress] = useState(() => repostSource ? formatAddress(repostSource) : homeProfiles[0] ? formatAddress(homeProfiles[0]) : "");
   const [requestedDate, setRequestedDate] = useState("");
-  const [timeMode, setTimeMode] = useState<TimeMode>("morning");
-  const [customStart, setCustomStart] = useState("09:00");
-  const [customEnd, setCustomEnd] = useState("13:00");
-  const [notes, setNotes] = useState("");
+  const [timeMode, setTimeMode] = useState<TimeMode>(repostSource?.requestedWindowStart ? "custom" : "morning");
+  const [customStart, setCustomStart] = useState(repostSource?.requestedWindowStart ?? "09:00");
+  const [customEnd, setCustomEnd] = useState(repostSource?.requestedWindowEnd ?? "13:00");
+  const [notes, setNotes] = useState(repostSource?.notes ?? "");
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [submitError, setSubmitError] = useState("");
 
   const selectedHome = homeProfiles.find((home) => formatAddress(home) === fullAddress.trim()) ?? null;
+  const activeRepostSource = repostSource && formatAddress(repostSource) === fullAddress.trim() ? repostSource : null;
   const activeAddress = selectedHome
     ? {
         addressLine1: selectedHome.addressLine1,
@@ -111,11 +132,11 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
   );
   const whenValidation = getWhenValidation(requestedDate, schedule.start, schedule.end);
   const whenComplete = whenValidation === "";
-  const entryMethod = selectedHome ? selectedHome.entryMethod : EntryMethod.OTHER;
-  const entryNotes = selectedHome ? selectedHome.entryNotes ?? "" : "";
+  const entryMethod = selectedHome ? selectedHome.entryMethod : activeRepostSource?.entryMethod ?? EntryMethod.OTHER;
+  const entryNotes = selectedHome ? selectedHome.entryNotes ?? "" : activeRepostSource?.entryNotes ?? "";
   const suppliesSource = selectedHome
     ? selectedHome.suppliesSource
-    : SuppliesSource.CLEANER_BRINGS_ALL;
+    : activeRepostSource?.suppliesSource ?? SuppliesSource.CLEANER_BRINGS_ALL;
 
   async function postJob(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -156,7 +177,7 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
       variants={composerContainerVariants}
     >
       <input type="hidden" name="title" value="Home Cleaning" />
-      <input type="hidden" name="homeProfileId" value={selectedHome?.id ?? ""} />
+      <input type="hidden" name="homeProfileId" value={selectedHome?.id ?? activeRepostSource?.homeProfileId ?? ""} />
       <input type="hidden" name="addressLine1" value={activeAddress.addressLine1} />
       <input type="hidden" name="addressLine2" value={activeAddress.addressLine2} />
       <input type="hidden" name="city" value={activeAddress.city} />
@@ -165,11 +186,11 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
       <input type="hidden" name="entryMethod" value={entryMethod} />
       <input type="hidden" name="entryNotes" value={entryNotes.trim()} />
       <input type="hidden" name="suppliesSource" value={suppliesSource} />
-      <input type="hidden" name="cleanLevel" value={CleanLevel.MEDIUM} />
-      <input type="hidden" name="cleanType" value={JobCleanType.STANDARD_CLEAN} />
-      <input type="hidden" name="currentCondition" value={HomeCondition.NORMAL_LIVED_IN} />
-      <input type="hidden" name="selectionPriority" value={BidSelectionPriority.BEST_OVERALL} />
-      {[ServiceNeed.GENERAL_CLEANING, ServiceNeed.KITCHEN, ServiceNeed.BATHROOMS, ServiceNeed.FLOORS, ServiceNeed.DUSTING].map((need) => (
+      <input type="hidden" name="cleanLevel" value={repostSource?.cleanLevel ?? CleanLevel.MEDIUM} />
+      <input type="hidden" name="cleanType" value={repostSource?.cleanType ?? JobCleanType.STANDARD_CLEAN} />
+      <input type="hidden" name="currentCondition" value={repostSource?.currentCondition ?? HomeCondition.NORMAL_LIVED_IN} />
+      <input type="hidden" name="selectionPriority" value={repostSource?.selectionPriority ?? BidSelectionPriority.BEST_OVERALL} />
+      {(repostSource?.serviceNeeds.length ? repostSource.serviceNeeds : [ServiceNeed.GENERAL_CLEANING, ServiceNeed.KITCHEN, ServiceNeed.BATHROOMS, ServiceNeed.FLOORS, ServiceNeed.DUSTING]).map((need) => (
         <input key={need} type="hidden" name="serviceNeeds" value={need} />
       ))}
       <input type="hidden" name="notes" value={notes.trim()} />
@@ -181,8 +202,8 @@ export function SimpleJobRequestForm({ homeProfiles }: { homeProfiles: HomeChoic
 
       <motion.header className="wk-job-composer__intro" variants={composerItemVariants}>
         <span aria-hidden="true" className="wk-job-composer__script">Good spaces<br />brighter days ✦</span>
-        <h1>Post a job</h1>
-        <p>Tell us where and when. Cleaners will send prices.</p>
+        <h1>{repostSource ? "Post again" : "Post a job"}</h1>
+        <p>{repostSource ? "Your previous details are ready. Choose a new date before posting." : "Tell us where and when. Cleaners will send prices."}</p>
       </motion.header>
 
       <motion.section

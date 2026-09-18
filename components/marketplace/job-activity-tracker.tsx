@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 
-type ActivityStatus = "OPEN" | "AWARDED" | "COMPLETED" | "CANCELLED" | "EXPIRED";
+type ActivityStatus = "OPEN" | "AWARDED" | "COMPLETED" | "CANCELLED" | "EXPIRED" | "DELETED";
 
 type ActivityTrackerProps = {
   bidCount: number;
@@ -33,7 +33,7 @@ export function JobActivityTracker({ bidCount, status }: ActivityTrackerProps) {
     <section className="wk-status-progress" aria-label="Job status">
       <div className="wk-status-progress__topline">
         <strong>
-          {selected
+          {status === "EXPIRED" ? "Job ended" : status === "DELETED" ? "Job removed" : status === "CANCELLED" ? "Job cancelled" : selected
             ? "Provider selected"
             : hasResponses
               ? "Reviewing providers"
@@ -43,11 +43,11 @@ export function JobActivityTracker({ bidCount, status }: ActivityTrackerProps) {
           <span className="wk-status-progress__waiting"><i aria-hidden="true" /> Live</span>
         ) : null}
       </div>
-      <ol>
+      {status === "OPEN" || selected ? <ol>
         <StatusStep complete={hasResponses} current={!hasResponses} label="Posted" />
         <StatusStep complete={selected} current={hasResponses && !selected} label="Offers" />
         <StatusStep complete={status === "COMPLETED"} current={selected} label="Selected" />
-      </ol>
+      </ol> : <p className="wk-status-progress__closed">This posting is no longer accepting offers.</p>}
     </section>
   );
 }

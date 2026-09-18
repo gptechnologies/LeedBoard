@@ -13,7 +13,7 @@ export default async function CustomerJobsPage({ searchParams }: { searchParams:
   const query = await searchParams;
   const { jobs } = await getCustomerHomeData(user.id);
   const activeJobs = jobs.filter(
-    (job) => job.status === JobRequestStatus.OPEN || job.status === JobRequestStatus.AWARDED,
+    (job) => job.status === JobRequestStatus.OPEN || job.status === JobRequestStatus.AWARDED || job.status === JobRequestStatus.EXPIRED,
   );
 
   return (

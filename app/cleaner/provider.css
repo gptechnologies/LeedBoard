@@ -983,6 +983,41 @@
   .wk-provider-expanded-actions { animation: none; }
 }
 
+/* Cleaner conversations share the compact Marketplace thread treatment. */
+.wk-role-shell[data-role="cleaner"] .wk-message-detail-content { min-height: calc(100dvh - 142px); grid-template-rows: auto 1fr auto; gap: 12px; }
+.wk-role-shell[data-role="cleaner"] .wk-conversation-top { min-width: 0; display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: start; gap: 8px; position: sticky; top: 0; z-index: 3; padding-bottom: 4px; background: var(--provider-bg); }
+.wk-role-shell[data-role="cleaner"] .wk-conversation-back { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--provider-line); border-radius: 50%; background: var(--provider-surface); color: var(--provider-green-dark); text-decoration: none; }
+.wk-role-shell[data-role="cleaner"] .wk-conversation-back svg { width: 21px; height: 21px; stroke-width: 1.7; }
+.wk-role-shell[data-role="cleaner"] .wk-conversation-bid { min-width: 0; display: grid; gap: 7px; }
+.wk-role-shell[data-role="cleaner"] .wk-bid-received-time { display: block; color: var(--provider-muted); font-size: 0.66rem; line-height: 1; text-align: center; }
+.wk-role-shell[data-role="cleaner"] .wk-bid-summary { min-width: 0; overflow: hidden; border: 1px solid var(--provider-line); border-radius: 18px; background: oklch(100% 0 0 / 0.84); box-shadow: 0 6px 18px oklch(30% 0.04 135 / 0.03); }
+.wk-role-shell[data-role="cleaner"] .wk-bid-summary__details { display: grid; grid-template-columns: minmax(0, 1.16fr) minmax(126px, 0.94fr); gap: 11px; padding: 12px 13px 10px; }
+.wk-role-shell[data-role="cleaner"] .wk-bid-summary__identity { min-width: 0; display: grid; align-content: start; gap: 3px; }
+.wk-role-shell[data-role="cleaner"] .wk-bid-summary__identity strong { overflow-wrap: anywhere; color: var(--provider-green-dark); font-size: 0.94rem; font-weight: 760; line-height: 1.2; }
+.wk-role-shell[data-role="cleaner"] .wk-bid-summary__identity span { color: var(--provider-muted); font-size: 0.64rem; line-height: 1.2; }
+.wk-role-shell[data-role="cleaner"] .wk-bid-summary__identity p { margin: 2px 0 0; color: var(--provider-muted); font-size: 0.62rem; line-height: 1.32; overflow-wrap: anywhere; }
+.wk-role-shell[data-role="cleaner"] .wk-bid-summary__schedule { min-width: 0; display: grid; align-content: start; gap: 6px; margin: 0; border-left: 1px solid var(--provider-line); padding-left: 11px; }
+.wk-role-shell[data-role="cleaner"] .wk-bid-summary__schedule > div { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) max-content; gap: 7px; align-items: baseline; }
+.wk-role-shell[data-role="cleaner"] .wk-bid-summary__schedule dt { color: var(--provider-muted); font-size: 0.62rem; line-height: 1.2; white-space: nowrap; }
+.wk-role-shell[data-role="cleaner"] .wk-bid-summary__schedule dd { margin: 0; color: var(--provider-green-dark); font-size: 0.66rem; font-weight: 700; line-height: 1.2; text-align: right; white-space: nowrap; }
+.wk-role-shell[data-role="cleaner"] .wk-bid-summary__pricing { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; border-top: 1px solid var(--provider-line); padding: 9px 8px; }
+.wk-role-shell[data-role="cleaner"] .wk-bid-summary__pricing > * { min-width: 0; padding: 0 7px; color: var(--provider-muted); font-size: 0.66rem; line-height: 1.2; text-align: center; white-space: nowrap; }
+.wk-role-shell[data-role="cleaner"] .wk-bid-summary__pricing > * + * { border-left: 1px solid var(--provider-line); }
+.wk-role-shell[data-role="cleaner"] .wk-bid-summary__pricing strong:first-child { color: var(--provider-ink); font-size: 0.76rem; font-weight: 780; }
+.wk-role-shell[data-role="cleaner"] .wk-bid-summary__pricing strong:last-child { color: var(--provider-green-dark); font-size: 0.69rem; font-weight: 760; }
+.wk-role-shell[data-role="cleaner"] .wk-conversation-actions { display: grid; gap: 8px; }
+.wk-role-shell[data-role="cleaner"] .wk-conversation-chosen,
+.wk-role-shell[data-role="cleaner"] .wk-conversation-job-action { min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid var(--provider-line); border-radius: 15px; background: oklch(100% 0 0 / 0.54); color: var(--provider-green-dark); font-size: 0.82rem; font-weight: 720; }
+.wk-conversation-job-action span { display: inline-flex; align-items: center; gap: 7px; }
+.wk-conversation-job-action svg { width: 17px; height: 17px; }
+.wk-conversation-job-action button { border: 0; border-radius: 10px; padding: 8px 10px; background: var(--wk-forest-dark); color: white; font-size: 0.72rem; }
+@media (max-width: 370px) {
+  .wk-role-shell[data-role="cleaner"] .wk-bid-summary__details { grid-template-columns: minmax(0, 1fr) minmax(116px, 0.9fr); gap: 8px; padding-inline: 10px; }
+  .wk-role-shell[data-role="cleaner"] .wk-bid-summary__schedule { padding-left: 8px; }
+  .wk-role-shell[data-role="cleaner"] .wk-bid-summary__pricing { padding-inline: 4px; }
+  .wk-role-shell[data-role="cleaner"] .wk-bid-summary__pricing > * { padding-inline: 4px; font-size: 0.6rem; }
+}
+
 /* Cleaner Jobs tab: active zero-job state */
 .wk-role-shell[data-role="cleaner"][data-ui="calm"] .cleaner-jobs-section.is-empty {
   min-height: calc(100dvh - 174px);

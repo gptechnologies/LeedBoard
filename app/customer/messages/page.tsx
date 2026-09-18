@@ -1,4 +1,4 @@
-import { BidStatus, UserRole } from "@prisma/client";
+import { BidStatus, JobRequestStatus, UserRole } from "@prisma/client";
 
 import { AppScreenHeader } from "@/components/marketplace/app-screen-header";
 import { HomeownerMessagesInbox, type HomeownerConversation } from "@/components/marketplace/homeowner-messages-inbox";
@@ -6,11 +6,13 @@ import { getCleaningJobTitle } from "@/lib/job-title";
 import { prisma } from "@/lib/prisma";
 import { getProviderName } from "@/lib/providers";
 import { requireUser } from "@/lib/session";
+import { expireDueJobs } from "@/lib/job-lifecycle";
 
 export const dynamic = "force-dynamic";
 
 export default async function CustomerMessagesPage() {
   const user = await requireUser(UserRole.CUSTOMER);
+  await expireDueJobs();
   const bids = await prisma.jobBid.findMany({
     where: { jobRequest: { customerId: user.id } },
     include: {
@@ -24,6 +26,7 @@ export default async function CustomerMessagesPage() {
   const conversations: HomeownerConversation[] = bids.map((bid) => {
     const name = getProviderName(bid);
     const isChosen = bid.status === BidStatus.ACCEPTED;
+    const closed = bid.jobRequest.status === JobRequestStatus.EXPIRED || bid.jobRequest.status === JobRequestStatus.DELETED;
     const isNew = (bid.status === BidStatus.SUBMITTED || bid.messages[0]?.sender === "CLEANER") && !bid.customerViewedAt;
     return {
       avatar: getAvatar(name),
@@ -31,8 +34,8 @@ export default async function CustomerMessagesPage() {
       id: bid.id,
       name,
       preview: bid.messages[0]?.body || bid.message || `${getCleaningJobTitle(bid.jobRequest)} · ${getStatusLabel(bid.status)}`,
-      status: isChosen ? "Chosen" : isNew ? "New" : "Bid sent",
-      statusTone: isChosen ? "chosen" : isNew ? "new" : "sent",
+      status: closed ? bid.jobRequest.status === JobRequestStatus.EXPIRED ? "Expired" : "Removed" : isChosen ? "Chosen" : isNew ? "New" : "Bid sent",
+      statusTone: closed ? "sent" : isChosen ? "chosen" : isNew ? "new" : "sent",
       time: formatMessageTime(bid.messages[0]?.createdAt ?? bid.updatedAt),
     };
   });
