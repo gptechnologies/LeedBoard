@@ -16,24 +16,28 @@ type CleanerDashboardProps = {
   }>;
 };
 
-export default async function CleanerDashboard({ searchParams }: CleanerDashboardProps) {
+export default async function CleanerDashboard({
+  searchParams,
+}: CleanerDashboardProps) {
   const user = await requireUser(UserRole.CLEANER);
   const params = await searchParams;
   const { cleaner, openJobs } = await getCleanerHomeData(user.id);
   const bidDefaults = {
-    standardHourlyRateCents: cleaner?.cleanerProfile?.standardHourlyRateCents ?? null,
-    standardFlatRateCents: cleaner?.cleanerProfile?.standardFlatRateCents ?? null,
+    standardHourlyRateCents:
+      cleaner?.cleanerProfile?.standardHourlyRateCents ?? null,
+    standardFlatRateCents:
+      cleaner?.cleanerProfile?.standardFlatRateCents ?? null,
     defaultEtaMinutes: cleaner?.cleanerProfile?.defaultEtaMinutes ?? null,
   };
 
   const toFeedJob = (job: (typeof openJobs)[number]) => ({
     areaLabel: `${job.city}, ${job.state}`,
-    bathroomCount: job.homeProfile?.bathroomCount ?? null,
-    bedroomCount: job.homeProfile?.bedroomCount ?? null,
+    bathroomCount: job.bathroomCount ?? job.homeProfile?.bathroomCount ?? null,
+    bedroomCount: job.bedroomCount ?? job.homeProfile?.bedroomCount ?? null,
     bidCount: job._count.bids,
     estimatedSquareFeet: job.homeProfile?.estimatedSquareFeet ?? null,
     id: job.id,
-    job,
+    job: { ...job, notes: null },
     priceLabel: formatCleanerPriceLabel({
       ...bidDefaults,
       hourlyRateFromCents: cleaner?.cleanerProfile?.hourlyRateFromCents ?? null,

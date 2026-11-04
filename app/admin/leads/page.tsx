@@ -11,7 +11,9 @@ type AdminLeadsPageProps = {
   }>;
 };
 
-export default async function AdminLeadsPage({ searchParams }: AdminLeadsPageProps) {
+export default async function AdminLeadsPage({
+  searchParams,
+}: AdminLeadsPageProps) {
   await requireUser(UserRole.ADMIN);
   const params = await searchParams;
   const leads = await prisma.cleanerLead.findMany({
@@ -32,69 +34,44 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
           </Link>
         </header>
 
-        {params.error ? <div className="notice error">{params.error}</div> : null}
+        {params.error ? (
+          <div className="notice error">{params.error}</div>
+        ) : null}
 
-        <form action="/admin/leads/save" method="post" className="market-card stack">
-          <div className="market-card__header">
-            <strong>Add cleaner lead</strong>
-          </div>
-          <div className="field-grid">
-            <div className="field">
-              <label htmlFor="businessName">Business name</label>
-              <input id="businessName" name="businessName" placeholder="Bright Home Cleaning" />
-            </div>
-            <div className="field">
-              <label htmlFor="name">Contact name</label>
-              <input id="name" name="name" placeholder="Optional" />
-            </div>
-          </div>
-          <div className="field-grid">
-            <div className="field">
-              <label htmlFor="phone">Phone</label>
-              <input id="phone" name="phone" inputMode="tel" required placeholder="(555) 555-0123" />
-            </div>
-            <div className="field">
-              <label htmlFor="website">Website</label>
-              <input id="website" name="website" inputMode="url" placeholder="https://example.com" />
-            </div>
-          </div>
-          <div className="field">
-            <label htmlFor="email">Email</label>
-            <input id="email" name="email" type="email" placeholder="quotes@cleaningbusiness.com" />
-          </div>
-          <div className="field-grid">
-            <div className="field">
-              <label htmlFor="city">City</label>
-              <input id="city" name="city" />
-            </div>
-            <div className="field">
-              <label htmlFor="state">State</label>
-              <input id="state" name="state" defaultValue="NY" />
-            </div>
-          </div>
-          <div className="field-grid">
-            <div className="field">
-              <label htmlFor="postalCode">Primary ZIP</label>
-              <input id="postalCode" name="postalCode" inputMode="numeric" required />
-            </div>
-            <div className="field">
-              <label htmlFor="serviceAreaPostalCodes">Service ZIPs</label>
-              <input
-                id="serviceAreaPostalCodes"
-                name="serviceAreaPostalCodes"
-                placeholder="10001, 10002, 10003"
-              />
-            </div>
-          </div>
-          <input type="hidden" name="source" value={CleanerLeadSource.MANUAL} />
-          <button type="submit">Save lead</button>
+        <form
+          action="/admin/leads/save"
+          method="post"
+          className="effortless-form"
+        >
+          <label>
+            Email
+            <input type="email" name="email" required />
+          </label>
+          <label>
+            Business name or website
+            <input name="business" required />
+          </label>
+          <label>
+            Service ZIP
+            <input name="postalCode" pattern="[0-9]{5}" required />
+          </label>
+          <label>
+            Additional ZIPs
+            <input name="extraZips" />
+          </label>
+          <p>
+            We’ll send an email confirmation. Leads start after the business
+            confirms.
+          </p>
+          <button className="effortless-primary">Add business</button>
         </form>
 
         {leads.length === 0 ? (
           <section className="market-empty">
             <strong>No leads yet.</strong>
             <p className="market-card__copy">
-              Add nearby cleaners by ZIP, then new jobs will create SMS and call outreach rows.
+              Add nearby cleaners by ZIP, then new jobs will create SMS and call
+              outreach rows.
             </p>
           </section>
         ) : (
@@ -103,13 +80,19 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
               <article key={lead.id} className="market-card">
                 <div className="market-card__header">
                   <div className="stack small">
-                    <strong>{lead.businessName || lead.name || lead.phone}</strong>
+                    <strong>
+                      {lead.businessName || lead.name || lead.phone}
+                    </strong>
                     <span className="market-card__meta">
-                      {lead.phone}{lead.email ? ` · ${lead.email}` : ""} · {lead.city ? `${lead.city}, ` : ""}
+                      {lead.phone}
+                      {lead.email ? ` · ${lead.email}` : ""} ·{" "}
+                      {lead.city ? `${lead.city}, ` : ""}
                       {lead.state ?? ""} {lead.postalCode ?? ""}
                     </span>
                   </div>
-                  {lead.optedOutAt ? <span className="status-pill">Opted out</span> : null}
+                  {lead.optedOutAt ? (
+                    <span className="status-pill">Opted out</span>
+                  ) : null}
                 </div>
                 <div className="market-card__copy">
                   Service ZIPs:{" "}

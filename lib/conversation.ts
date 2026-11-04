@@ -1,7 +1,21 @@
-import { BidStatus, ConversationChannel, ConversationDeliveryStatus, ConversationSender, JobRequestStatus, UserRole } from "@prisma/client";
+import { privateText } from "@/lib/lead-policy";
+import { queueMail } from "@/lib/mail-queue";
+import { buildAppUrl } from "@/lib/email";
+import {
+  BidStatus,
+  ConversationChannel,
+  ConversationDeliveryStatus,
+  ConversationSender,
+  JobRequestStatus,
+  UserRole,
+} from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
-import { getConversationReference, getProviderPhone, resolveConversationReference } from "@/lib/providers";
+import {
+  getConversationReference,
+  getProviderPhone,
+  resolveConversationReference,
+} from "@/lib/providers";
 import { normalizePhone } from "@/lib/session";
 import { isConversationSmsReady, sendConversationSms } from "@/lib/sms";
 import { expireDueJobs, expireJobIfDue } from "@/lib/job-lifecycle";
@@ -26,39 +40,146 @@ export function toThreadMessage(message: {
   return { ...message, createdAt: message.createdAt.toISOString() };
 }
 
-export function initialBidMessage(bid: { id: string; message: string | null; createdAt: Date }): ThreadMessage[] {
-  return bid.message?.trim() ? [{
-    id: `bid-${bid.id}`,
-    sender: ConversationSender.CLEANER,
-    channel: ConversationChannel.APP,
-    body: bid.message.trim(),
-    deliveryStatus: null,
-    createdAt: bid.createdAt.toISOString(),
-  }] : [];
+export function initialBidMessage(bid: {
+  id: string;
+  message: string | null;
+  createdAt: Date;
+}): ThreadMessage[] {
+  return bid.message?.trim()
+    ? [
+        {
+          id: `bid-${bid.id}`,
+          sender: ConversationSender.CLEANER,
+          channel: ConversationChannel.APP,
+          body: bid.message.trim(),
+          deliveryStatus: null,
+          createdAt: bid.createdAt.toISOString(),
+        },
+      ]
+    : [];
 }
 
-export async function sendAppMessage(input: { bidId: string; body: string; role: UserRole; userId: string }) {
-  const owned = await prisma.jobBid.findUnique({ where: { id: input.bidId }, select: { jobRequestId: true } });
+export async function sendAppMessage(input: {
+  bidId: string;
+  body: string;
+  role: UserRole;
+  userId: string;
+}) {
+  const owned = await prisma.jobBid.findUnique({
+    where: { id: input.bidId },
+    select: { jobRequestId: true },
+  });
   if (owned) await expireJobIfDue(owned.jobRequestId);
   const bid = await prisma.jobBid.findFirst({
-    where: input.role === UserRole.CUSTOMER
-      ? { id: input.bidId, jobRequest: { customerId: input.userId } }
-      : { id: input.bidId, OR: [{ cleanerId: input.userId }, { cleanerLead: { linkedCleanerUserId: input.userId } }] },
+    where:
+      input.role === UserRole.CUSTOMER
+        ? { id: input.bidId, jobRequest: { customerId: input.userId } }
+        : {
+            id: input.bidId,
+            OR: [
+              { cleanerId: input.userId },
+              { cleanerLead: { linkedCleanerUserId: input.userId } },
+            ],
+          },
     include: { cleanerLead: true, cleaner: true, jobRequest: true },
   });
   if (!bid) return { error: "Conversation not found.", status: 404 } as const;
-  if (bid.status === BidStatus.DECLINED || bid.status === BidStatus.WITHDRAWN ||
-    bid.jobRequest.status === JobRequestStatus.CANCELLED || bid.jobRequest.status === JobRequestStatus.EXPIRED || bid.jobRequest.status === JobRequestStatus.DELETED) {
+  if (
+    bid.status === BidStatus.DECLINED ||
+    bid.status === BidStatus.WITHDRAWN ||
+    bid.jobRequest.status === JobRequestStatus.CANCELLED ||
+    bid.jobRequest.status === JobRequestStatus.EXPIRED ||
+    bid.jobRequest.status === JobRequestStatus.DELETED
+  ) {
     return { error: "This conversation is closed.", status: 400 } as const;
   }
 
-  const smsOnly = input.role === UserRole.CUSTOMER && !bid.cleanerId && !bid.cleanerLead?.linkedCleanerUserId && Boolean(bid.cleanerLeadId);
+  if (bid.jobRequest.acceptedBidId !== bid.id && privateText(input.body))
+    return {
+      error:
+        "Keep names, addresses, and contact details private until you choose a cleaner.",
+      status: 400,
+    } as const;
+  if (
+    input.role === UserRole.CUSTOMER &&
+    bid.jobRequest.acceptedBidId !== bid.id
+  ) {
+    const message = await prisma.$transaction(async (tx) => {
+      const m = await tx.conversationMessage.create({
+        data: {
+          bidId: bid.id,
+          sender: ConversationSender.CUSTOMER,
+          channel: ConversationChannel.APP,
+          body: input.body,
+          deliveryStatus: ConversationDeliveryStatus.PENDING,
+        },
+      });
+      const review = await queueMail(
+        `review:${m.id}`,
+        "REVIEW",
+        { messageId: m.id, bidId: bid.id },
+        tx,
+      );
+      await tx.mailTask.update({
+        where: { id: review.id },
+        data: { status: "REVIEW" },
+      });
+      return m;
+    });
+    return { message: toThreadMessage(message) } as const;
+  }
+  const email = bid.cleanerLead?.email ?? bid.cleaner?.email;
+  if (input.role === UserRole.CUSTOMER && email) {
+    const outreach = await prisma.jobOutreach.findFirst({
+      where: { bidId: bid.id },
+    });
+    const message = await prisma.$transaction(async (tx) => {
+      const m = await tx.conversationMessage.create({
+        data: {
+          bidId: bid.id,
+          sender: ConversationSender.CUSTOMER,
+          channel: ConversationChannel.APP,
+          body: input.body,
+        },
+      });
+      await queueMail(
+        `question:${m.id}`,
+        "EMAIL",
+        {
+          to: email,
+          subject: `Homeowner reply · ${bid.jobRequest.publicReference}`,
+          text: `${input.body}\n\nView or update your bid: ${buildAppUrl(outreach ? "/invite/cleaner/" + outreach.interestToken : "/cleaner/messages/" + bid.id)}`,
+          replyTo:
+            outreach && process.env.INBOUND_EMAIL_DOMAIN
+              ? `bid+${outreach.interestToken}@${process.env.INBOUND_EMAIL_DOMAIN}`
+              : "",
+        },
+        tx,
+      );
+      return m;
+    });
+    return { message: toThreadMessage(message) } as const;
+  }
+  const smsOnly =
+    input.role === UserRole.CUSTOMER &&
+    !bid.cleanerId &&
+    !bid.cleanerLead?.linkedCleanerUserId &&
+    Boolean(bid.cleanerLeadId);
   const phone = smsOnly ? getProviderPhone(bid) : null;
-  if (smsOnly && (bid.cleanerLead?.optedOutAt || !phone || !isConversationSmsReady())) {
-    return { error: "SMS is not available for this cleaner yet.", status: 503 } as const;
+  if (
+    smsOnly &&
+    (bid.cleanerLead?.optedOutAt || !phone || !isConversationSmsReady())
+  ) {
+    return {
+      error: "SMS is not available for this cleaner yet.",
+      status: 503,
+    } as const;
   }
 
-  const sender = input.role === UserRole.CUSTOMER ? ConversationSender.CUSTOMER : ConversationSender.CLEANER;
+  const sender =
+    input.role === UserRole.CUSTOMER
+      ? ConversationSender.CUSTOMER
+      : ConversationSender.CLEANER;
   let message;
   try {
     message = await prisma.$transaction(async (tx) => {
@@ -66,13 +187,22 @@ export async function sendAppMessage(input: { bidId: string; body: string; role:
         where: {
           id: bid.jobRequestId,
           OR: [
-            { status: JobRequestStatus.OPEN, acceptanceDeadline: { gt: new Date() } },
-            { status: { in: [JobRequestStatus.AWARDED, JobRequestStatus.COMPLETED] }, acceptedBidId: bid.id },
+            {
+              status: JobRequestStatus.OPEN,
+              acceptanceDeadline: { gt: new Date() },
+            },
+            {
+              status: {
+                in: [JobRequestStatus.AWARDED, JobRequestStatus.COMPLETED],
+              },
+              acceptedBidId: bid.id,
+            },
           ],
         },
         data: { updatedAt: new Date() },
       });
-      if (available.count !== 1) throw new Error("This conversation is closed.");
+      if (available.count !== 1)
+        throw new Error("This conversation is closed.");
       const created = await tx.conversationMessage.create({
         data: {
           bidId: bid.id,
@@ -84,7 +214,10 @@ export async function sendAppMessage(input: { bidId: string; body: string; role:
       });
       await tx.jobBid.update({
         where: { id: bid.id },
-        data: input.role === UserRole.CUSTOMER ? { cleanerViewedAt: null } : { customerViewedAt: null },
+        data:
+          input.role === UserRole.CUSTOMER
+            ? { cleanerViewedAt: null }
+            : { customerViewedAt: null },
       });
       return created;
     });
@@ -94,23 +227,39 @@ export async function sendAppMessage(input: { bidId: string; body: string; role:
 
   if (smsOnly && phone) {
     try {
-      const sid = await sendConversationSms(phone, `Well Kept ${getConversationReference(bid)}: ${input.body}`);
+      const sid = await sendConversationSms(
+        phone,
+        `Well Kept ${getConversationReference(bid)}: ${input.body}`,
+      );
       const sent = await prisma.conversationMessage.update({
         where: { id: message.id },
-        data: { providerMessageId: sid, deliveryStatus: ConversationDeliveryStatus.SENT },
+        data: {
+          providerMessageId: sid,
+          deliveryStatus: ConversationDeliveryStatus.SENT,
+        },
       });
       return { message: toThreadMessage(sent) } as const;
     } catch {
       const failed = await prisma.conversationMessage.update({
-        where: { id: message.id }, data: { deliveryStatus: ConversationDeliveryStatus.FAILED },
+        where: { id: message.id },
+        data: { deliveryStatus: ConversationDeliveryStatus.FAILED },
       });
-      return { message: toThreadMessage(failed), error: "Text could not be sent. Try again.", status: 502 } as const;
+      return {
+        message: toThreadMessage(failed),
+        error: "Text could not be sent. Try again.",
+        status: 502,
+      } as const;
     }
   }
   return { message: toThreadMessage(message) } as const;
 }
 
-export async function receiveConversationSms(input: { body: string; from: string; to: string; sid: string }) {
+export async function receiveConversationSms(input: {
+  body: string;
+  from: string;
+  to: string;
+  sid: string;
+}) {
   if (!isConversationSmsReady()) return { matched: false } as const;
   await expireDueJobs();
   let from: string;
@@ -118,64 +267,127 @@ export async function receiveConversationSms(input: { body: string; from: string
   try {
     from = normalizePhone(input.from);
     to = normalizePhone(input.to);
-    if (to !== normalizePhone(process.env.TWILIO_FROM_PHONE_NUMBER!)) return { matched: false } as const;
+    if (to !== normalizePhone(process.env.TWILIO_FROM_PHONE_NUMBER!))
+      return { matched: false } as const;
   } catch {
     return { matched: false } as const;
   }
 
-  const existing = await prisma.conversationMessage.findUnique({ where: { providerMessageId: input.sid } });
+  const existing = await prisma.conversationMessage.findUnique({
+    where: { providerMessageId: input.sid },
+  });
   if (existing) return { matched: true } as const;
 
   const bids = await prisma.jobBid.findMany({
     where: {
       status: { in: [BidStatus.SUBMITTED, BidStatus.ACCEPTED] },
-      jobRequest: { status: { in: [JobRequestStatus.OPEN, JobRequestStatus.AWARDED] } },
+      jobRequest: {
+        status: { in: [JobRequestStatus.OPEN, JobRequestStatus.AWARDED] },
+      },
       OR: [
         { cleanerLead: { phone: from } },
         { cleaner: { phone: from } },
         { jobRequest: { customer: { phone: from } } },
       ],
     },
-    include: { cleanerLead: true, cleaner: true, jobRequest: { include: { customer: true } } },
+    include: {
+      cleanerLead: true,
+      cleaner: true,
+      jobRequest: { include: { customer: true } },
+    },
   });
   if (!bids.length) return { matched: false } as const;
 
   const resolved = resolveConversationReference(bids, input.body);
-  if (resolved.matches.length !== 1) return { matched: true, ambiguous: true } as const;
+  if (resolved.matches.length !== 1)
+    return { matched: true, ambiguous: true } as const;
   const bid = resolved.matches[0];
-  const fromCleaner = [bid.cleanerLead?.phone, bid.cleaner?.phone].some((phone) => phone && normalizePhone(phone) === from);
-  const fromCustomer = bid.jobRequest.customer.phone && normalizePhone(bid.jobRequest.customer.phone) === from;
-  if (Boolean(fromCleaner) === Boolean(fromCustomer)) return { matched: true, ambiguous: true } as const;
+  const fromCleaner = [bid.cleanerLead?.phone, bid.cleaner?.phone].some(
+    (phone) => phone && normalizePhone(phone) === from,
+  );
+  const fromCustomer =
+    bid.jobRequest.customer.phone &&
+    normalizePhone(bid.jobRequest.customer.phone) === from;
+  if (Boolean(fromCleaner) === Boolean(fromCustomer))
+    return { matched: true, ambiguous: true } as const;
 
-  const sender = fromCleaner ? ConversationSender.CLEANER : ConversationSender.CUSTOMER;
+  const sender = fromCleaner
+    ? ConversationSender.CLEANER
+    : ConversationSender.CUSTOMER;
   const body = resolved.messageBody;
   if (!body) return { matched: true } as const;
+  if (bid.jobRequest.acceptedBidId !== bid.id && privateText(body))
+    return { matched: true } as const;
   try {
     await prisma.$transaction(async (tx) => {
       await tx.conversationMessage.create({
-        data: { bidId: bid.id, sender, channel: ConversationChannel.SMS, body, providerMessageId: input.sid },
+        data: {
+          bidId: bid.id,
+          sender,
+          channel: ConversationChannel.SMS,
+          body,
+          providerMessageId: input.sid,
+        },
       });
-      await tx.jobBid.update({ where: { id: bid.id }, data: fromCleaner ? { customerViewedAt: null } : { cleanerViewedAt: null } });
+      await tx.jobBid.update({
+        where: { id: bid.id },
+        data: fromCleaner
+          ? { customerViewedAt: null }
+          : { cleanerViewedAt: null },
+      });
     });
   } catch (error) {
     if ((error as { code?: string }).code !== "P2002") throw error;
     return { matched: true } as const;
   }
 
-  if (fromCustomer && !bid.cleanerId && !bid.cleanerLead?.linkedCleanerUserId && bid.cleanerLead?.phone && !bid.cleanerLead.optedOutAt) {
-    const reply = await prisma.conversationMessage.findUnique({ where: { providerMessageId: input.sid } });
+  if (
+    fromCustomer &&
+    !bid.cleanerId &&
+    !bid.cleanerLead?.linkedCleanerUserId &&
+    bid.cleanerLead?.phone &&
+    !bid.cleanerLead.optedOutAt
+  ) {
+    const reply = await prisma.conversationMessage.findUnique({
+      where: { providerMessageId: input.sid },
+    });
     if (reply) {
       const delivery = await prisma.notificationDelivery.create({
-        data: { channel: "SMS", status: "PENDING", toPhone: bid.cleanerLead.phone, jobRequestId: bid.jobRequestId, cleanerLeadId: bid.cleanerLeadId, payload: { conversationMessageId: reply.id } },
+        data: {
+          channel: "SMS",
+          status: "PENDING",
+          toPhone: bid.cleanerLead.phone,
+          jobRequestId: bid.jobRequestId,
+          cleanerLeadId: bid.cleanerLeadId,
+          payload: { conversationMessageId: reply.id },
+        },
       });
       try {
-        const sid = await sendConversationSms(bid.cleanerLead.phone, `Well Kept ${getConversationReference(bid)}: ${body}`);
-        await prisma.conversationMessage.update({ where: { id: reply.id }, data: { deliveryStatus: ConversationDeliveryStatus.SENT } });
+        const sid = await sendConversationSms(
+          bid.cleanerLead.phone,
+          `Well Kept ${getConversationReference(bid)}: ${body}`,
+        );
+        await prisma.conversationMessage.update({
+          where: { id: reply.id },
+          data: { deliveryStatus: ConversationDeliveryStatus.SENT },
+        });
         // The inbound SID remains the idempotency key; the relay SID is tracked in the delivery log.
-        await prisma.notificationDelivery.update({ where: { id: delivery.id }, data: { status: "SENT", providerMessageId: sid, sentAt: new Date() } });
+        await prisma.notificationDelivery.update({
+          where: { id: delivery.id },
+          data: { status: "SENT", providerMessageId: sid, sentAt: new Date() },
+        });
       } catch {
-        await prisma.conversationMessage.update({ where: { id: reply.id }, data: { deliveryStatus: ConversationDeliveryStatus.FAILED } });
-        await prisma.notificationDelivery.update({ where: { id: delivery.id }, data: { status: "FAILED", failureReason: "Conversation text could not be relayed." } });
+        await prisma.conversationMessage.update({
+          where: { id: reply.id },
+          data: { deliveryStatus: ConversationDeliveryStatus.FAILED },
+        });
+        await prisma.notificationDelivery.update({
+          where: { id: delivery.id },
+          data: {
+            status: "FAILED",
+            failureReason: "Conversation text could not be relayed.",
+          },
+        });
       }
     }
   }

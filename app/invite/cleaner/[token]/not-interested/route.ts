@@ -13,12 +13,24 @@ export async function POST(request: Request, { params }: { params: Params }) {
     select: {
       id: true,
       interestTokenExpiresAt: true,
+      bidId: true,
     },
   });
 
   if (outreach && !isOutreachExpired(outreach)) {
     await markOutreachNotInterested(outreach.id);
+    if (outreach.bidId)
+      await prisma.jobBid.updateMany({
+        where: {
+          id: outreach.bidId,
+          status: "SUBMITTED",
+          jobRequest: { status: "OPEN" },
+        },
+        data: { status: "WITHDRAWN" },
+      });
   }
 
-  return NextResponse.redirect(new URL(`/invite/cleaner/${token}`, request.url));
+  return NextResponse.redirect(
+    new URL(`/invite/cleaner/${token}`, request.url),
+  );
 }

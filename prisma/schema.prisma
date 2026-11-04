@@ -101,6 +101,7 @@ enum CleanerLeadSource {
 }
 
 enum OutreachChannel {
+  EMAIL
   APP
   SMS
   VAPI_CALL
@@ -369,7 +370,11 @@ model JobRequest {
   id                            String               @id @default(cuid())
   publicReference               String?              @unique
   title                         String
-  addressLine1                  String
+  addressLine1                  String               @default("")
+  bedroomCount                  Int?
+  bathroomCount                 Float?
+  timezone                      String               @default("America/New_York")
+  postingKey                    String?              @unique
   addressLine2                  String?
   city                          String
   state                         String
@@ -484,8 +489,12 @@ model CleanerLead {
   id                     String                 @id @default(cuid())
   name                   String?
   businessName           String?
-  phone                  String
+  phone                  String?
   email                  String?
+  normalizedEmail        String?                @unique
+  subscriptionToken      String?                @unique
+  emailConfirmedAt       DateTime?
+  pausedAt               DateTime?
   website                String?
   source                 CleanerLeadSource      @default(MANUAL)
   city                   String?
@@ -690,4 +699,32 @@ model BookingEvent {
   actorId    String?
   booking    Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   actor      User?            @relation(fields: [actorId], references: [id], onDelete: SetNull)
+}
+
+model MailTask {
+  id String @id @default(cuid())
+  key String @unique
+  kind String
+  payload Json
+  status String @default("PENDING")
+  attempts Int @default(0)
+  availableAt DateTime @default(now())
+  lockedAt DateTime?
+  error String?
+  createdAt DateTime @default(now())
+  @@index([status, availableAt])
+}
+model InboundEmail {
+  id String @id
+  payload Json
+  status String @default("PENDING")
+  error String?
+  createdAt DateTime @default(now())
+}
+model Introduction {
+  id String @id @default(cuid())
+  jobId String @unique
+  bidId String @unique
+  token String @unique
+  createdAt DateTime @default(now())
 }

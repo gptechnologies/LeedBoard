@@ -4,10 +4,16 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { FastBidDrawer } from "@/components/marketplace/fast-bid-drawer";
-import { ProviderJobOverview, type NearbyJobSwipeItem } from "@/components/marketplace/nearby-job-swipe-carousel";
+import {
+  ProviderJobOverview,
+  type NearbyJobSwipeItem,
+} from "@/components/marketplace/nearby-job-swipe-carousel";
 import { PassJobAction } from "@/components/marketplace/pass-job-action";
 import { AppScreenHeader } from "@/components/marketplace/app-screen-header";
-import { formatCleanerPriceLabel, formatTimingSummary } from "@/lib/marketplace";
+import {
+  formatCleanerPriceLabel,
+  formatTimingSummary,
+} from "@/lib/marketplace";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { expireJobIfDue } from "@/lib/job-lifecycle";
@@ -47,7 +53,9 @@ export default async function CleanerJobDetailPage({
       requestedDate: true,
       requestedWindowStart: true,
       requestedWindowEnd: true,
-      notes: true,
+      notes: false,
+      bedroomCount: true,
+      bathroomCount: true,
       status: true,
       createdAt: true,
       homeProfile: {
@@ -70,7 +78,8 @@ export default async function CleanerJobDetailPage({
     },
   });
 
-  if (!job || (job.status !== JobRequestStatus.OPEN && job.bids.length === 0)) notFound();
+  if (!job || (job.status !== JobRequestStatus.OPEN && job.bids.length === 0))
+    notFound();
   const existingBid = job.bids[0] ?? null;
   if (existingBid) redirect(`/cleaner/messages/${existingBid.id}`);
   if (job.status !== JobRequestStatus.OPEN) notFound();
@@ -78,16 +87,17 @@ export default async function CleanerJobDetailPage({
   const timingLabel = formatTimingSummary(job);
   const item: NearbyJobSwipeItem = {
     areaLabel: `${job.city}, ${job.state}`,
-    bathroomCount: job.homeProfile?.bathroomCount ?? null,
-    bedroomCount: job.homeProfile?.bedroomCount ?? null,
+    bathroomCount: job.bathroomCount ?? job.homeProfile?.bathroomCount ?? null,
+    bedroomCount: job.bedroomCount ?? job.homeProfile?.bedroomCount ?? null,
     bidCount: job._count.bids,
     estimatedSquareFeet: job.homeProfile?.estimatedSquareFeet ?? null,
     id: job.id,
-    job,
+    job: { ...job, notes: null },
     priceLabel: formatCleanerPriceLabel({
       hourlyRateFromCents: user.cleanerProfile?.hourlyRateFromCents ?? null,
       standardFlatRateCents: user.cleanerProfile?.standardFlatRateCents ?? null,
-      standardHourlyRateCents: user.cleanerProfile?.standardHourlyRateCents ?? null,
+      standardHourlyRateCents:
+        user.cleanerProfile?.standardHourlyRateCents ?? null,
     }),
     timingLabel,
     title: job.title,
@@ -98,7 +108,10 @@ export default async function CleanerJobDetailPage({
       <AppScreenHeader brandHref="/cleaner" />
       <main className="wk-screen-content">
         <header className="wk-detail-page-heading">
-          <Link href="/cleaner"><ChevronLeft aria-hidden="true" />Back to Open Jobs</Link>
+          <Link href="/cleaner">
+            <ChevronLeft aria-hidden="true" />
+            Back to Open Jobs
+          </Link>
           <h1>Job Details</h1>
         </header>
 
@@ -111,13 +124,19 @@ export default async function CleanerJobDetailPage({
         <div className="wk-detail-job-actions">
           <FastBidDrawer
             defaults={{
-              standardHourlyRateCents: user.cleanerProfile?.standardHourlyRateCents ?? null,
-              standardFlatRateCents: user.cleanerProfile?.standardFlatRateCents ?? null,
+              standardHourlyRateCents:
+                user.cleanerProfile?.standardHourlyRateCents ?? null,
+              standardFlatRateCents:
+                user.cleanerProfile?.standardFlatRateCents ?? null,
               defaultEtaMinutes: user.cleanerProfile?.defaultEtaMinutes ?? null,
             }}
             job={job}
             timingLabel={timingLabel}
-            trigger={<button className="wk-detail-bid" type="button">Bid on Job</button>}
+            trigger={
+              <button className="wk-detail-bid" type="button">
+                Bid on Job
+              </button>
+            }
           />
           <PassJobAction jobId={job.id} />
         </div>

@@ -43,7 +43,9 @@ function toVerifyError(
   }
   if (returnTo) search.set("returnTo", returnTo);
 
-  return NextResponse.redirect(new URL(`/verify?${search.toString()}`, request.url));
+  return NextResponse.redirect(
+    new URL(`/verify?${search.toString()}`, request.url),
+  );
 }
 
 export async function POST(request: Request) {
@@ -53,13 +55,19 @@ export async function POST(request: Request) {
     String(formData.get("destination") || "") ||
     String(formData.get("email") || "");
   const inviteToken = String(formData.get("inviteToken") || "").trim();
-  const returnTo = getSafeReturnTo(String(formData.get("returnTo") || "")) ?? undefined;
+  const returnTo =
+    getSafeReturnTo(String(formData.get("returnTo") || "")) ?? undefined;
   const role = getRole(formData.get("role"));
-  const mode = String(formData.get("mode") || "login") === "signup" ? "signup" : "login";
+  const mode =
+    String(formData.get("mode") || "login") === "signup" ? "signup" : "login";
 
   try {
     const currentUser = await getCurrentUser();
-    const verification = await verifyOtp(rawDestination, String(formData.get("code") || ""), channel);
+    const verification = await verifyOtp(
+      rawDestination,
+      String(formData.get("code") || ""),
+      channel,
+    );
     if (currentUser) {
       const existingEmailUser = await prisma.user.findFirst({
         where: {
@@ -73,17 +81,24 @@ export async function POST(request: Request) {
       }
     }
 
-    const existingUser = currentUser ?? await prisma.user.findFirst({
-      where: { email: verification.destination },
-      orderBy: { updatedAt: "desc" },
-    });
+    const existingUser =
+      currentUser ??
+      (await prisma.user.findFirst({
+        where: { email: verification.destination },
+        orderBy: { updatedAt: "desc" },
+      }));
 
-    if (mode === "signup" && existingUser && !currentUser && existingUser.role !== role) {
-      throw new Error("That email is connected to a different Well Kept account type.");
+    if (
+      mode === "signup" &&
+      existingUser &&
+      !currentUser &&
+      existingUser.role !== role
+    ) {
+      throw new Error(
+        "That email is connected to a different Well Kept account type.",
+      );
     }
-    if (mode === "login" && !existingUser) {
-      throw new Error("No account is connected to that email. Choose a Join option to create one.");
-    }
+
     const user =
       existingUser ??
       (await prisma.user.create({
@@ -120,9 +135,32 @@ export async function POST(request: Request) {
       return NextResponse.redirect(new URL(path, request.url));
     }
 
-    return NextResponse.redirect(new URL(getPostAuthPath({ inviteToken, returnTo, role: updatedUser.role }), request.url));
+    return NextResponse.redirect(
+      new URL(
+        getPostAuthPath({
+          inviteToken,
+          returnTo:
+            returnTo ??
+            (!existingUser && updatedUser.role === UserRole.CUSTOMER
+              ? "/customer/jobs/new"
+              : undefined),
+          role: updatedUser.role,
+        }),
+        request.url,
+      ),
+    );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "We couldn't verify that code.";
-    return toVerifyError(request, message, rawDestination, role, channel, mode, inviteToken, returnTo);
+    const message =
+      error instanceof Error ? error.message : "We couldn't verify that code.";
+    return toVerifyError(
+      request,
+      message,
+      rawDestination,
+      role,
+      channel,
+      mode,
+      inviteToken,
+      returnTo,
+    );
   }
 }

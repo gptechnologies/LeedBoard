@@ -10,9 +10,16 @@ export const dynamic = "force-dynamic";
 export default async function CustomerDashboard() {
   const user = await requireUser(UserRole.CUSTOMER);
   const { jobs } = await getCustomerHomeData(user.id);
-  const activeJobs = jobs.filter(
-    (job) => job.status === JobRequestStatus.OPEN || job.status === JobRequestStatus.AWARDED || job.status === JobRequestStatus.EXPIRED,
-  );
+  const activeJobs = jobs.map((job) => ({
+    ...job,
+    mailState: job.outreaches.some((o) => o.status === "FAILED")
+      ? "FAILED"
+      : job.outreaches.length
+        ? "PENDING"
+        : Date.now() - job.createdAt.getTime() > 60000
+          ? "NO_MATCH"
+          : "PENDING",
+  }));
 
   return (
     <div className="wk-app-screen wk-homeowner-hub-screen">

@@ -1,3 +1,5 @@
+> Historical reference. Current behavior and release setup are defined in PRODUCT.md and docs/EMAIL_FIRST_RELEASE.md. Their email-first, minimal-posting and explicit-sharing rules take precedence.
+
 # Well Kept — Homeowner Post-a-Job Flow Redesign Plan
 
 ## Purpose

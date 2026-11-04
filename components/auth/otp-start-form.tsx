@@ -12,32 +12,49 @@ type OtpStartFormProps = {
   returnTo?: string;
 };
 
-export function OtpStartForm({ error, inviteToken, mode, returnTo, role }: OtpStartFormProps) {
+export function OtpStartForm({
+  error,
+  inviteToken,
+  mode,
+  returnTo,
+  role,
+}: OtpStartFormProps) {
   const inputId = useId();
   const roleLabel = role === "CUSTOMER" ? "homeowner" : "cleaner";
-  const heading = mode === "signup"
-    ? `Create your ${roleLabel} account`
-    : "Welcome back";
-  const intro = mode === "signup"
-    ? `Use your email to create a ${roleLabel} account.`
-    : "Sign in with a one-time code. We'll take you to your account.";
+  const heading = "Continue with email";
+  const intro =
+    "We’ll send a one-time code to sign you in or create your account.";
 
   return (
     <section className="auth-shell auth-passcode-card">
       <div className="auth-intro">
-        <span className="eyebrow">{mode === "login" ? "Sign in" : role === "CUSTOMER" ? "Homeowner" : "Cleaner"}</span>
+        <span className="eyebrow">
+          {mode === "login"
+            ? "Sign in"
+            : role === "CUSTOMER"
+              ? "Homeowner"
+              : "Cleaner"}
+        </span>
         <h1>{heading}</h1>
         <p>{intro}</p>
       </div>
 
       {error ? <div className="notice error">{error}</div> : null}
 
-      <form action="/auth/otp/start" method="post" className="auth-passcode-form">
+      <form
+        action="/auth/otp/start"
+        method="post"
+        className="auth-passcode-form"
+      >
         <input type="hidden" name="mode" value={mode} />
         {role ? <input type="hidden" name="role" value={role} /> : null}
         <input type="hidden" name="channel" value="email" />
-        {inviteToken ? <input type="hidden" name="inviteToken" value={inviteToken} /> : null}
-        {returnTo ? <input type="hidden" name="returnTo" value={returnTo} /> : null}
+        {inviteToken ? (
+          <input type="hidden" name="inviteToken" value={inviteToken} />
+        ) : null}
+        {returnTo ? (
+          <input type="hidden" name="returnTo" value={returnTo} />
+        ) : null}
 
         <label className="auth-contact-field" htmlFor={inputId}>
           <span className="sr-only">Email address</span>
@@ -67,14 +84,12 @@ export function OtpStartForm({ error, inviteToken, mode, returnTo, role }: OtpSt
           <LockKeyhole aria-hidden="true" size={16} />
           <span>No password needed</span>
         </div>
-        {mode === "signup" ? <Link className="auth-switch-role" href={`/signup?role=${role === "CUSTOMER" ? "CLEANER" : "CUSTOMER"}`}>
-          Create a {role === "CUSTOMER" ? "cleaner" : "homeowner"} account instead
-        </Link> : null}
       </form>
 
       <p className="auth-legal">
-        We use your email to verify your account and send important job updates. By continuing,
-        you agree to our <Link href="/terms">Terms</Link> and acknowledge our <Link href="/privacy">Privacy Policy</Link>.
+        We use your email to verify your account and send important job updates.
+        By continuing, you agree to our <Link href="/terms">Terms</Link> and
+        acknowledge our <Link href="/privacy">Privacy Policy</Link>.
       </p>
     </section>
   );

@@ -1,4 +1,8 @@
-import { NotificationChannel, NotificationStatus, type Prisma } from "@prisma/client";
+import {
+  NotificationChannel,
+  NotificationStatus,
+  type Prisma,
+} from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 const RESEND_EMAILS_URL = "https://api.resend.com/emails";
@@ -50,7 +54,9 @@ export function buildAppUrl(path: string) {
   return `${getAppBaseUrl().replace(/\/$/, "")}${normalizedPath}`;
 }
 
-export async function sendTransactionalEmail(input: SendEmailInput): Promise<EmailResult> {
+export async function sendTransactionalEmail(
+  input: SendEmailInput,
+): Promise<EmailResult> {
   const config = getResendConfig();
 
   if (!config) {
@@ -67,6 +73,7 @@ export async function sendTransactionalEmail(input: SendEmailInput): Promise<Ema
   }
 
   const response = await fetch(RESEND_EMAILS_URL, {
+    signal: AbortSignal.timeout(10000),
     method: "POST",
     headers,
     body: JSON.stringify({
@@ -86,7 +93,9 @@ export async function sendTransactionalEmail(input: SendEmailInput): Promise<Ema
   } | null;
 
   if (!response.ok) {
-    throw new Error(result?.message || `Resend email failed with ${response.status}.`);
+    throw new Error(
+      result?.message || `Resend email failed with ${response.status}.`,
+    );
   }
 
   return {

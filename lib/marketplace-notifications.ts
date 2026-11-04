@@ -11,7 +11,11 @@ import {
   sendTransactionalEmail,
 } from "@/lib/email";
 import { getCleaningJobTitle } from "@/lib/job-title";
-import { formatBidAmount, formatBidTiming, formatTimingSummary } from "@/lib/marketplace";
+import {
+  formatBidAmount,
+  formatBidTiming,
+  formatTimingSummary,
+} from "@/lib/marketplace";
 import { prisma } from "@/lib/prisma";
 
 type BidForNotification = {
@@ -84,7 +88,11 @@ export async function notifyCleanerOfAcceptance(input: {
 export async function notifyHomeownerOfCompletion(input: {
   bidId: string;
   customer: Pick<User, "email" | "firstName" | "id">;
-  job: { id: string; title: string; homeProfile?: { propertyType: "HOUSE" | "APARTMENT" } | null };
+  job: {
+    id: string;
+    title: string;
+    homeProfile?: { propertyType: "HOUSE" | "APARTMENT" } | null;
+  };
 }) {
   if (!input.customer.email) return;
   const content = buildJobCompletedEmail({
@@ -103,29 +111,47 @@ export async function notifyHomeownerOfCompletion(input: {
   });
 }
 
-export async function notifyCleanersOfJobClosure(jobId: string, reason: "deleted" | "expired") {
+export async function notifyCleanersOfJobClosure(
+  jobId: string,
+  reason: "deleted" | "expired",
+) {
   try {
     const bids = await prisma.jobBid.findMany({
       where: { jobRequestId: jobId },
-      include: { cleaner: { select: { id: true, email: true } }, cleanerLead: { include: { linkedCleanerUser: { select: { id: true, email: true } } } }, outreach: { select: { interestToken: true } } },
-    });
-    await Promise.all(bids.map(async (bid) => {
-      const cleaner = bid.cleaner ?? bid.cleanerLead?.linkedCleanerUser;
-      const email = cleaner?.email ?? bid.cleanerLead?.email;
-      if (!email) return;
-      const updatePath = cleaner ? `/cleaner/messages/${bid.id}` : bid.outreach ? `/invite/cleaner/${bid.outreach.interestToken}` : `/login`;
-      await sendMarketplaceEmail({
-        content: {
-          subject: reason === "deleted" ? "A Well Kept job was removed" : "A Well Kept job has ended",
-          text: `${reason === "deleted" ? "The homeowner closed this job." : "The homeowner didn't select a cleaner before the acceptance deadline."}\n\nYour offer and conversation are saved for your records. View the update: ${buildAppUrl(updatePath)}`,
+      include: {
+        cleaner: { select: { id: true, email: true } },
+        cleanerLead: {
+          include: { linkedCleanerUser: { select: { id: true, email: true } } },
         },
-        dedupeKey: `job-${reason}:${jobId}:${bid.id}`,
-        jobRequestId: jobId,
-        purpose: `job_${reason}`,
-        toEmail: email,
-        userId: cleaner?.id ?? null,
-      });
-    }));
+        outreach: { select: { interestToken: true } },
+      },
+    });
+    await Promise.all(
+      bids.map(async (bid) => {
+        const cleaner = bid.cleaner ?? bid.cleanerLead?.linkedCleanerUser;
+        const email = cleaner?.email ?? bid.cleanerLead?.email;
+        if (!email) return;
+        const updatePath = cleaner
+          ? `/cleaner/messages/${bid.id}`
+          : bid.outreach
+            ? `/invite/cleaner/${bid.outreach.interestToken}`
+            : `/login`;
+        await sendMarketplaceEmail({
+          content: {
+            subject:
+              reason === "deleted"
+                ? "A Well Kept job was removed"
+                : "A Well Kept job has ended",
+            text: `${reason === "deleted" ? "The homeowner closed this job." : "The homeowner didn't select a cleaner before the acceptance deadline."}\n\nYour offer and conversation are saved for your records. View the update: ${buildAppUrl(updatePath)}`,
+          },
+          dedupeKey: `job-${reason}:${jobId}:${bid.id}`,
+          jobRequestId: jobId,
+          purpose: `job_${reason}`,
+          toEmail: email,
+          userId: cleaner?.id ?? null,
+        });
+      }),
+    );
   } catch (error) {
     console.error("Unable to notify cleaners of job closure", error);
   }
@@ -133,7 +159,14 @@ export async function notifyCleanersOfJobClosure(jobId: string, reason: "deleted
 
 export async function notifyHomeownerOfJobExpiration(jobId: string) {
   try {
-    const job = await prisma.jobRequest.findUnique({ where: { id: jobId }, select: { id: true, title: true, customer: { select: { id: true, email: true } } } });
+    const job = await prisma.jobRequest.findUnique({
+      where: { id: jobId },
+      select: {
+        id: true,
+        title: true,
+        customer: { select: { id: true, email: true } },
+      },
+    });
     if (!job?.customer.email) return;
     await sendMarketplaceEmail({
       content: {
@@ -159,37 +192,10 @@ async function sendMarketplaceEmail(input: {
   toEmail: string;
   userId: string | null;
 }) {
-  let delivery;
-
-  try {
-    delivery = await createEmailDelivery({
-      dedupeKey: input.dedupeKey,
-      jobRequestId: input.jobRequestId,
-      payload: { purpose: input.purpose, subject: input.content.subject },
-      toEmail: input.toEmail,
-      userId: input.userId,
-    });
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") return;
-    console.error("Unable to create marketplace email delivery", error);
-    return;
-  }
-
-  try {
-    const result = await sendTransactionalEmail({
-      idempotencyKey: input.dedupeKey,
-      subject: input.content.subject,
-      text: input.content.text,
-      to: input.toEmail,
-    });
-    await markEmailDeliverySent({
-      deliveryId: delivery.id,
-      providerMessageId: result.providerMessageId,
-    });
-  } catch (error) {
-    await markEmailDeliveryFailed({
-      deliveryId: delivery.id,
-      failureReason: error instanceof Error ? error.message : "Unable to send marketplace email.",
-    });
-  }
+  const { queueMail } = await import("@/lib/mail-queue");
+  await queueMail(input.dedupeKey, "EMAIL", {
+    to: input.toEmail,
+    subject: input.content.subject,
+    text: input.content.text,
+  });
 }

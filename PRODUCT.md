@@ -1,32 +1,25 @@
-# Well Kept Product Context
+# Well Kept product context
 
-register: product
+Homeowners post once and compare cleaner prices and availability in one place. Cleaners participate by email or a tiny no-login web form; using the cleaner app is optional.
 
-## Product Purpose
+## Homeowner journey
 
-Well Kept is a mobile-first home cleaning marketplace. Homeowners post cleaning jobs, vetted cleaners submit their own bids, and the homeowner compares offers before accepting one. The product should feel calm, trustworthy, and operationally clear rather than like a generic booking funnel.
+Continue with email → verify one-time code → ZIP, bedrooms/bathrooms and timing → Find cleaners → My jobs → review total prices and actual availability → confirm one cleaner and share private details.
 
-## Primary Users
+Do not require a full profile, exact address, phone, budget or notes to post. Collect the address and contact first name at selection. A verified email is sufficient contact information. Payment is arranged directly.
 
-- Homeowners and apartment renters who want a cleaner but do not want to negotiate details across multiple texts.
-- Cleaning businesses and independent cleaners who need a phone-friendly way to find jobs and submit bids.
-- Operations users who need the marketplace to stay legible and low-risk.
+## Cleaner journey
 
-## Strategic Principles
+Get cleaning leads → email, business name or website, service ZIP → confirm email → receive real matching requests → send total price and next available arrival. No account, password, app download or onboarding is required.
 
-- The poster does not choose or set the price. Cleaners bid, and the poster accepts an offer.
-- Mobile is the primary surface. The app must be usable one-handed, with large tap targets and sticky next actions.
-- Trust signals should be visible before money or commitment: insurance, background checks, ratings, clear availability, and job status.
-- Use familiar product patterns. Delight comes from polish, hierarchy, and confidence, not invented controls.
-- Keep the experience bid-first: post job, receive bids, compare, accept, message or manage.
+## Product rules
 
-## Tone
+- Homeowners never set the price. New bids are total job prices.
+- ZIP, home size, scope and requested timing are public job facts. Identity, exact address and access details remain private until explicit selection, then go only to the selected cleaner.
+- Show actual outreach and bid states. Never simulate contacted cleaners or promise bids that do not exist.
+- Fit to requested schedule precedes price in the default comparison order. Alternative availability is clearly labeled.
+- One canonical homeowner workspace contains progress, bids, questions and introductions.
+- Preselection homeowner text is reviewed before relay. Cleaners receive operational updates through email without needing to learn the app.
+- Calm ivory surfaces, forest green actions, restrained serif headings, readable controls and visible next actions. Mobile comes first.
 
-Plain, reassuring, specific. Avoid hype and sales language. Interface copy should tell users what happens next.
-
-## Anti-References
-
-- Fixed-price booking apps where the poster chooses the quote.
-- Generic purple SaaS dashboards.
-- Dense admin UI on mobile.
-- Decorative motion or visuals that make actions harder to understand.
+See [the release guide](docs/EMAIL_FIRST_RELEASE.md) for current delivery operations and production setup. This document supersedes the older SMS-first outreach and mandatory onboarding plans.

@@ -13,8 +13,14 @@ import { getConversationReference, getJobReference } from "@/lib/providers";
 const TWILIO_MESSAGES_URL = "https://api.twilio.com/2010-04-01/Accounts";
 
 export function isConversationSmsReady() {
-  return process.env.ENABLE_CONVERSATION_SMS === "true" &&
-    Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_PHONE_NUMBER);
+  return (
+    process.env.ENABLE_CONVERSATION_SMS === "true" &&
+    Boolean(
+      process.env.TWILIO_ACCOUNT_SID &&
+      process.env.TWILIO_AUTH_TOKEN &&
+      process.env.TWILIO_FROM_PHONE_NUMBER,
+    )
+  );
 }
 
 export async function sendConversationSms(to: string, body: string) {
@@ -23,19 +29,30 @@ export async function sendConversationSms(to: string, body: string) {
     throw new Error("SMS messaging is not configured.");
   }
 
-  const params = new URLSearchParams({ To: to, From: config.fromPhoneNumber, Body: body });
+  const params = new URLSearchParams({
+    To: to,
+    From: config.fromPhoneNumber,
+    Body: body,
+  });
   const callback = getTwilioStatusCallbackUrl();
   if (callback) params.set("StatusCallback", callback);
 
-  const response = await fetch(`${TWILIO_MESSAGES_URL}/${config.accountSid}/Messages.json`, {
-    method: "POST",
-    headers: {
-      Authorization: getAuthorizationHeader(config.accountSid, config.authToken),
-      "Content-Type": "application/x-www-form-urlencoded",
+  const response = await fetch(
+    `${TWILIO_MESSAGES_URL}/${config.accountSid}/Messages.json`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: getAuthorizationHeader(
+          config.accountSid,
+          config.authToken,
+        ),
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: params,
     },
-    body: params,
-  });
-  if (!response.ok) throw new Error(`SMS delivery failed (${response.status}).`);
+  );
+  if (!response.ok)
+    throw new Error(`SMS delivery failed (${response.status}).`);
   const result = (await response.json()) as { sid?: string };
   if (!result.sid) throw new Error("SMS provider did not return a message ID.");
   return result.sid;
@@ -142,7 +159,8 @@ export async function sendCleanerInviteSms(jobOutreachId: string) {
     bathroomCount: outreach.jobRequest.homeProfile?.bathroomCount ?? null,
     bedroomCount: outreach.jobRequest.homeProfile?.bedroomCount ?? null,
     city: outreach.jobRequest.city,
-    estimatedSquareFeet: outreach.jobRequest.homeProfile?.estimatedSquareFeet ?? null,
+    estimatedSquareFeet:
+      outreach.jobRequest.homeProfile?.estimatedSquareFeet ?? null,
     notes: outreach.jobRequest.notes,
     state: outreach.jobRequest.state,
     timing: formatSmsTiming(outreach.jobRequest),
@@ -189,7 +207,7 @@ export async function sendCleanerInviteSms(jobOutreachId: string) {
   }
 
   const bodyParams = new URLSearchParams({
-    To: lead.phone,
+    To: lead.phone ?? "",
     Body: body,
   });
 
@@ -209,7 +227,10 @@ export async function sendCleanerInviteSms(jobOutreachId: string) {
     {
       method: "POST",
       headers: {
-        Authorization: getAuthorizationHeader(config.accountSid, config.authToken),
+        Authorization: getAuthorizationHeader(
+          config.accountSid,
+          config.authToken,
+        ),
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: bodyParams,
@@ -266,7 +287,8 @@ export async function sendCleanerInviteSms(jobOutreachId: string) {
 }
 
 export async function sendProviderAcceptanceSms(bidId: string) {
-  if (!isConversationSmsReady() && process.env.ENABLE_SMS_OUTREACH !== "true") return null;
+  if (!isConversationSmsReady() && process.env.ENABLE_SMS_OUTREACH !== "true")
+    return null;
 
   const bid = await prisma.jobBid.findUnique({
     where: { id: bidId },
@@ -274,7 +296,14 @@ export async function sendProviderAcceptanceSms(bidId: string) {
       cleanerLead: true,
       jobRequest: {
         include: {
-          customer: { select: { firstName: true, lastName: true, phone: true, email: true } },
+          customer: {
+            select: {
+              firstName: true,
+              lastName: true,
+              phone: true,
+              email: true,
+            },
+          },
         },
       },
       outreach: true,
@@ -283,7 +312,8 @@ export async function sendProviderAcceptanceSms(bidId: string) {
 
   if (!bid?.cleanerLead || bid.cleanerLead.optedOutAt) return null;
 
-  const customerName = `${bid.jobRequest.customer.firstName} ${bid.jobRequest.customer.lastName}`.trim();
+  const customerName =
+    `${bid.jobRequest.customer.firstName} ${bid.jobRequest.customer.lastName}`.trim();
   const reference = getJobReference(bid.jobRequest);
   const body = [
     `You're connected for Well Kept job ${reference}.`,
@@ -293,7 +323,9 @@ export async function sendProviderAcceptanceSms(bidId: string) {
     `Address: ${bid.jobRequest.addressLine1}, ${bid.jobRequest.city}, ${bid.jobRequest.state} ${bid.jobRequest.postalCode}`,
     "",
     `Reply to this number with ${getConversationReference(bid)} and your message to continue the conversation in Well Kept.`,
-  ].filter(Boolean).join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const delivery = await prisma.notificationDelivery.create({
     data: {
@@ -317,20 +349,30 @@ export async function sendProviderAcceptanceSms(bidId: string) {
     });
   }
 
-  const bodyParams = new URLSearchParams({ To: bid.cleanerLead.phone, Body: body });
+  const bodyParams = new URLSearchParams({
+    To: bid.cleanerLead.phone ?? "",
+    Body: body,
+  });
   if (config.fromPhoneNumber) bodyParams.set("From", config.fromPhoneNumber);
-  else if (config.messagingServiceSid) bodyParams.set("MessagingServiceSid", config.messagingServiceSid);
+  else if (config.messagingServiceSid)
+    bodyParams.set("MessagingServiceSid", config.messagingServiceSid);
   const statusCallback = getTwilioStatusCallbackUrl();
   if (statusCallback) bodyParams.set("StatusCallback", statusCallback);
 
-  const response = await fetch(`${TWILIO_MESSAGES_URL}/${config.accountSid}/Messages.json`, {
-    method: "POST",
-    headers: {
-      Authorization: getAuthorizationHeader(config.accountSid, config.authToken),
-      "Content-Type": "application/x-www-form-urlencoded",
+  const response = await fetch(
+    `${TWILIO_MESSAGES_URL}/${config.accountSid}/Messages.json`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: getAuthorizationHeader(
+          config.accountSid,
+          config.authToken,
+        ),
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: bodyParams,
     },
-    body: bodyParams,
-  });
+  );
 
   if (!response.ok) {
     return prisma.notificationDelivery.update({
@@ -365,15 +407,20 @@ function formatHomeFacts(input: {
   const bathroomLabel =
     input.bathroomCount === null || input.bathroomCount === undefined
       ? null
-      : `${Number.isInteger(input.bathroomCount)
-          ? input.bathroomCount.toFixed(0)
-          : input.bathroomCount} bath`;
+      : `${
+          Number.isInteger(input.bathroomCount)
+            ? input.bathroomCount.toFixed(0)
+            : input.bathroomCount
+        } bath`;
   const squareFeetLabel = input.estimatedSquareFeet
     ? `${input.estimatedSquareFeet.toLocaleString("en-US")} sq ft`
     : null;
 
-  return [bedroomLabel, bathroomLabel, squareFeetLabel].filter(Boolean).join(" / ") ||
-    "Home details are in the job link";
+  return (
+    [bedroomLabel, bathroomLabel, squareFeetLabel]
+      .filter(Boolean)
+      .join(" / ") || "Home details are in the job link"
+  );
 }
 
 function formatSmsTiming(job: Parameters<typeof formatTimingSummary>[0]) {

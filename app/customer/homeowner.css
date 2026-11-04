@@ -3911,3 +3911,45 @@
   .wk-home-stat { font-size: 0.68rem; padding-inline: 8px; }
   .wk-home-summary-card .wk-account-row { grid-template-columns: minmax(78px, 0.62fr) minmax(0, 1.38fr); gap: 9px; }
 }
+
+/* The short posting flow uses a clear paper surface. */
+.wk-role-shell[data-role="customer"]:has(.wk-quick-post-screen),
+.wk-role-shell[data-role="customer"]:has(.wk-quick-post-screen)
+  .wk-route-stage {
+  background: #fbfaf5;
+}
+.wk-role-shell[data-role="customer"][data-ui="calm"] .wk-quick-post-screen {
+  background: #fbfaf5;
+  color: #242722;
+  border-radius: 0;
+  box-shadow: none;
+  min-height: 100dvh;
+}
+.wk-quick-post-screen::before,
+.wk-quick-post-screen::after {
+  display: none;
+}
+.wk-quick-post-screen .effortless-form {
+  width: 100%;
+  margin: 12px 0 60px;
+  gap: 16px;
+}
+.wk-quick-post-screen .effortless-form h1 {
+  color: #174f2b;
+}
+.wk-quick-post-screen .wk-screen-header__action {
+  color: #174f2b !important;
+  background: #edf2e9 !important;
+  border-color: #d5dacd !important;
+}
+.wk-quick-post-screen .effortless-form .effortless-primary {
+  position: sticky;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  z-index: 5;
+  box-shadow: 0 0 0 8px #fbfaf5;
+}
+.wk-homeowner-hub-screen .effortless-page {
+  width: 100%;
+  margin: 8px auto 40px;
+}
+.wk-quick-post-screen .wk-app-menu-trigger,.wk-quick-post-screen .wk-app-menu-trigger svg {color:#174f2b!important}

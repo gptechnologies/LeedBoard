@@ -97,7 +97,8 @@ export function getPostAuthPath(input: {
 }) {
   const returnTo = getSafeReturnTo(input.returnTo);
   if (returnTo) return returnTo;
-  if (input.inviteToken && input.role === UserRole.CLEANER) return `/invite/cleaner/${encodeURIComponent(input.inviteToken)}`;
+  if (input.inviteToken && input.role === UserRole.CLEANER)
+    return `/invite/cleaner/${encodeURIComponent(input.inviteToken)}`;
   return getRoleHome(input.role);
 }
 
@@ -141,7 +142,9 @@ function getSessionExpiresAt() {
 export function needsAccountSetup(user: {
   firstName: string | null;
   lastName: string | null;
+  role?: UserRole;
 }) {
+  if (user.role === UserRole.CUSTOMER) return false;
   return !user.firstName?.trim() || !user.lastName?.trim();
 }
 
@@ -249,10 +252,14 @@ export async function requireSignedInIdentity() {
 
 export async function requireUser(role?: UserRole) {
   const user = await getCurrentUser();
-  const returnTo = getSafeReturnTo((await headers()).get("x-well-kept-return-to"));
+  const returnTo = getSafeReturnTo(
+    (await headers()).get("x-well-kept-return-to"),
+  );
 
   if (!user) {
-    redirect(returnTo ? `/login?returnTo=${encodeURIComponent(returnTo)}` : "/login");
+    redirect(
+      returnTo ? `/login?returnTo=${encodeURIComponent(returnTo)}` : "/login",
+    );
   }
 
   if (!isFullyVerified(user)) {
@@ -275,8 +282,15 @@ export async function requireUser(role?: UserRole) {
 export async function requireApiUser(request: Request, role?: UserRole) {
   const user = await getCurrentUser();
   const requestUrl = new URL(request.url);
-  const returnTo = getSafeReturnTo(`${requestUrl.pathname}${requestUrl.search}`);
+  const returnTo = getSafeReturnTo(
+    `${requestUrl.pathname}${requestUrl.search}`,
+  );
 
+  if (!user && request.headers.get("X-Well-Kept-Client") === "1")
+    return NextResponse.json(
+      { error: "Your session expired. Sign in again; your draft is saved." },
+      { status: 401 },
+    );
   if (!user) {
     const loginUrl = new URL("/login", request.url);
     if (returnTo) loginUrl.searchParams.set("returnTo", returnTo);
@@ -284,7 +298,9 @@ export async function requireApiUser(request: Request, role?: UserRole) {
   }
 
   if (!isFullyVerified(user)) {
-    return NextResponse.redirect(new URL(getVerifyContactPath(user, { returnTo }), request.url));
+    return NextResponse.redirect(
+      new URL(getVerifyContactPath(user, { returnTo }), request.url),
+    );
   }
 
   if (needsAccountSetup(user)) {

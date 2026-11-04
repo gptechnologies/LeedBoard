@@ -1,423 +1,201 @@
 "use client";
-
-import {
-  BidSelectionPriority,
-  CleanLevel,
-  EntryMethod,
-  HomeCondition,
-  JobCleanType,
-  ServiceNeed,
-  SuppliesSource,
-  TimingPreference,
-} from "@prisma/client";
-import {
-  ArrowRight,
-  CalendarDays,
-  Check,
-  ChevronDown,
-  Clock3,
-  LoaderCircle,
-  MapPin,
-} from "lucide-react";
-import { motion, useReducedMotion, type Variants } from "framer-motion";
-import { FormEvent, useMemo, useState } from "react";
-
-import { triggerHaptic } from "@/lib/haptics";
-
-type HomeChoice = {
-  id: string;
-  label: string;
-  addressLine1: string;
-  addressLine2: string | null;
-  city: string;
-  state: string;
-  postalCode: string;
-  entryMethod: EntryMethod;
-  entryNotes: string | null;
-  suppliesSource: SuppliesSource;
-};
-
-export type RepostSource = {
-  addressLine1: string;
-  addressLine2: string | null;
-  city: string;
-  state: string;
-  postalCode: string;
-  homeProfileId: string | null;
-  entryMethod: EntryMethod;
-  entryNotes: string | null;
-  suppliesSource: SuppliesSource;
-  cleanLevel: CleanLevel;
-  cleanType: JobCleanType | null;
-  currentCondition: HomeCondition | null;
-  selectionPriority: BidSelectionPriority;
-  serviceNeeds: ServiceNeed[];
-  notes: string | null;
-  requestedWindowStart: string | null;
-  requestedWindowEnd: string | null;
-};
-
-type AddressState = {
-  addressLine1: string;
-  addressLine2: string;
-  city: string;
-  state: string;
-  postalCode: string;
-};
-
-type TimeMode = "custom" | "morning" | "afternoon";
-type SubmitState = "idle" | "posting";
-type ActiveSection = 1 | 2 | 3;
-
-const emptyAddress: AddressState = {
-  addressLine1: "",
-  addressLine2: "",
-  city: "",
-  state: "New York",
-  postalCode: "",
-};
-
-const timeModes: Array<{ value: TimeMode; label: string }> = [
-  { value: "custom", label: "Custom" },
-  { value: "morning", label: "Morning" },
-  { value: "afternoon", label: "Afternoon" },
-];
-
-const presetTimes: Record<Exclude<TimeMode, "custom">, { start: string; end: string }> = {
-  morning: { start: "08:00", end: "12:00" },
-  afternoon: { start: "12:00", end: "17:00" },
-};
-
-const composerContainerVariants: Variants = {
-  hidden: {},
-  visible: { transition: { delayChildren: 0.04, staggerChildren: 0.085 } },
-};
-
-const composerItemVariants: Variants = {
-  hidden: { opacity: 0, y: 12 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.34, ease: [0.22, 1, 0.36, 1] },
-  },
-};
-
-export function SimpleJobRequestForm({ homeProfiles, repostSource }: { homeProfiles: HomeChoice[]; repostSource?: RepostSource | null }) {
-  const reduceMotion = useReducedMotion();
-  const [activeSection, setActiveSection] = useState<ActiveSection>(1);
-  const [fullAddress, setFullAddress] = useState(() => repostSource ? formatAddress(repostSource) : homeProfiles[0] ? formatAddress(homeProfiles[0]) : "");
-  const [requestedDate, setRequestedDate] = useState("");
-  const [timeMode, setTimeMode] = useState<TimeMode>(repostSource?.requestedWindowStart ? "custom" : "morning");
-  const [customStart, setCustomStart] = useState(repostSource?.requestedWindowStart ?? "09:00");
-  const [customEnd, setCustomEnd] = useState(repostSource?.requestedWindowEnd ?? "13:00");
-  const [notes, setNotes] = useState(repostSource?.notes ?? "");
-  const [submitState, setSubmitState] = useState<SubmitState>("idle");
-  const [submitError, setSubmitError] = useState("");
-
-  const selectedHome = homeProfiles.find((home) => formatAddress(home) === fullAddress.trim()) ?? null;
-  const activeRepostSource = repostSource && formatAddress(repostSource) === fullAddress.trim() ? repostSource : null;
-  const activeAddress = selectedHome
-    ? {
-        addressLine1: selectedHome.addressLine1,
-        addressLine2: selectedHome.addressLine2 ?? "",
-        city: selectedHome.city,
-        state: selectedHome.state,
-        postalCode: selectedHome.postalCode,
-      }
-    : parseFullAddress(fullAddress);
-  const addressComplete = getAddressValidation(activeAddress) === "";
-  const schedule = useMemo(
-    () => timeMode === "custom" ? { start: customStart, end: customEnd } : presetTimes[timeMode],
-    [customEnd, customStart, timeMode],
-  );
-  const whenValidation = getWhenValidation(requestedDate, schedule.start, schedule.end);
-  const whenComplete = whenValidation === "";
-  const entryMethod = selectedHome ? selectedHome.entryMethod : activeRepostSource?.entryMethod ?? EntryMethod.OTHER;
-  const entryNotes = selectedHome ? selectedHome.entryNotes ?? "" : activeRepostSource?.entryNotes ?? "";
-  const suppliesSource = selectedHome
-    ? selectedHome.suppliesSource
-    : activeRepostSource?.suppliesSource ?? SuppliesSource.CLEANER_BRINGS_ALL;
-
-  async function postJob(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!addressComplete || !whenComplete || submitState !== "idle") return;
-
-    setSubmitError("");
-    setSubmitState("posting");
-
+import { useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
+export type RepostSource = Record<string, unknown>;
+export function SimpleJobRequestForm({
+  homeProfiles,
+}: {
+  homeProfiles: Array<{
+    postalCode: string;
+    bedroomCount?: number | null;
+    bathroomCount?: number | null;
+  }>;
+  repostSource?: unknown;
+}) {
+  const [draft, setDraft] = useState({
+    postalCode: homeProfiles[0]?.postalCode ?? "",
+    bedroomCount: homeProfiles[0]?.bedroomCount?.toString() ?? "",
+    bathroomCount: homeProfiles[0]?.bathroomCount?.toString() ?? "",
+    timingPreference: "ASAP",
+    requestedDate: "",
+    requestedWindowStart: "08:00",
+    requestedWindowEnd: "20:00",
+    cleanType: "STANDARD_CLEAN",
+  });
+  const [ready, setReady] = useState(false);
+  const [key, setKey] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => {
     try {
-      const response = await fetch(event.currentTarget.action, {
+      const saved = localStorage.getItem("wk-quick-post");
+      if (saved) setDraft((d) => ({ ...d, ...JSON.parse(saved) }));
+    } catch {}
+    setKey(crypto.randomUUID());
+    setReady(true);
+  }, []);
+  useEffect(() => {
+    if (ready) localStorage.setItem("wk-quick-post", JSON.stringify(draft));
+  }, [draft, ready]);
+  function update(name: string, value: string) {
+    setDraft((d) => ({ ...d, [name]: value }));
+    setError("");
+  }
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const f = new FormData(e.currentTarget);
+      f.set("postingKey", key);
+      const r = await fetch("/customer/jobs/create", {
         method: "POST",
-        body: new FormData(event.currentTarget),
         headers: { "X-Well-Kept-Client": "1" },
+        body: f,
       });
-      const result = (await response.json()) as { error?: string; jobId?: string };
-
-      if (!response.ok || !result.jobId) {
-        throw new Error(result.error || "We couldn’t post your request. Check your connection and try again.");
-      }
-
-      triggerHaptic("success");
-      window.location.assign("/customer?posted=1");
-    } catch (error) {
-      setSubmitState("idle");
-      setSubmitError(error instanceof Error ? error.message : "We couldn’t post your request. Try again.");
-      triggerHaptic("warning");
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error);
+      localStorage.setItem(
+        "wk-quick-post",
+        JSON.stringify({ ...draft, requestedDate: "" }),
+      );
+      location.assign("/customer?posted=1#job-" + data.jobId);
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Check your connection and try again.",
+      );
+      setBusy(false);
     }
   }
-
   return (
-    <motion.form
-      action="/customer/jobs/create"
-      animate="visible"
-      className="wk-job-composer"
-      initial={reduceMotion ? false : "hidden"}
-      method="post"
-      onSubmit={postJob}
-      variants={composerContainerVariants}
-    >
-      <input type="hidden" name="title" value="Home Cleaning" />
-      <input type="hidden" name="homeProfileId" value={selectedHome?.id ?? activeRepostSource?.homeProfileId ?? ""} />
-      <input type="hidden" name="addressLine1" value={activeAddress.addressLine1} />
-      <input type="hidden" name="addressLine2" value={activeAddress.addressLine2} />
-      <input type="hidden" name="city" value={activeAddress.city} />
-      <input type="hidden" name="state" value={activeAddress.state} />
-      <input type="hidden" name="postalCode" value={activeAddress.postalCode} />
-      <input type="hidden" name="entryMethod" value={entryMethod} />
-      <input type="hidden" name="entryNotes" value={entryNotes.trim()} />
-      <input type="hidden" name="suppliesSource" value={suppliesSource} />
-      <input type="hidden" name="cleanLevel" value={repostSource?.cleanLevel ?? CleanLevel.MEDIUM} />
-      <input type="hidden" name="cleanType" value={repostSource?.cleanType ?? JobCleanType.STANDARD_CLEAN} />
-      <input type="hidden" name="currentCondition" value={repostSource?.currentCondition ?? HomeCondition.NORMAL_LIVED_IN} />
-      <input type="hidden" name="selectionPriority" value={repostSource?.selectionPriority ?? BidSelectionPriority.BEST_OVERALL} />
-      {(repostSource?.serviceNeeds.length ? repostSource.serviceNeeds : [ServiceNeed.GENERAL_CLEANING, ServiceNeed.KITCHEN, ServiceNeed.BATHROOMS, ServiceNeed.FLOORS, ServiceNeed.DUSTING]).map((need) => (
-        <input key={need} type="hidden" name="serviceNeeds" value={need} />
-      ))}
-      <input type="hidden" name="notes" value={notes.trim()} />
-      <input type="hidden" name="saveHome" value="false" />
-      <input type="hidden" name="timingPreference" value={TimingPreference.TIME_SLOT} />
-      <input type="hidden" name="requestedDate" value={requestedDate} />
-      <input type="hidden" name="requestedWindowStart" value={schedule.start} />
-      <input type="hidden" name="requestedWindowEnd" value={schedule.end} />
-
-      <motion.header className="wk-job-composer__intro" variants={composerItemVariants}>
-        <span aria-hidden="true" className="wk-job-composer__script">Good spaces<br />brighter days ✦</span>
-        <h1>{repostSource ? "Post again" : "Post a job"}</h1>
-        <p>{repostSource ? "Your previous details are ready. Choose a new date before posting." : "Tell us where and when. Cleaners will send prices."}</p>
-      </motion.header>
-
-      <motion.section
-        className={`wk-composer-section${activeSection === 1 ? " is-active" : ""}`}
-        onFocus={() => setActiveSection(1)}
-        variants={composerItemVariants}
-      >
-        <ComposerHeading number="01">Where do you need cleaned?</ComposerHeading>
-        <div className="wk-composer-control wk-composer-address">
-          <MapPin aria-hidden="true" />
-          <input
-            aria-describedby="composer-address-hint"
-            aria-label="Cleaning address"
-            autoComplete="street-address"
-            autoFocus={!homeProfiles.length}
-            list={homeProfiles.length ? "composer-saved-addresses" : undefined}
-            onChange={(event) => { setFullAddress(event.target.value); setSubmitError(""); }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && addressComplete) {
-                event.preventDefault();
-                setActiveSection(2);
-              }
-            }}
-            placeholder="Street, city, state ZIP"
-            value={fullAddress}
-          />
-          {addressComplete ? <span className="wk-composer-check" aria-label="Address complete"><Check /></span> : null}
-        </div>
-        <p className="sr-only" id="composer-address-hint">Enter a street, city, state, and ZIP code.</p>
-        {homeProfiles.length ? (
-          <datalist id="composer-saved-addresses">
-            {homeProfiles.map((home) => <option key={home.id} value={formatAddress(home)} />)}
-          </datalist>
-        ) : null}
-      </motion.section>
-
-      <motion.section
-        className={`wk-composer-section${activeSection === 2 ? " is-active" : ""}`}
-        onFocus={() => setActiveSection(2)}
-        variants={composerItemVariants}
-      >
-              <ComposerHeading number="02">When should cleaners arrive?</ComposerHeading>
-              <div className="wk-composer-schedule-grid">
-                <label className="wk-composer-control">
-                  <CalendarDays aria-hidden="true" />
-                  <span className={`wk-composer-value${requestedDate ? "" : " is-placeholder"}`}>
-                    {requestedDate ? formatDate(requestedDate) : "Choose date"}
-                  </span>
-                  <input
-                    aria-label="Cleaning date"
-                    className="wk-composer-native-picker"
-                    min={getLocalDate(0)}
-                    onChange={(event) => {
-                      setRequestedDate(event.target.value);
-                      setSubmitError("");
-                    }}
-                    type="date"
-                    value={requestedDate}
-                  />
-                  <ChevronDown aria-hidden="true" className="wk-composer-chevron" />
-                </label>
-                <label className="wk-composer-control">
-                  <Clock3 aria-hidden="true" />
-                  <span className="wk-composer-value">{timeModes.find((option) => option.value === timeMode)?.label}</span>
-                  <select
-                    aria-label="Arrival window"
-                    className="wk-composer-native-picker"
-                    onChange={(event) => {
-                      const value = event.target.value as TimeMode;
-                      setTimeMode(value);
-                      setSubmitError("");
-                      triggerHaptic("selection");
-                    }}
-                    value={timeMode}
-                  >
-                    {timeModes.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                  </select>
-                  <ChevronDown aria-hidden="true" className="wk-composer-chevron" />
-                </label>
-              </div>
-
-              <div aria-hidden={timeMode !== "custom"} className={`wk-composer-custom-time${timeMode === "custom" ? " is-visible" : ""}`}>
-                <div>
-                  <TimeControl active={timeMode === "custom"} label="Arrive" onChange={(value) => setCustomStart(value)} value={customStart} />
-                  <TimeControl active={timeMode === "custom"} label="Finish" onChange={(value) => setCustomEnd(value)} value={customEnd} />
-                </div>
-              </div>
-              {requestedDate && whenValidation ? <p className="wk-composer-error" role="alert">{whenValidation}</p> : null}
-      </motion.section>
-
-      <motion.section
-        className={`wk-composer-section${activeSection === 3 ? " is-active" : ""}`}
-        onFocus={() => setActiveSection(3)}
-        variants={composerItemVariants}
-      >
-              <ComposerHeading number="03">Anything cleaners should know?</ComposerHeading>
-              <label className="wk-composer-notes">
-                <span className="sr-only">Notes for cleaners</span>
-                <textarea
-                  maxLength={500}
-                  onChange={(event) => setNotes(event.target.value)}
-                  placeholder="Home details, areas to focus on, entry instructions, pets, elevator or buzzer details."
-                  value={notes}
-                />
-                <small>{notes.length}/500</small>
-              </label>
-      </motion.section>
-
-      <motion.div className="wk-composer-submit is-visible" variants={composerItemVariants}>
-            {submitError ? <p className="wk-composer-error" role="alert">{submitError}</p> : null}
-            <button
-              aria-busy={submitState === "posting"}
-              className="wk-composer-submit__button wk-pressable"
-              disabled={!addressComplete || !whenComplete || submitState === "posting"}
-              type="submit"
+    <form className="effortless-form" onSubmit={submit}>
+      <header>
+        <p className="effortless-kicker">A little help for your home</p>
+        <h1>Find your cleaner.</h1>
+        <p>Post once. Compare total prices and availability here.</p>
+      </header>
+      <label>
+        ZIP code
+        <input
+          autoComplete="postal-code"
+          inputMode="numeric"
+          name="postalCode"
+          pattern="[0-9]{5}"
+          maxLength={5}
+          required
+          value={draft.postalCode}
+          onChange={(e) => update("postalCode", e.target.value)}
+          placeholder="Your service ZIP"
+        />
+      </label>
+      <div className="effortless-grid">
+        {(["bedroomCount", "bathroomCount"] as const).map((name) => (
+          <label key={name}>
+            {name === "bedroomCount" ? "Bedrooms" : "Bathrooms"}
+            <select
+              name={name}
+              required
+              value={draft[name]}
+              onChange={(e) => update(name, e.target.value)}
             >
-              {submitState === "posting" ? (
-                <><LoaderCircle className="wk-button-spinner" aria-hidden="true" /> Posting</>
-              ) : (
-                <><span>Post Job</span><ArrowRight aria-hidden="true" /></>
-              )}
-            </button>
-            <p>By posting, you agree to our Terms of Service and Privacy Policy.</p>
-      </motion.div>
-    </motion.form>
+              <option value="">Choose</option>
+              {(name === "bedroomCount"
+                ? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+                : [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8]
+              ).map((n) => (
+                <option key={n} value={n}>
+                  {n === 0 ? "Studio" : n}
+                </option>
+              ))}
+            </select>
+          </label>
+        ))}
+      </div>
+      <label>
+        When?
+        <select
+          name="timingPreference"
+          value={draft.timingPreference}
+          onChange={(e) => update("timingPreference", e.target.value)}
+        >
+          <option value="ASAP">First available</option>
+          <option value="TIME_SLOT">Choose a date</option>
+        </select>
+      </label>
+      {draft.timingPreference === "TIME_SLOT" && (
+        <>
+          <label>
+            Date
+            <input
+              type="date"
+              name="requestedDate"
+              required
+              value={draft.requestedDate}
+              onChange={(e) => update("requestedDate", e.target.value)}
+            />
+          </label>
+          <div className="effortless-grid">
+            <label>
+              Arrive after
+              <input
+                type="time"
+                name="requestedWindowStart"
+                required
+                value={draft.requestedWindowStart}
+                onChange={(e) => update("requestedWindowStart", e.target.value)}
+              />
+            </label>
+            <label>
+              Arrive before
+              <input
+                type="time"
+                name="requestedWindowEnd"
+                required
+                value={draft.requestedWindowEnd}
+                onChange={(e) => update("requestedWindowEnd", e.target.value)}
+              />
+            </label>
+          </div>
+          <small>This is an arrival window, not the cleaning duration.</small>
+        </>
+      )}
+      <label>
+        Cleaning
+        <select
+          name="cleanType"
+          value={draft.cleanType}
+          onChange={(e) => update("cleanType", e.target.value)}
+        >
+          <option value="STANDARD_CLEAN">Standard clean</option>
+          <option value="DEEP_CLEAN">Deep clean</option>
+          <option value="MOVE_OUT_CLEAN">Move-out clean</option>
+        </select>
+      </label>
+      <p className="effortless-note">
+        Cleaners bring supplies. Your address and contact details stay private
+        until you choose a cleaner.
+      </p>
+      {error && (
+        <p role="alert" className="effortless-error">
+          {error}{" "}
+          {error.includes("session") && (
+            <Link href="/login?returnTo=/customer/jobs/new">Sign in again</Link>
+          )}
+        </p>
+      )}
+      <button
+        className="effortless-primary"
+        type="submit"
+        disabled={busy || !ready}
+        aria-busy={busy}
+      >
+        {busy ? "Posting…" : "Find cleaners"}
+      </button>
+      <small>
+        By posting, you agree to our <Link href="/terms">Terms</Link> and{" "}
+        <Link href="/privacy">Privacy Policy</Link>.
+      </small>
+    </form>
   );
-}
-
-function ComposerHeading({ children, number }: { children: string; number: string }) {
-  return (
-    <div className="wk-composer-heading">
-      <span aria-hidden="true">{number}</span>
-      <h2>{children}</h2>
-    </div>
-  );
-}
-
-function TimeControl({ active, label, onChange, value }: { active: boolean; label: string; onChange: (value: string) => void; value: string }) {
-  return (
-    <label className="wk-composer-control wk-composer-time-control">
-      <Clock3 aria-hidden="true" />
-      <span><small>{label}</small><strong>{formatTime(value)}</strong></span>
-      <input className="wk-composer-native-picker" aria-label={`${label} time`} disabled={!active} onChange={(event) => onChange(event.target.value)} type="time" value={value} />
-      <ChevronDown aria-hidden="true" className="wk-composer-chevron" />
-    </label>
-  );
-}
-
-function getLocalDate(offsetDays: number) {
-  const date = new Date();
-  date.setDate(date.getDate() + offsetDays);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function formatDate(date: string) {
-  return new Date(`${date}T12:00:00`).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatTime(time: string) {
-  const [hour, minute] = time.split(":").map(Number);
-  const period = hour >= 12 ? "PM" : "AM";
-  const displayHour = hour % 12 || 12;
-  return `${displayHour}:${String(minute).padStart(2, "0")} ${period}`;
-}
-
-function getWhenValidation(date: string, start: string, end: string) {
-  if (!date) return "Choose a cleaning date.";
-  const [startHour, startMinute] = start.split(":").map(Number);
-  const [endHour, endMinute] = end.split(":").map(Number);
-  const duration = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
-  if (!start || !end || duration < 120 || duration > 720) return "Choose a time range between 2 and 12 hours.";
-  if (new Date(`${date}T${start}:00`).getTime() <= Date.now()) return "Choose a future arrival time.";
-  return "";
-}
-
-function formatAddress(address: {
-  addressLine1: string;
-  addressLine2: string | null;
-  city: string;
-  state: string;
-  postalCode: string;
-}) {
-  return [
-    address.addressLine1,
-    address.addressLine2,
-    [address.city, address.state].filter(Boolean).join(", ") + (address.postalCode ? ` ${address.postalCode}` : ""),
-  ].filter(Boolean).join(", ");
-}
-
-function getAddressValidation(address: AddressState) {
-  if (address.addressLine1.trim().length < 4) return "Enter a complete street address.";
-  if (address.city.trim().length < 2) return "Enter a city.";
-  if (address.state.trim().length < 2) return "Enter a state.";
-  if (!/^\d{5}(?:-\d{4})?$/.test(address.postalCode.trim())) return "Enter a valid ZIP code.";
-  return "";
-}
-
-function parseFullAddress(value: string): AddressState {
-  const parts = value.split(",").map((part) => part.trim()).filter(Boolean);
-  if (parts.length < 3) return emptyAddress;
-  const stateAndZip = parts.at(-1)?.match(/^(.+?)\s+(\d{5}(?:-\d{4})?)$/);
-  if (!stateAndZip) return emptyAddress;
-  return {
-    addressLine1: parts.slice(0, -2).join(", "),
-    addressLine2: "",
-    city: parts.at(-2) ?? "",
-    state: stateAndZip[1].trim(),
-    postalCode: stateAndZip[2],
-  };
 }

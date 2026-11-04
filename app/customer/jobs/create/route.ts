@@ -1,119 +1,62 @@
-import { JobRequestStatus, PropertyType, UserRole } from "@prisma/client";
-import { NextResponse } from "next/server";
-import { parseJobRequestForm } from "@/lib/marketplace-form";
-import { createJobOutreachForJob } from "@/lib/outreach";
+import { NextResponse, after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiUser } from "@/lib/session";
+import { parseQuickPost } from "@/lib/quick-post";
 import { createJobReference } from "@/lib/providers";
-import { getAcceptanceDeadline } from "@/lib/job-deadline";
-
-function respondWithError(request: Request, message: string) {
-  if (request.headers.get("X-Well-Kept-Client") === "1") {
-    return NextResponse.json({ error: message }, { status: 400 });
-  }
-
-  return NextResponse.redirect(
-    new URL(`/customer/jobs/new?error=${encodeURIComponent(message)}`, request.url),
-    303,
-  );
-}
-
-function getCleaningTitle(propertyType?: PropertyType | null) {
-  return propertyType === PropertyType.APARTMENT ? "Apartment Cleaning" : "Home Cleaning";
-}
-
-function getJobTitle(inputTitle: string, propertyType?: PropertyType | null) {
-  return inputTitle === "Home Cleaning" ? getCleaningTitle(propertyType) : inputTitle;
-}
-
+import { queueLeadJob, processMailQueue } from "@/lib/mail-queue";
 export async function POST(request: Request) {
-  const user = await requireApiUser(request, UserRole.CUSTOMER);
-  if (user instanceof NextResponse) {
-    return user;
-  }
-
-  const formData = await request.formData();
-
+  const user = await requireApiUser(request, "CUSTOMER");
+  if (user instanceof NextResponse) return user;
+  let postingKey = "";
   try {
-    const input = parseJobRequestForm(formData);
-    const saveHome = formData.get("saveHome") === "true";
-    const homeProfile = input.homeProfileId
-      ? await prisma.homeProfile.findFirst({
-          where: {
-            id: input.homeProfileId,
-            customerId: user.id,
-          },
-        })
-      : null;
-
-    if (input.homeProfileId && !homeProfile) {
-      return respondWithError(request, "That saved home is no longer available. Choose another home and try again.");
-    }
-
+    const input = parseQuickPost(await request.formData());
+    postingKey = input.postingKey;
     const job = await prisma.$transaction(async (tx) => {
-      const priorCompletedJobs = await tx.jobRequest.count({
+      const existing = await tx.jobRequest.findUnique({
+        where: { postingKey: input.postingKey },
+      });
+      if (existing) {
+        if (existing.customerId !== user.id)
+          throw new Error("Invalid request.");
+        return existing;
+      }
+      const recent = await tx.jobRequest.count({
         where: {
           customerId: user.id,
-          status: JobRequestStatus.COMPLETED,
+          createdAt: { gte: new Date(Date.now() - 600000) },
         },
       });
-      const savedHome = !homeProfile && saveHome
-        ? await tx.homeProfile.create({
-            data: {
-              label: "My Home",
-              addressLine1: input.addressLine1,
-              addressLine2: input.addressLine2,
-              city: input.city,
-              state: input.state,
-              postalCode: input.postalCode,
-              entryMethod: input.entryMethod,
-              entryNotes: input.entryNotes,
-              suppliesSource: input.suppliesSource,
-              customerId: user.id,
-              isDefault: true,
-            },
-          })
-        : null;
-      const linkedHome = homeProfile ?? savedHome;
-
-      const createdAt = new Date();
-      return tx.jobRequest.create({
+      if (recent >= 5)
+        throw new Error(
+          "You have several recent requests. Review them in My jobs before posting another.",
+        );
+      const job = await tx.jobRequest.create({
         data: {
           ...input,
-          createdAt,
-          acceptanceDeadline: getAcceptanceDeadline({
-            acceptanceDeadline: null,
-            createdAt,
-            requestedDate: input.requestedDate,
-            requestedWindowStart: input.requestedWindowStart,
-          }),
-          publicReference: createJobReference(),
-          title: getJobTitle(input.title, linkedHome?.propertyType),
-          status: JobRequestStatus.OPEN,
           customerId: user.id,
-          homeProfileId: linkedHome?.id ?? null,
-          customerCompletedJobsSnapshot: priorCompletedJobs,
-          customerMemberSinceSnapshot: user.createdAt,
+          publicReference: createJobReference(),
+          acceptanceDeadline: new Date(Date.now() + 7 * 86400000),
         },
       });
+      await queueLeadJob(job.id, tx);
+      return job;
     });
-
-    await createJobOutreachForJob({
-      city: job.city,
-      jobRequestId: job.id,
-      postalCode: job.postalCode,
-      serviceNeeds: job.serviceNeeds,
-      state: job.state,
+    after(async () => {
+      await processMailQueue();
+      await processMailQueue();
     });
-
-    if (request.headers.get("X-Well-Kept-Client") === "1") {
-      return NextResponse.json({ jobId: job.id });
+    return NextResponse.json({ jobId: job.id });
+  } catch (e) {
+    if ((e as { code?: string }).code === "P2002" && postingKey) {
+      const existing = await prisma.jobRequest.findFirst({
+        where: { postingKey, customerId: user.id },
+        select: { id: true },
+      });
+      if (existing) return NextResponse.json({ jobId: existing.id });
     }
-
-    return NextResponse.redirect(new URL("/customer?posted=1", request.url), 303);
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unable to post your job right now.";
-    return respondWithError(request, message);
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Unable to post. Try again." },
+      { status: 400 },
+    );
   }
 }

@@ -36,7 +36,10 @@ function parseEnumValue<T extends string>(
   return enumValues.includes(raw as T) ? (raw as T) : fallback;
 }
 
-function parseEnumList<T extends string>(values: FormDataEntryValue[], enumValues: T[]) {
+function parseEnumList<T extends string>(
+  values: FormDataEntryValue[],
+  enumValues: T[],
+) {
   return values
     .map(String)
     .filter((value): value is T => enumValues.includes(value as T));
@@ -54,7 +57,10 @@ function parseSelectionPriority(value: FormDataEntryValue | null) {
     : priority;
 }
 
-function getJobShape(cleanType: JobCleanType, priorityAreas: JobPriorityArea[]) {
+function getJobShape(
+  cleanType: JobCleanType,
+  priorityAreas: JobPriorityArea[],
+) {
   const serviceNeeds = new Set<ServiceNeed>([
     ServiceNeed.GENERAL_CLEANING,
     ServiceNeed.KITCHEN,
@@ -125,7 +131,11 @@ export async function POST(request: Request, { params }: { params: Params }) {
   const formData = await request.formData();
   const cleanType = parseEnumValue(
     formData.get("cleanType"),
-    [JobCleanType.STANDARD_CLEAN, JobCleanType.DEEP_CLEAN, JobCleanType.MOVE_OUT_CLEAN],
+    [
+      JobCleanType.STANDARD_CLEAN,
+      JobCleanType.DEEP_CLEAN,
+      JobCleanType.MOVE_OUT_CLEAN,
+    ],
     JobCleanType.STANDARD_CLEAN,
   );
   const currentCondition = parseEnumValue(
@@ -137,24 +147,35 @@ export async function POST(request: Request, { params }: { params: Params }) {
     formData.getAll("matchingPriorityAreas"),
     Object.values(JobPriorityArea),
   );
-  const selectionPriority = parseSelectionPriority(formData.get("selectionPriority"));
+  const selectionPriority = parseSelectionPriority(
+    formData.get("selectionPriority"),
+  );
   const jobShape = getJobShape(cleanType, matchingPriorityAreas);
 
-  await prisma.jobRequest.updateMany({
-    where: {
-      id,
-      customerId: user.id,
-      status: JobRequestStatus.OPEN,
-      acceptanceDeadline: { gt: new Date() },
-    },
-    data: {
-      cleanType,
-      currentCondition,
-      matchingPriorityAreas,
-      selectionPriority,
-      ...jobShape,
-    },
+  await prisma.$transaction(async (tx) => {
+    const changed = await tx.jobRequest.updateMany({
+      where: {
+        id,
+        customerId: user.id,
+        status: JobRequestStatus.OPEN,
+        acceptanceDeadline: { gt: new Date() },
+      },
+      data: {
+        cleanType,
+        currentCondition,
+        matchingPriorityAreas,
+        selectionPriority,
+        ...jobShape,
+      },
+    });
+    if (changed.count)
+      await tx.jobBid.updateMany({
+        where: { jobRequestId: id, status: "SUBMITTED" },
+        data: { status: "WITHDRAWN", customerViewedAt: null },
+      });
   });
 
-  return NextResponse.redirect(new URL(`/customer/jobs/${id}?updated=1`, request.url));
+  return NextResponse.redirect(
+    new URL(`/customer/jobs/${id}?updated=1`, request.url),
+  );
 }

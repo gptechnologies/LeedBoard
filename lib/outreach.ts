@@ -120,7 +120,9 @@ export async function createJobOutreachForJob(input: {
       cleanerUserId: true,
     },
   });
-  const existingCleanerIds = new Set(existing.map((item) => item.cleanerUserId).filter(Boolean));
+  const existingCleanerIds = new Set(
+    existing.map((item) => item.cleanerUserId).filter(Boolean),
+  );
 
   const createdSmsOutreachIds: string[] = [];
   const createdAppOutreaches: Array<{
@@ -177,11 +179,16 @@ export async function createJobOutreachForJob(input: {
       },
     });
     const existingLeadChannelKeys = new Set(
-      existingLeadOutreaches.map((item) => `${item.cleanerLeadId}:${item.channel}`),
+      existingLeadOutreaches.map(
+        (item) => `${item.cleanerLeadId}:${item.channel}`,
+      ),
     );
 
     for (const lead of externalLeads) {
-      if (smsOutreachEnabled && !existingLeadChannelKeys.has(`${lead.id}:${OutreachChannel.SMS}`)) {
+      if (
+        smsOutreachEnabled &&
+        !existingLeadChannelKeys.has(`${lead.id}:${OutreachChannel.SMS}`)
+      ) {
         const smsOutreach = await tx.jobOutreach.create({
           data: {
             jobRequestId: input.jobRequestId,
@@ -207,7 +214,11 @@ export async function createJobOutreachForJob(input: {
         createdCount += 1;
       }
 
-      if (!existingLeadChannelKeys.has(`${lead.id}:${OutreachChannel.MANUAL_CALL}`)) {
+      if (
+        !existingLeadChannelKeys.has(
+          `${lead.id}:${OutreachChannel.MANUAL_CALL}`,
+        )
+      ) {
         const callOutreach = await tx.jobOutreach.create({
           data: {
             jobRequestId: input.jobRequestId,
@@ -216,7 +227,8 @@ export async function createJobOutreachForJob(input: {
             status: JobOutreachStatus.PENDING,
             interestToken: createInviteToken(),
             interestTokenExpiresAt: getInviteTokenExpiresAt(),
-            notes: "Call to confirm time and location work, then send the invite link if interested.",
+            notes:
+              "Call to confirm time and location work, then send the invite link if interested.",
           },
         });
 
@@ -326,7 +338,7 @@ async function sendJobPostedEmailsToCleaners(input: {
       estimatedSquareFeet: job.homeProfile?.estimatedSquareFeet ?? null,
     }),
     jobUrl,
-    notes: job.notes,
+    notes: null,
     postalCode: job.postalCode,
     state: job.state,
     timing: formatTimingSummary(job),
@@ -374,7 +386,9 @@ async function sendJobPostedEmailsToCleaners(input: {
       });
     } catch (error) {
       const failureReason =
-        error instanceof Error ? error.message : "Unable to send job posted email.";
+        error instanceof Error
+          ? error.message
+          : "Unable to send job posted email.";
       await markEmailDeliveryFailed({
         deliveryId: delivery.id,
         failureReason,
@@ -403,15 +417,20 @@ function formatHomeFacts(input: {
   const bathroomLabel =
     input.bathroomCount === null || input.bathroomCount === undefined
       ? null
-      : `${Number.isInteger(input.bathroomCount)
-          ? input.bathroomCount.toFixed(0)
-          : input.bathroomCount} bath`;
+      : `${
+          Number.isInteger(input.bathroomCount)
+            ? input.bathroomCount.toFixed(0)
+            : input.bathroomCount
+        } bath`;
   const squareFeetLabel = input.estimatedSquareFeet
     ? `${input.estimatedSquareFeet.toLocaleString("en-US")} sq ft`
     : null;
 
-  return [bedroomLabel, bathroomLabel, squareFeetLabel].filter(Boolean).join(" / ") ||
-    "Home details are in the job link";
+  return (
+    [bedroomLabel, bathroomLabel, squareFeetLabel]
+      .filter(Boolean)
+      .join(" / ") || "Home details are in the job link"
+  );
 }
 
 export async function markOutreachInterested(outreachId: string) {

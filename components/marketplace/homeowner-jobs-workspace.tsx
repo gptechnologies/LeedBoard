@@ -1,43 +1,51 @@
 "use client";
-
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import {
-  CalendarDays,
-  Check,
-  ChevronRight,
-  Clock3,
-  FileText,
-  MapPin,
-  Plus,
-  Sparkles,
-  UserRound,
-} from "lucide-react";
-
-import { HomeownerOpenJobsCarousel } from "@/components/marketplace/homeowner-open-jobs-carousel";
-import { ProviderSelectionDrawer } from "@/components/marketplace/provider-selection-drawer";
-import { JobOptionsSheet } from "@/components/marketplace/job-options-sheet";
-
+import Link from "next/link";
+import { ProviderSelectionDrawer } from "./provider-selection-drawer";
+export type HomeownerWorkspaceJob = {
+  id: string;
+  publicReference: string | null;
+  postalCode: string;
+  bedroomCount: number | null;
+  bathroomCount: number | null;
+  cleanersNotifiedCount: number;
+  acceptanceDeadline: Date | null;
+  status: string;
+  createdAt: Date;
+  requestedDate: Date | null;
+  requestedWindowStart: string | null;
+  requestedWindowEnd: string | null;
+  bids: WorkspaceBid[];
+  acceptedBid: WorkspaceBid | null;
+  mailState?: string;
+  addressLine1: string;
+  addressLine2: string | null;
+  city: string;
+  state: string;
+  title: string;
+  notes: string | null;
+  selectionPriority: string;
+  timingPreference: string;
+};
 type WorkspaceBid = {
   id: string;
-  pricingType: "FLAT" | "HOURLY";
-  hourlyRateCents: number | null;
   flatRateCents: number | null;
-  estimatedHours: number | null;
-  etaMinutes: number | null;
+  pricingType: string;
+  hourlyRateCents: number | null;
+  offerType: string | null;
   arrivalDate: Date | null;
   arrivalWindowStart: string | null;
   arrivalWindowEnd: string | null;
-  message: string | null;
-  offerType: "FIXED_PRICE" | "ESTIMATE" | "HOURLY" | "FREE_QUOTE" | "NEEDS_DETAILS" | null;
-  priceMinCents: number | null;
-  priceMaxCents: number | null;
   requestedScheduleAccepted: boolean | null;
+  message: string | null;
   providerQuestion: string | null;
+  updatedAt: Date;
   cleaner: {
     firstName: string;
     lastName: string;
+    email?: string | null;
+    phone?: string | null;
     cleanerProfile: {
       businessName: string | null;
       googleRating: number | null;
@@ -47,306 +55,246 @@ type WorkspaceBid = {
   cleanerLead: {
     businessName: string | null;
     name: string | null;
-    phone: string;
+    email?: string | null;
+    phone: string | null;
     googleRating: number | null;
     googleReviewCount: number | null;
   } | null;
 };
-
-export type HomeownerWorkspaceJob = {
-  id: string;
-  publicReference: string | null;
-  title: string;
-  addressLine1: string;
-  addressLine2: string | null;
-  city: string;
-  state: string;
-  postalCode: string;
-  timingPreference: "ASAP" | "TIME_SLOT";
-  requestedDate: Date | null;
-  requestedWindowStart: string | null;
-  requestedWindowEnd: string | null;
-  selectionPriority: "BEST_OVERALL" | "CHEAPEST" | "FASTEST" | "BEST_QUALITY";
-  status: string;
-  createdAt: Date;
-  notes: string | null;
-  bids: WorkspaceBid[];
-  acceptedBid: WorkspaceBid | null;
-};
-
-export function HomeownerJobsWorkspace({ jobs }: { jobs: HomeownerWorkspaceJob[] }) {
+function name(b: WorkspaceBid) {
+  return (
+    b.cleanerLead?.businessName ||
+    b.cleanerLead?.name ||
+    b.cleaner?.cleanerProfile?.businessName ||
+    [b.cleaner?.firstName, b.cleaner?.lastName].filter(Boolean).join(" ") ||
+    "Local cleaner"
+  );
+}
+function when(b: WorkspaceBid) {
+  return b.arrivalDate
+    ? `${new Date(b.arrivalDate).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })} · ${clock(b.arrivalWindowStart)}`
+    : "Time to confirm";
+}
+function clock(value: string | null) {
+  if (!value) return "Time to confirm";
+  const [h, m] = value.split(":").map(Number);
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
+}
+function total(b: WorkspaceBid) {
+  return b.flatRateCents
+    ? new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+      }).format(b.flatRateCents / 100)
+    : b.hourlyRateCents
+      ? `$${b.hourlyRateCents / 100}/hr`
+      : "Needs a total price";
+}
+export function HomeownerJobsWorkspace({
+  jobs,
+}: {
+  jobs: HomeownerWorkspaceJob[];
+}) {
   const router = useRouter();
-
   useEffect(() => {
-    if (!jobs.some((job) => job.status === "OPEN")) return;
-    const interval = window.setInterval(() => router.refresh(), 30000);
-    return () => window.clearInterval(interval);
-  }, [jobs, router]);
-
+    const refresh = () => {
+      if (document.visibilityState === "visible") router.refresh();
+    };
+    const t = setInterval(refresh, 15000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [router]);
   return (
-    <div className="homeowner-jobs-workspace">
-      <Link className="homeowner-jobs-workspace__create wk-pressable" href="/customer/jobs/new">
-        <Plus aria-hidden="true" />
-        Create new job
-      </Link>
-
-      <section className="homeowner-my-jobs" aria-labelledby="my-jobs-heading">
-        <div className="homeowner-my-jobs__heading">
-          <h1 id="my-jobs-heading">My jobs</h1>
-        </div>
-
-        {jobs.length > 0 ? (
-          <HomeownerOpenJobsCarousel className="homeowner-my-jobs__carousel">
-            {jobs.map((job) => <HomeownerJobCard job={job} key={job.id} />)}
-          </HomeownerOpenJobsCarousel>
-        ) : (
-          <EmptyJobsWorkspace />
-        )}
-      </section>
+    <div className="effortless-page">
+      <header className="effortless-actions">
+        <h1>My jobs</h1>
+        <Link className="effortless-primary" href="/customer/jobs/new">
+          Find cleaners
+        </Link>
+      </header>
+      {!jobs.length ? (
+        <section className="effortless-status">
+          <h2>A cleaner home starts here.</h2>
+          <p>Post your ZIP, home size, and timing. We’ll collect the prices.</p>
+        </section>
+      ) : (
+        jobs.map((j) => <Job key={j.id} job={j} />)
+      )}
     </div>
   );
 }
-
-function HomeownerJobCard({ job }: { job: HomeownerWorkspaceJob }) {
-  const reference = job.publicReference ?? `WK-${job.id.slice(-6).toUpperCase()}`;
-  const offers = useMemo(() => sortOffers(job.bids, job.selectionPriority), [job.bids, job.selectionPriority]);
-  const [expandedBidId, setExpandedBidId] = useState<string | null>(offers[0]?.id ?? null);
-  const isOpen = job.status === "OPEN";
-
+function Job({ job: j }: { job: HomeownerWorkspaceJob }) {
+  const [sort, setSort] = useState("fit");
+  const offers = j.bids
+    .filter((b) => !b.providerQuestion)
+    .sort((a, b) =>
+      sort === "price"
+        ? (a.flatRateCents ?? Infinity) - (b.flatRateCents ?? Infinity)
+        : sort === "soon"
+          ? stamp(a) - stamp(b)
+          : Number(!!b.requestedScheduleAccepted) -
+              Number(!!a.requestedScheduleAccepted) ||
+            stamp(a) - stamp(b) ||
+            (a.flatRateCents ?? Infinity) - (b.flatRateCents ?? Infinity),
+    );
+  const questions = j.bids.filter((b) => b.providerQuestion);
   return (
-    <div className="homeowner-job-slide">
-      <p className="homeowner-job-summary__posted"><i aria-hidden="true" />{formatPosted(job.createdAt)}</p>
-      <JobOptionsSheet hasBids={job.bids.length > 0} jobId={job.id} status={job.status}>
-      <article className="homeowner-job-summary" aria-labelledby={`job-heading-${job.id}`}>
-        <p className="homeowner-job-summary__reference">Job ID <span>{reference}</span></p>
-        <header className="homeowner-job-summary__intro">
-          <span className="homeowner-job-summary__service-mark" aria-hidden="true"><Sparkles /></span>
-          <div>
-            <h2 id={`job-heading-${job.id}`}>{formatJobTiming(job)}</h2>
-            <p className="homeowner-job-summary__location">{job.city}, {job.state} {job.postalCode}</p>
-          </div>
-        </header>
-
-        <dl className="homeowner-job-summary__metadata">
-          <div>
-            <MapPin aria-hidden="true" />
-            <dt>Address</dt>
-            <dd>{formatAddress(job)}</dd>
-          </div>
-          <div>
-            <FileText aria-hidden="true" />
-            <dt>Notes</dt>
-            <dd>{job.notes || "No extra notes"}</dd>
-          </div>
-        </dl>
-
-        <div className="homeowner-job-summary__status-area">
-          {isOpen && offers.length === 0 ? (
-            <CleanerBroadcastAnimation />
-          ) : isOpen ? (
-            <section className="homeowner-card-offers" aria-labelledby={`offers-heading-${job.id}`}>
-              <div className="homeowner-card-offers__heading">
-                <div>
-                  <span><i aria-hidden="true" /> Live now</span>
-                  <h3 id={`offers-heading-${job.id}`}>{offers.length} {offers.length === 1 ? "offer" : "offers"} ready</h3>
-                </div>
-                <Link href={`/customer/jobs/${job.id}/bids`}>See all <ChevronRight aria-hidden="true" /></Link>
-              </div>
-              <p>Cleaners are responding to your request. Compare their timing and price below.</p>
-              <div className="homeowner-offers-list">
-                {offers.map((bid, index) => (
-                  <OfferRow
-                    bid={bid}
-                    expanded={expandedBidId === bid.id}
-                    job={job}
-                    key={bid.id}
-                    onToggle={() => setExpandedBidId((value) => value === bid.id ? null : bid.id)}
-                    recommended={index === 0}
-                  />
-                ))}
-              </div>
-            </section>
-          ) : job.status === "EXPIRED" ? (
-            <div className="homeowner-job-ended" role="status"><strong>Job ended</strong><p>No cleaner was selected before the deadline.</p><Link href={`/customer/jobs/new?repost=${job.id}`}>Post again <ChevronRight aria-hidden="true" /></Link></div>
-          ) : job.acceptedBid ? (
-            <AcceptedProviderPanel bid={job.acceptedBid} job={job} />
-          ) : (
-            <div className="homeowner-job-booked-summary">
-              <span aria-hidden="true"><Check /></span>
-              <div><p>Job update</p><strong>{job.status === "COMPLETED" ? "Cleaning complete" : "This job is no longer active"}</strong></div>
-            </div>
+    <article className="effortless-job" id={"job-" + j.id}>
+      <small>
+        {j.publicReference} · ZIP {j.postalCode}
+      </small>
+      <h2>
+        {j.bedroomCount ?? "—"} bed · {j.bathroomCount ?? "—"} bath
+      </h2>
+      <p>
+        {j.requestedDate
+          ? `${new Date(j.requestedDate).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })} · ${j.requestedWindowStart}–${j.requestedWindowEnd}`
+          : "First available"}
+      </p>
+      {j.status === "AWARDED" && j.acceptedBid ? (
+        <section className="effortless-status">
+          <h3>You’re connected with {name(j.acceptedBid)}</h3>
+          <p>
+            {total(j.acceptedBid)} · {when(j.acceptedBid)}
+          </p>
+          <p>
+            <a
+              href={`mailto:${j.acceptedBid.cleanerLead?.email ?? j.acceptedBid.cleaner?.email ?? ""}`}
+            >
+              {j.acceptedBid.cleanerLead?.email ?? j.acceptedBid.cleaner?.email}
+            </a>
+          </p>
+          {(j.acceptedBid.cleanerLead?.phone ??
+            j.acceptedBid.cleaner?.phone) && (
+            <p>
+              <a
+                href={`tel:${j.acceptedBid.cleanerLead?.phone ?? j.acceptedBid.cleaner?.phone}`}
+              >
+                Call cleaner
+              </a>
+            </p>
           )}
-        </div>
-      </article>
-      </JobOptionsSheet>
-    </div>
-  );
-}
-
-function CleanerBroadcastAnimation() {
-  return (
-    <div className="homeowner-cleaner-broadcast" aria-live="polite">
-      <div className="homeowner-cleaner-radar" aria-hidden="true">
-        <span className="homeowner-cleaner-radar__ring homeowner-cleaner-radar__ring--one" />
-        <span className="homeowner-cleaner-radar__ring homeowner-cleaner-radar__ring--two" />
-        <span className="homeowner-cleaner-radar__ring homeowner-cleaner-radar__ring--three" />
-        <span className="homeowner-cleaner-radar__signal homeowner-cleaner-radar__signal--one" />
-        <span className="homeowner-cleaner-radar__signal homeowner-cleaner-radar__signal--two" />
-        <span className="homeowner-cleaner-radar__signal homeowner-cleaner-radar__signal--three" />
-        <span className="homeowner-cleaner-radar__person homeowner-cleaner-radar__person--one"><UserRound /></span>
-        <span className="homeowner-cleaner-radar__person homeowner-cleaner-radar__person--two"><UserRound /></span>
-        <span className="homeowner-cleaner-radar__person homeowner-cleaner-radar__person--three"><UserRound /></span>
-        <span className="homeowner-cleaner-radar__center"><Sparkles /></span>
-      </div>
-      <div className="homeowner-cleaner-broadcast__copy">
-        <span><i aria-hidden="true" /> Live now</span>
-        <strong>Notifying<br />Cleaners</strong>
-        <p>We’re reaching out to nearby cleaners. You’ll see bids here soon.</p>
-        <div className="homeowner-cleaner-broadcast__dots" aria-hidden="true"><i /><i /><i /></div>
-      </div>
-    </div>
-  );
-}
-
-function OfferRow({ bid, expanded, job, onToggle, recommended }: { bid: WorkspaceBid; expanded: boolean; job: HomeownerWorkspaceJob; onToggle: () => void; recommended: boolean }) {
-  const provider = getProvider(bid);
-  const timing = formatBidTiming(bid);
-
-  return (
-    <article className={`homeowner-offer${expanded ? " is-expanded" : ""}`}>
-      <button className="homeowner-offer__overview" onClick={onToggle} type="button" aria-expanded={expanded}>
-        <span className="homeowner-offer__avatar" aria-hidden="true">{provider.initial}</span>
-        <span className="homeowner-offer__provider">
-          <strong>{provider.name}</strong>
-          {provider.rating ? <small>{provider.rating.toFixed(1)} <b aria-hidden="true">★</b> {provider.reviewCount ? `(${provider.reviewCount})` : ""}</small> : <small>Local cleaning provider</small>}
-          <em className={bid.requestedScheduleAccepted ? "is-match" : ""}>{bid.requestedScheduleAccepted ? <Check aria-hidden="true" /> : <Clock3 aria-hidden="true" />}{timing}</em>
-        </span>
-        <span className="homeowner-offer__value">
-          {recommended ? <small className="homeowner-offer__recommended">Best match</small> : null}
-          <strong>{formatBidAmount(bid)}</strong>
-        </span>
-        <ChevronRight className="homeowner-offer__chevron" aria-hidden="true" />
-      </button>
-      {expanded ? (
-        <div className="homeowner-offer__detail">
-          <p>{bid.message || bid.providerQuestion || "This cleaner shared their availability for your job."}</p>
-          <div className="homeowner-offer__actions">
-            <Link href={`/customer/messages/${bid.id}`}>Message</Link>
-            <ProviderSelectionDrawer bidId={bid.id} jobId={job.id} jobTitle={job.title} price={formatBidAmount(bid)} providerName={provider.name} timing={timing} />
+          <p>
+            Payment is arranged directly. Your introduction is also in your
+            email.
+          </p>
+          <Link href={`/customer/messages/${j.acceptedBid.id}`}>
+            Open conversation
+          </Link>
+        </section>
+      ) : j.status === "OPEN" ? (
+        <>
+          <div className="effortless-status" role="status">
+            <strong>
+              {offers.length
+                ? `${offers.length} ${offers.length === 1 ? "bid" : "bids"} to review`
+                : j.cleanersNotifiedCount
+                  ? "Waiting for prices and availability"
+                  : "Your request is posted"}
+            </strong>
+            <p>
+              {offers.length
+                ? "Compare the prices and proposed times below. Your personal details stay private until you confirm."
+                : j.cleanersNotifiedCount
+                  ? `${j.cleanersNotifiedCount} local ${j.cleanersNotifiedCount === 1 ? "cleaner contacted" : "cleaners contacted"}. Your information stays private until you choose.`
+                  : j.mailState === "NO_MATCH"
+                    ? "We haven’t found a subscribed cleaner for this ZIP yet. Your request is visible to our team."
+                    : j.mailState === "FAILED"
+                      ? "Your request is saved. Email delivery needs attention; our team can review it."
+                      : "We’re finding cleaners for your ZIP."}
+            </p>
+            <small>
+              Closes{" "}
+              {j.acceptanceDeadline
+                ? new Date(j.acceptanceDeadline).toLocaleDateString()
+                : ""}
+            </small>
           </div>
+          {offers.length > 1 && (
+            <label>
+              Sort bids{" "}
+              <select value={sort} onChange={(e) => setSort(e.target.value)}>
+                <option value="fit">Schedule fit</option>
+                <option value="price">Lowest total</option>
+                <option value="soon">Soonest</option>
+              </select>
+            </label>
+          )}
+          {offers.map((b) => (
+            <details key={b.id} className="effortless-offer">
+              <summary>
+                <span>
+                  {name(b)}
+                  <br />
+                  <small>
+                    {b.requestedScheduleAccepted
+                      ? "Fits your schedule"
+                      : "Next available"}{" "}
+                    · {when(b)}
+                  </small>
+                </span>
+                <span style={{ textAlign: "right" }}>
+                  <strong>{total(b)}</strong>
+                  <br />
+                  <small>Review bid ›</small>
+                </span>
+              </summary>
+              {b.message && <p>{b.message}</p>}
+              <div className="effortless-actions">
+                <Link href={`/customer/messages/${b.id}`}>Ask a question</Link>
+                {b.flatRateCents &&
+                (!b.offerType || b.offerType === "FIXED_PRICE") ? (
+                  <ProviderSelectionDrawer
+                    bidId={b.id}
+                    jobId={j.id}
+                    jobTitle={j.title}
+                    price={total(b)}
+                    providerName={name(b)}
+                    timing={when(b)}
+                    bidVersion={new Date(b.updatedAt).toISOString()}
+                  />
+                ) : (
+                  <p>Ask the cleaner to confirm a total before selecting.</p>
+                )}
+              </div>
+            </details>
+          ))}
+          {questions.length > 0 && (
+            <section>
+              <h3>Questions from cleaners</h3>
+              {questions.map((b) => (
+                <div className="effortless-offer" key={b.id}>
+                  <strong>{name(b)}</strong>
+                  <p>{b.providerQuestion}</p>
+                  <Link href={`/customer/messages/${b.id}`}>
+                    Answer privately through Well Kept
+                  </Link>
+                </div>
+              ))}
+            </section>
+          )}
+          <form action={`/customer/jobs/${j.id}/cancel`} method="post">
+            <button className="effortless-secondary">Cancel request</button>
+          </form>
+        </>
+      ) : (
+        <div className="effortless-status">
+          <p>This request has ended.</p>
+          <Link href={`/customer/jobs/new?repost=${j.id}`}>
+            Post again with a new time
+          </Link>
         </div>
-      ) : null}
+      )}
     </article>
   );
 }
-
-function AcceptedProviderPanel({ bid, job }: { bid: WorkspaceBid; job: HomeownerWorkspaceJob }) {
-  const provider = getProvider(bid);
-  return (
-    <section className="homeowner-accepted-provider" aria-labelledby={`accepted-provider-${job.id}`}>
-      <div className="homeowner-accepted-provider__main">
-        <div className="homeowner-accepted-provider__heading">
-          <span aria-hidden="true"><Check /></span>
-          <div><p className="homeowner-kicker">Cleaner chosen</p><h3 id={`accepted-provider-${job.id}`}>{provider.name}</h3></div>
-        </div>
-        <div className="homeowner-accepted-provider__actions">
-          <Link href={`/customer/messages/${bid.id}`}>Open conversation <ChevronRight aria-hidden="true" /></Link>
-        </div>
-      </div>
-      <dl className="homeowner-accepted-provider__facts">
-        <div><dt>Arrival</dt><dd>{formatBidTiming(bid)}</dd></div>
-        <div><dt>Price</dt><dd>{formatBidAmount(bid)}</dd></div>
-      </dl>
-    </section>
-  );
-}
-
-function EmptyJobsWorkspace() {
-  return (
-    <div className="homeowner-empty-jobs">
-      <span aria-hidden="true"><CalendarDays /></span>
-      <p className="homeowner-kicker">Your home, on your schedule</p>
-      <h2>No jobs yet</h2>
-      <p>Post a cleaning request and we’ll gather nearby offers here.</p>
-      <Link href="/customer/jobs/new"><Plus aria-hidden="true" /> Create your first job</Link>
-    </div>
-  );
-}
-
-function formatAddress(job: HomeownerWorkspaceJob) {
-  return [job.addressLine1, job.addressLine2, `${job.city}, ${job.state} ${job.postalCode}`].filter(Boolean).join(", ");
-}
-
-function formatPosted(createdAt: Date) {
-  const minutes = Math.max(0, Math.floor((Date.now() - createdAt.getTime()) / 60_000));
-  if (minutes < 1) return "Posted just now";
-  if (minutes < 60) return `Posted ${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `Posted ${hours}h ago`;
-  return `Posted ${Math.floor(hours / 24)}d ago`;
-}
-
-function formatJobTiming(job: HomeownerWorkspaceJob) {
-  if (job.timingPreference === "ASAP") return "As soon as possible";
-  if (!job.requestedDate || !job.requestedWindowStart || !job.requestedWindowEnd) return "Time requested";
-  const date = job.requestedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  return `${date} · ${formatClock(job.requestedWindowStart)}–${formatClock(job.requestedWindowEnd)}`;
-}
-
-function formatClock(value: string) {
-  const [hours, minutes] = value.split(":").map(Number);
-  const date = new Date();
-  date.setHours(hours, minutes, 0, 0);
-  return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-}
-
-function getProvider(bid: WorkspaceBid) {
-  const name = bid.cleanerLead?.businessName || bid.cleaner?.cleanerProfile?.businessName || bid.cleanerLead?.name || (bid.cleaner ? `${bid.cleaner.firstName} ${bid.cleaner.lastName}` : "Local cleaner");
-  return { initial: name.charAt(0).toUpperCase(), name, rating: bid.cleanerLead?.googleRating ?? bid.cleaner?.cleanerProfile?.googleRating ?? null, reviewCount: bid.cleanerLead?.googleReviewCount ?? bid.cleaner?.cleanerProfile?.googleReviewCount ?? null };
-}
-
-function formatBidTiming(bid: WorkspaceBid) {
-  if (bid.etaMinutes) return `Can arrive in ${bid.etaMinutes} min`;
-  if (!bid.arrivalDate || !bid.arrivalWindowStart) return "Timing shared in message";
-  const date = bid.arrivalDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  if (!bid.arrivalWindowEnd) return `${date} · ${formatClock(bid.arrivalWindowStart)}`;
-  return `${date} · ${formatClock(bid.arrivalWindowStart)}–${formatClock(bid.arrivalWindowEnd)}`;
-}
-
-function formatBidAmount(bid: WorkspaceBid) {
-  if (bid.offerType === "FREE_QUOTE") return "Free quote";
-  if (bid.offerType === "NEEDS_DETAILS") return "Needs details";
-  if (bid.offerType === "ESTIMATE") {
-    const min = bid.priceMinCents ?? bid.flatRateCents;
-    const max = bid.priceMaxCents;
-    if (min && max && min !== max) return `$${Math.round(min / 100)}–$${Math.round(max / 100)}`;
-    return min ? `$${Math.round(min / 100)} est.` : "Estimate";
-  }
-  if (bid.pricingType === "HOURLY") return `$${Math.round((bid.hourlyRateCents ?? 0) / 100)}/hr`;
-  return `$${Math.round((bid.flatRateCents ?? 0) / 100)}`;
-}
-
-function sortOffers(bids: WorkspaceBid[], priority: HomeownerWorkspaceJob["selectionPriority"]) {
-  return [...bids].sort((a, b) => {
-    if (priority === "CHEAPEST") return getBidPrice(a) - getBidPrice(b);
-    if (priority === "FASTEST") return getBidMinutes(a) - getBidMinutes(b);
-    if (priority === "BEST_QUALITY") return getBidRating(b) - getBidRating(a);
-    return getBidRating(b) - getBidRating(a) || getBidPrice(a) - getBidPrice(b);
-  });
-}
-
-function getBidPrice(bid: WorkspaceBid) {
-  if (bid.flatRateCents) return bid.flatRateCents;
-  if (bid.hourlyRateCents && bid.estimatedHours) return bid.hourlyRateCents * bid.estimatedHours;
-  return bid.priceMinCents ?? bid.priceMaxCents ?? Number.MAX_SAFE_INTEGER;
-}
-
-function getBidMinutes(bid: WorkspaceBid) {
-  if (bid.etaMinutes) return bid.etaMinutes;
-  if (!bid.arrivalDate) return Number.MAX_SAFE_INTEGER;
-  return Math.max(0, Math.floor((bid.arrivalDate.getTime() - Date.now()) / 60_000));
-}
-
-function getBidRating(bid: WorkspaceBid) {
-  return bid.cleanerLead?.googleRating ?? bid.cleaner?.cleanerProfile?.googleRating ?? 0;
+function stamp(b: WorkspaceBid) {
+  return b.arrivalDate
+    ? new Date(
+        `${new Date(b.arrivalDate).toISOString().slice(0, 10)}T${b.arrivalWindowStart ?? "23:59"}:00Z`,
+      ).getTime()
+    : Infinity;
 }
