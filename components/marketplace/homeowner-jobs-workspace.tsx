@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
-import { CalendarDays, ChevronRight, Plus, X } from "lucide-react";
+import { CalendarDays, ChevronRight, Plus } from "lucide-react";
 import { age, jobTiming, type HomeDetails } from "@/lib/homeowner-view";
 import { SimpleJobRequestForm, type JobDraft } from "./simple-job-request-form";
 import { discardChanges } from "./homeowner-shell";
@@ -34,10 +35,16 @@ export function HomeownerJobsWorkspace({
   hasMore?: boolean;
 }) {
   const router = useRouter();
+  const reducedMotion = useReducedMotion();
   const [form, setForm] = useState<string | null>(compose ? "new" : null);
   const [open, setOpen] = useState<string | null>(null);
   const [source, setSource] = useState<JobDraft | null>(repost ?? null);
   const [notice, setNotice] = useState("");
+  useEffect(() => {
+    if (!notice) return;
+    const timeout = setTimeout(() => setNotice(""), 5000);
+    return () => clearTimeout(timeout);
+  }, [notice]);
   useEffect(() => {
     if (window.location.hash.startsWith("#job-"))
       setOpen(window.location.hash.slice(5));
@@ -85,32 +92,49 @@ export function HomeownerJobsWorkspace({
   }
   return (
     <section className="hk-page hk-jobs">
-      <header className="hk-heading">
-        <h1>Your jobs</h1>
-        <p>Post and manage your cleanings.</p>
-      </header>
-      <button
-        className="hk-primary"
-        type="button"
-        onClick={() => {
-          setSource(null);
-          switchForm(form === "new" ? null : "new");
-        }}
-      >
-        {form === "new" ? <X /> : <Plus />}
-        {form === "new" ? "Cancel posting" : "Post a cleaning job"}
-      </button>
-      {form === "new" && (
-        <SimpleJobRequestForm
-          home={home}
-          source={source}
-          onSaved={() => {
-            setForm(null);
-            setNotice("Request sent. We’re finding cleaners.");
-          }}
-          onDiscard={() => setForm(null)}
-        />
-      )}
+      <AnimatePresence initial={false} mode="wait">
+        {form === "new" ? (
+          <motion.div
+            key="request-form"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{
+              duration: reducedMotion ? 0 : 0.22,
+              ease: [0.23, 1, 0.32, 1],
+            }}
+            style={{ overflow: "hidden", paddingInline: 4, marginInline: -4 }}
+          >
+            <SimpleJobRequestForm
+              home={home}
+              source={source}
+              onSaved={() => {
+                setForm(null);
+                setNotice("Request sent to cleaners");
+              }}
+              onDiscard={() => setForm(null)}
+            />
+          </motion.div>
+        ) : (
+          <motion.div key="job-actions" transition={{ duration: 0 }}>
+            <header className="hk-heading">
+              <h1>Your jobs</h1>
+              <p>Post and manage your cleanings.</p>
+            </header>
+            <button
+              className="hk-primary"
+              type="button"
+              onClick={() => {
+                setSource(null);
+                switchForm("new");
+              }}
+            >
+              <Plus />
+              Post a cleaning job
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {notice && (
         <p className="hk-feedback" role="status">
           {notice}

@@ -412,35 +412,6 @@
 .hk-app select {
   padding-right: 25px;
 }
-.hk-job-form details > summary {
-  min-height: 44px;
-  cursor: pointer;
-  padding: 10px 0;
-  font-size: 14px;
-  font-weight: 600;
-}
-.hk-job-form summary small {
-  font-weight: 400;
-  color: var(--hk-muted);
-  margin-left: 5px;
-}
-.hk-saved-home {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  font-size: 14px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--hk-line);
-}
-.hk-saved-home span {
-  color: var(--hk-muted);
-}
-.hk-request-summary {
-  font-size: 13px;
-  color: var(--hk-muted);
-  padding-top: 10px;
-  border-top: 1px solid var(--hk-line);
-}
 .hk-job-filter {
   display: block;
   margin: 0 0 12px;
@@ -1128,3 +1099,202 @@ body #main-content:has(.hk-app) {
 .hk-bubble {
   font-weight: 400;
 }
+
+/* Inline job request: Where → When → optional cleaning details. */
+.hk-jobs:has(.hk-request-form) { background: #fbf9f5; }
+.hk-request-form {
+  margin: 0 0 12px;
+  gap: 0;
+  color: #1a382b;
+}
+.hk-request-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 4px 0 24px;
+}
+.hk-request-heading h1 {
+  font-family: var(--serif, Georgia, serif);
+  font-size: clamp(23px, 6.3vw, 29px);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.9px;
+  color: #151b16;
+}
+.hk-request-heading button {
+  border: 0;
+  background: transparent;
+  color: #1a5137;
+  padding: 10px 0 10px 6px;
+  min-height: 44px;
+  font-size: 15px;
+}
+.hk-request-fields, .hk-arrival-options {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.hk-request-fields { display: grid; gap: 0; }
+.hk-request-section {
+  display: grid;
+  grid-template-columns: 29px minmax(0, 1fr);
+  gap: 11px;
+  padding: 0 0 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #dedfd8;
+}
+.hk-request-section > svg { width: 23px; height: 23px; margin-top: 3px; color: #20583b; }
+.hk-request-section-body { min-width: 0; }
+.hk-request-section h2 {
+  margin: 0 0 8px;
+  font-family: inherit;
+  font-size: 19px;
+  line-height: 1.4;
+  font-weight: 750;
+  color: #141a15;
+  letter-spacing: -0.5px;
+}
+.hk-request-form :is(input:not([type="radio"]), select, textarea), .hk-request-date {
+  border: 1px solid #d3d7cf;
+  background: #fffefa;
+  border-radius: 11px;
+  min-height: 44px;
+  padding: 10px 12px;
+  font-size: 16px;
+  color: #171e19;
+  scroll-margin-block: 100px;
+}
+.hk-request-date {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+.hk-request-date > svg { width: 20px; height: 20px; }
+.hk-request-date > svg:last-of-type { width: 16px; height: 16px; margin-left: auto; }
+.hk-request-form .hk-request-date input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.hk-request-date input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: auto; height: auto; cursor: pointer; }
+.hk-request-date:focus-within { outline: 3px solid #83a17a; outline-offset: 3px; }
+.hk-arrival-options { display: grid; gap: 6px; margin-top: 13px; }
+.hk-arrival-options legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  margin-bottom: 9px;
+  font-size: 15px;
+  line-height: 1.4;
+  font-weight: 750;
+  color: #141a15;
+  letter-spacing: -0.4px;
+}
+.hk-arrival-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 11px;
+  min-height: 44px;
+  border: 1px solid #d3d7cf;
+  border-radius: 24px;
+  background: #fffefa;
+  color: #171e19;
+  font-size: 14px;
+  line-height: 1.35;
+  cursor: pointer;
+  transition: background-color 150ms ease-out, border-color 150ms ease-out;
+}
+.hk-arrival-option:has(input:checked) { background: #e8f0e5; border-color: #cbdcc5; }
+.hk-request-form .hk-arrival-option input {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  flex: 0 0 18px;
+  border-radius: 50%;
+  border: 1.5px solid #aeb5ad;
+  padding: 0;
+  margin: 0;
+  background: #fffefa;
+}
+.hk-request-form .hk-arrival-option input:checked { border-color: #20583b; background: #20583b; box-shadow: inset 0 0 0 3px #fffefa; }
+.hk-custom-time-toggle {
+  display: block;
+  min-height: 36px;
+  padding: 10px 0 0;
+  border: 0;
+  background: transparent;
+  color: #3b644b;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: 12px !important;
+}
+.hk-inline-disclosure {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+  transition: grid-template-rows 200ms ease-out, opacity 200ms ease-out, visibility 200ms;
+}
+.hk-inline-disclosure[data-open="true"] { grid-template-rows: 1fr; opacity: 1; visibility: visible; }
+.hk-inline-disclosure > div { min-height: 0; overflow: hidden; }
+.hk-custom-time-fields { padding-top: 12px; gap: 8px; }
+.hk-custom-time-fields .hk-field { font-size: 12px; }
+.hk-request-form input[type="time"] { padding-inline: 8px; }
+.hk-details-toggle {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid #dedfd8;
+  border-radius: 12px;
+  color: #161e18;
+  background: #fffefa;
+  text-align: left;
+}
+.hk-details-toggle > svg:first-child { color: #20583b; }
+.hk-details-toggle > span { font-size: 15px; font-weight: 750; letter-spacing: -0.5px; }
+.hk-details-toggle small { color: #6c7169; font-size: 12px; }
+.hk-details-toggle > svg:last-child { width: 16px; height: 16px; margin-left: auto; transition: transform 200ms ease-out; }
+.hk-details-toggle[aria-expanded="true"] > svg:last-child { transform: rotate(180deg); }
+.hk-details-fields { display: grid; gap: 14px; padding: 16px 0 4px; }
+.hk-request-form .hk-request-submit {
+  min-height: 54px;
+  margin-top: 24px;
+  border-radius: 13px;
+  background: #20583b;
+  color: #fffefa;
+  font-size: 17px;
+  letter-spacing: -0.5px;
+  gap: 10px;
+}
+.hk-request-form .hk-request-submit svg { width: 24px; height: 24px; }
+@media (prefers-reduced-motion: reduce) {
+  .hk-inline-disclosure, .hk-details-toggle > svg:last-child { transition: none; }
+  .hk-request-form.hk-expand { animation: none; }
+}
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("/fonts/plus-jakarta-sans-regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("/fonts/plus-jakarta-sans-bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+.hk-request-form { font-family: "Plus Jakarta Sans", var(--sans, sans-serif); }
