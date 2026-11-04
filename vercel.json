@@ -1,6 +1,12 @@
 {
   "crons": [
-    { "path": "/api/cron/expire-jobs", "schedule": "0 4 * * *" },
-    { "path": "/api/cron/mail", "schedule": "* * * * *" }
+    {
+      "path": "/api/cron/expire-jobs",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/mail",
+      "schedule": "0 5 2-30/2 * *"
+    }
   ]
 }

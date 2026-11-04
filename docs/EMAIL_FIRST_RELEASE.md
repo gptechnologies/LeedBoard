@@ -10,7 +10,7 @@ The current product is homeowner email/code authentication → ZIP, beds/baths a
 - `INBOUND_EMAIL_DOMAIN`: dedicated receiving subdomain, with Resend receiving DNS records. Do not redirect your main business mailbox's MX records.
 - `RESEND_WEBHOOK_SECRET`: signing secret for `/api/webhooks/resend`. Subscribe to `email.received`, `email.delivered`, `email.bounced`, and `email.failed`.
 - `CRON_SECRET`: protects `/api/cron/mail` and `/api/cron/expire-jobs`.
-- The one-minute recovery cron in `vercel.json` requires a Vercel plan that supports that frequency. Request-triggered `after()` processing starts immediately; the cron recovers retries and abandoned work.
+- The recovery cron runs at 05:00 UTC on even calendar dates (`0 5 2-30/2 * *`), keeping runs at least 48 hours apart and compatible with Vercel Hobby. Cron cannot represent an exact rolling 25-hour interval; this temporary schedule stays above the requested 25-hour minimum. Request-triggered `after()` processing still starts immediately. Failed work may wait until the next recovery run unless another request triggers processing.
 
 The local checkout does not contain Resend sending/receiving or cron credentials. Production values must be configured in Vercel; never commit them. Without receiving configured, lead emails offer the no-login form without promising email replies.
 
