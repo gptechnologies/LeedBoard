@@ -3,11 +3,13 @@ import { useState, type FormEvent } from "react";
 import type { TimingPreference } from "@prisma/client";
 export function ProviderResponseForm({
   token,
+  jobRevision,
   requestedDate,
   requestedTime,
   initial,
 }: {
   token: string;
+  jobRevision?: number;
   timingPreference: TimingPreference;
   requestedDate: string | null;
   requestedTime: string | null;
@@ -52,6 +54,9 @@ export function ProviderResponseForm({
       method="post"
       onSubmit={submit}
     >
+      {jobRevision !== undefined && (
+        <input type="hidden" name="jobRevision" value={jobRevision} />
+      )}
       <label>
         Total price
         <input

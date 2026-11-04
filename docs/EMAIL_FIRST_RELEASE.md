@@ -39,3 +39,10 @@ Public invite pages select only job facts and the provider's offer. They do not 
 - Playwright inspected enrollment and posting at desktop/390px phone widths. The short form uses a paper surface with accessible text contrast and a sticky primary action.
 
 The 10-second posting goal still needs representative human usability trials. Production email round trips require configured production credentials and DNS.
+
+
+## Homeowner reference UI
+
+Jobs, Messages and Account use the isolated `hk-` homeowner shell and persistent bottom navigation. Conversations retain their own route, pinned bid summary, inline acceptance and fixed composer. Posting, job editing, home editing and bid details stay within these destinations. `jobId` filters the Messages inbox; direct tab entry starts with All jobs.
+
+The additive `20261104_homeowner_reference` migration stores job home-fact snapshots and request revisions. Material job changes invalidate existing bids, notify previous recipients and match newly eligible cleaners. Existing cleaner offer forms include a request revision to reject submissions against stale details. No new environment variables are needed for this UI release.

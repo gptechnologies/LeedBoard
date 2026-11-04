@@ -375,6 +375,8 @@ model JobRequest {
   bathroomCount                 Float?
   timezone                      String               @default("America/New_York")
   postingKey                    String?              @unique
+  revision                      Int                  @default(1)
+  homeFactsSnapshot             Json?
   addressLine2                  String?
   city                          String
   state                         String

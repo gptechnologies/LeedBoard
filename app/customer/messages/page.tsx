@@ -1,74 +1,100 @@
-import { BidStatus, JobRequestStatus, UserRole } from "@prisma/client";
-
-import { AppScreenHeader } from "@/components/marketplace/app-screen-header";
-import { HomeownerMessagesInbox, type HomeownerConversation } from "@/components/marketplace/homeowner-messages-inbox";
-import { getCleaningJobTitle } from "@/lib/job-title";
+import { HomeownerHeader } from "@/components/marketplace/homeowner-shell";
+import { HomeownerMessagesInbox } from "@/components/marketplace/homeowner-messages-inbox";
 import { prisma } from "@/lib/prisma";
-import { getProviderName } from "@/lib/providers";
 import { requireUser } from "@/lib/session";
-import { expireDueJobs } from "@/lib/job-lifecycle";
-
+import { getProviderName } from "@/lib/providers";
+import {
+  age,
+  bidTiming,
+  jobTiming,
+  money,
+  unreadBid,
+} from "@/lib/homeowner-view";
+import { formatBidAmount } from "@/lib/marketplace";
+import { notFound } from "next/navigation";
 export const dynamic = "force-dynamic";
-
-export default async function CustomerMessagesPage() {
-  const user = await requireUser(UserRole.CUSTOMER);
-  await expireDueJobs();
+export default async function Messages({
+  searchParams,
+}: {
+  searchParams: Promise<{ jobId?: string }>;
+}) {
+  const u = await requireUser("CUSTOMER");
+  const p = await searchParams;
+  const jobs = await prisma.jobRequest.findMany({
+    where: { customerId: u.id, status: { not: "DELETED" } },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      addressLine1: true,
+      postalCode: true,
+      publicReference: true,
+      requestedDate: true,
+      requestedWindowStart: true,
+      requestedWindowEnd: true,
+    },
+  });
+  const selected = p.jobId ?? "";
+  if (selected && !jobs.some((j) => j.id === selected)) notFound();
   const bids = await prisma.jobBid.findMany({
-    where: { jobRequest: { customerId: user.id } },
+    where: {
+      jobRequest: { customerId: u.id, status: { not: "DELETED" } },
+      ...(selected ? { jobRequestId: selected } : {}),
+    },
     include: {
       cleanerLead: true,
       cleaner: { include: { cleanerProfile: true } },
       jobRequest: true,
       messages: { orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 1 },
     },
-    orderBy: { updatedAt: "desc" },
   });
-  const conversations: HomeownerConversation[] = bids.map((bid) => {
-    const name = getProviderName(bid);
-    const isChosen = bid.status === BidStatus.ACCEPTED;
-    const closed = bid.jobRequest.status === JobRequestStatus.EXPIRED || bid.jobRequest.status === JobRequestStatus.DELETED;
-    const isNew = (bid.status === BidStatus.SUBMITTED || bid.messages[0]?.sender === "CLEANER") && !bid.customerViewedAt;
-    return {
-      avatar: getAvatar(name),
-      href: `/customer/messages/${bid.id}`,
-      id: bid.id,
-      name,
-      preview: bid.messages[0]?.body || bid.message || `${getCleaningJobTitle(bid.jobRequest)} · ${getStatusLabel(bid.status)}`,
-      status: closed ? bid.jobRequest.status === JobRequestStatus.EXPIRED ? "Expired" : "Removed" : isChosen ? "Chosen" : isNew ? "New" : "Bid sent",
-      statusTone: closed ? "sent" : isChosen ? "chosen" : isNew ? "new" : "sent",
-      time: formatMessageTime(bid.messages[0]?.createdAt ?? bid.updatedAt),
-    };
-  });
-
+  const rows = bids
+    .sort(
+      (a, b) =>
+        (b.messages[0]?.createdAt ?? b.updatedAt).getTime() -
+        (a.messages[0]?.createdAt ?? a.updatedAt).getTime(),
+    )
+    .map((b) => ({
+      id: b.id,
+      jobId: b.jobRequestId,
+      name: getProviderName(b),
+      avatar: getProviderName(b).charAt(0).toUpperCase(),
+      price: b.providerQuestion
+        ? "Question"
+        : b.flatRateCents && (!b.offerType || b.offerType === "FIXED_PRICE")
+          ? money(b.flatRateCents)
+          : formatBidAmount(b),
+      timing: bidTiming(b),
+      preview:
+        b.messages[0]?.body ||
+        b.message ||
+        b.providerQuestion ||
+        "A cleaning bid for your home.",
+      time: age(b.messages[0]?.createdAt ?? b.updatedAt, true),
+      unread: unreadBid(b),
+      status:
+        b.jobRequest.status === "CANCELLED"
+          ? "Cancelled"
+          : b.jobRequest.status === "EXPIRED"
+            ? "Expired"
+            : b.status === "ACCEPTED"
+              ? "Cleaner chosen"
+              : b.status === "DECLINED"
+                ? "Not selected"
+                : b.status === "WITHDRAWN"
+                  ? "Withdrawn"
+                  : null,
+    }));
   return (
-    <div className="wk-app-screen wk-messages-screen">
-      <AppScreenHeader brandHref="/customer" />
-      <div className="wk-screen-content wk-messages-content">
-        <HomeownerMessagesInbox conversations={conversations} />
-      </div>
-    </div>
+    <>
+      <HomeownerHeader />
+      <HomeownerMessagesInbox
+        conversations={rows}
+        jobs={jobs.map((j) => ({
+          id: j.id,
+          label: `${jobTiming(j)} · ${j.addressLine1 || "ZIP " + j.postalCode} · ${j.publicReference ?? j.id.slice(-4)}`,
+        }))}
+        selectedJob={selected}
+      />
+    </>
   );
-}
-
-function getAvatar(name: string) {
-  const words = name.split(/\s+/).filter(Boolean);
-  return words.length === 1 ? words[0].slice(0, 2).toUpperCase() : `${words[0][0]}${words[1][0]}`.toUpperCase();
-}
-
-function getStatusLabel(status: BidStatus) {
-  if (status === BidStatus.ACCEPTED) return "Cleaner chosen";
-  if (status === BidStatus.DECLINED) return "Offer declined";
-  if (status === BidStatus.WITHDRAWN) return "Offer withdrawn";
-  return "Offer received";
-}
-
-function formatMessageTime(date: Date) {
-  const now = new Date();
-  if (date.toDateString() === now.toDateString()) {
-    return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-  }
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-  if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }

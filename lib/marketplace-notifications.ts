@@ -42,7 +42,7 @@ export async function notifyHomeownerOfBid(input: {
 }) {
   if (!input.job.customer.email) return;
   const content = buildHomeownerBidReceivedEmail({
-    bidUrl: buildAppUrl(`/customer/jobs/${input.job.id}/bids`),
+    bidUrl: buildAppUrl(`/customer/messages/${input.bid.id}`),
     cleanerName: input.providerName,
     jobTitle: getCleaningJobTitle(input.job),
     price: formatBidAmount(input.bid),

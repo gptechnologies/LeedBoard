@@ -9,7 +9,17 @@ export async function POST(request: Request) {
   if (user instanceof NextResponse) return user;
   let postingKey = "";
   try {
-    const input = parseQuickPost(await request.formData());
+    const form = await request.formData();
+    const input = parseQuickPost(form);
+    const homeId = String(form.get("homeProfileId") ?? "");
+    const home = homeId
+      ? await prisma.homeProfile.findFirst({
+          where: { id: homeId, customerId: user.id },
+        })
+      : null;
+    if (homeId && !home)
+      throw new Error("That saved home is unavailable. Try again.");
+    const matchedHome = home?.postalCode === input.postalCode ? home : null;
     postingKey = input.postingKey;
     const job = await prisma.$transaction(async (tx) => {
       const existing = await tx.jobRequest.findUnique({
@@ -33,6 +43,18 @@ export async function POST(request: Request) {
       const job = await tx.jobRequest.create({
         data: {
           ...input,
+          homeProfileId: matchedHome?.id,
+          addressLine1: matchedHome?.addressLine1 ?? "",
+          addressLine2: matchedHome?.addressLine2,
+          city: matchedHome?.city ?? "",
+          state: matchedHome?.state ?? "",
+          entryNotes: matchedHome?.entryNotes,
+          homeFactsSnapshot: matchedHome
+            ? {
+                estimatedSquareFeet: matchedHome.estimatedSquareFeet,
+                hasPets: matchedHome.hasPets,
+              }
+            : undefined,
           customerId: user.id,
           publicReference: createJobReference(),
           acceptanceDeadline: new Date(Date.now() + 7 * 86400000),

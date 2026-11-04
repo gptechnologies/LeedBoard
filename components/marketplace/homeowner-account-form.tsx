@@ -1,325 +1,379 @@
 "use client";
-
-import { EntryMethod } from "@prisma/client";
-import { Bath, BedDouble, Box, ChevronRight, ClipboardList, Home, MapPin, Minus, PawPrint, Pencil, Plus, Ruler, Save, Sparkles, X } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
-
-type AccountHome = {
-  id: string | null;
-  label: string;
-  addressLine1: string;
-  addressLine2: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  bedroomCount: number | null;
-  bathroomCount: number | null;
-  estimatedSquareFeet: number | null;
-  storyCount: number | null;
-  hasPets: boolean;
-  entryMethod: EntryMethod;
-  entryNotes: string;
-  notes: string;
-};
-
-type ParsedAddress = Pick<AccountHome, "addressLine1" | "addressLine2" | "city" | "state" | "postalCode">;
-
-export function HomeownerAccountForm({ home, startEditing = false }: { home: AccountHome; startEditing?: boolean }) {
-  const initialAddress = formatAddress(home);
+import {
+  Bath,
+  BedDouble,
+  House,
+  MapPin,
+  Minus,
+  PawPrint,
+  Pencil,
+  Plus,
+  Save,
+  LogOut,
+  KeyRound,
+  Sparkles,
+} from "lucide-react";
+import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import type { HomeDetails } from "@/lib/homeowner-view";
+import { discardChanges, useHomeownerDraft } from "./homeowner-shell";
+export function HomeownerAccountForm({
+  home,
+  startEditing = false,
+}: {
+  home: HomeDetails;
+  startEditing?: boolean;
+}) {
+  const router = useRouter();
+  const [saved, setSaved] = useState(home);
+  const [draft, setDraft] = useState(home);
   const [editing, setEditing] = useState(startEditing);
-  const [showBuilderMessage, setShowBuilderMessage] = useState(false);
-  const [address, setAddress] = useState(initialAddress);
-  const [bedrooms, setBedrooms] = useState<number | null>(home.bedroomCount);
-  const [bathrooms, setBathrooms] = useState<number | null>(home.bathroomCount);
-  const [addressError, setAddressError] = useState("");
-  const [saving, setSaving] = useState(false);
-  const parsedAddress = useMemo<ParsedAddress | null>(
-    () => address.trim() === initialAddress ? pickAddress(home) : parseAddress(address),
-    [address, home, initialAddress],
-  );
-
-  useEffect(() => {
-    if (!showBuilderMessage) return;
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") setShowBuilderMessage(false);
-    }
-    window.addEventListener("keydown", handleEscape);
-    return () => window.removeEventListener("keydown", handleEscape);
-  }, [showBuilderMessage]);
-
-  function toggleEditing() {
-    if (editing) {
-      setAddress(initialAddress);
-      setBedrooms(home.bedroomCount);
-      setBathrooms(home.bathroomCount);
-      setAddressError("");
-    }
-    setEditing(!editing);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const dirty = editing && JSON.stringify(draft) !== JSON.stringify(saved);
+  function cancel() {
+    setDraft(saved);
+    setEditing(false);
+    setError("");
   }
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    if (!parsedAddress) {
-      event.preventDefault();
-      setAddressError("Enter the full street, city, state, and ZIP code.");
-      return;
-    }
-
-    setAddressError("");
-    setSaving(true);
+  useHomeownerDraft("home", dirty, cancel);
+  function set(
+    key: keyof HomeDetails,
+    value: string | number | boolean | null,
+  ) {
+    setDraft((d) => ({ ...d, [key]: value }));
+    setError("");
   }
-
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      const f = new FormData(e.currentTarget);
+      f.set("homeProfileId", draft.id ?? "");
+      f.set("label", draft.label);
+      f.set("entryMethod", draft.entryMethod);
+      f.set("bedroomCount", String(draft.bedroomCount ?? ""));
+      f.set("bathroomCount", String(draft.bathroomCount ?? ""));
+      f.set("hasPets", String(draft.hasPets));
+      const r = await fetch("/customer/my-home/save", {
+        method: "POST",
+        headers: { "X-Well-Kept-Client": "1" },
+        body: f,
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error);
+      setSaved(data.homeProfile);
+      setDraft(data.homeProfile);
+      setEditing(false);
+      setNotice("Home details saved.");
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to save. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <>
-      <HomeProfileCard home={home} onBuild={() => setShowBuilderMessage(true)} />
-
-      <section aria-labelledby="home-summary-heading" className="wk-home-summary-card">
-        <div className="wk-home-summary-heading">
-          <h2 id="home-summary-heading">Home summary</h2>
-          <button className="wk-home-summary-edit wk-pressable" onClick={toggleEditing} type="button">
-            {editing ? "Cancel" : "Edit"}
-            {editing ? <X aria-hidden="true" /> : <Pencil aria-hidden="true" />}
-          </button>
-        </div>
-
-        {editing ? (
-      <form action="/customer/my-home/save" className="wk-account-editor" method="post" onSubmit={handleSubmit}>
-        {home.id ? <input name="homeProfileId" type="hidden" value={home.id} /> : null}
-        <input name="label" type="hidden" value={home.label || "My Home"} />
-        <input name="addressLine1" type="hidden" value={parsedAddress?.addressLine1 ?? ""} />
-        <input name="addressLine2" type="hidden" value={parsedAddress?.addressLine2 ?? ""} />
-        <input name="city" type="hidden" value={parsedAddress?.city ?? ""} />
-        <input name="state" type="hidden" value={parsedAddress?.state ?? ""} />
-        <input name="postalCode" type="hidden" value={parsedAddress?.postalCode ?? ""} />
-        <input name="bedroomCount" type="hidden" value={bedrooms ?? ""} />
-        <input name="bathroomCount" type="hidden" value={bathrooms ?? ""} />
-        <input name="storyCount" type="hidden" value={home.storyCount ?? ""} />
-        <input name="entryMethod" type="hidden" value={home.entryMethod} />
-
-        <div className="wk-account-list">
-          <div className="wk-account-row">
-            <label htmlFor="account-bedrooms">Bedrooms</label>
-            <NumberStepper
-              id="account-bedrooms"
-              label="bedrooms"
-              max={20}
-              min={0}
-              onChange={setBedrooms}
-              step={1}
-              value={bedrooms}
-            />
-          </div>
-
-          <div className="wk-account-row">
-            <label htmlFor="account-bathrooms">Bathrooms</label>
-            <NumberStepper
-              id="account-bathrooms"
-              label="bathrooms"
-              max={20}
-              min={0.5}
-              onChange={setBathrooms}
-              step={0.5}
-              value={bathrooms}
-            />
-          </div>
-
-          <div className="wk-account-row">
-            <label htmlFor="account-square-feet">Sq ft</label>
-            <input
-              defaultValue={home.estimatedSquareFeet ?? ""}
-              id="account-square-feet"
-              inputMode="numeric"
-              min="1"
-              name="estimatedSquareFeet"
-              placeholder="Add square footage"
-              step="1"
-              type="number"
-            />
-          </div>
-
-          <fieldset className="wk-account-row wk-account-row--pets">
-            <legend>Pets</legend>
-            <div className="wk-account-segmented">
-              <label>
-                <input defaultChecked={!home.hasPets} name="hasPets" type="radio" value="false" />
-                <span>No pets</span>
-              </label>
-              <label>
-                <input defaultChecked={home.hasPets} name="hasPets" type="radio" value="true" />
-                <span>Pets</span>
-              </label>
+      <button
+        className="hk-primary"
+        onClick={() => {
+          if (editing) {
+            if (discardChanges(dirty)) cancel();
+          } else {
+            setDraft(saved);
+            setEditing(true);
+            setNotice("");
+          }
+        }}
+        type="button"
+      >
+        <Pencil />
+        {editing
+          ? "Cancel editing"
+          : saved.id
+            ? "Edit home details"
+            : "Add home details"}
+      </button>
+      {notice && !editing && (
+        <p className="hk-feedback" role="status">
+          {notice}
+        </p>
+      )}
+      {editing ? (
+        <form className="hk-home-editor hk-expand" onSubmit={submit}>
+          <div className="hk-panel hk-home-fields">
+            <label className="hk-field">
+              Address
+              <div className="hk-input-icon">
+                <MapPin />
+                <input
+                  name="addressLine1"
+                  value={draft.addressLine1}
+                  onChange={(e) => set("addressLine1", e.target.value)}
+                  autoComplete="street-address"
+                  placeholder="Street address"
+                  required
+                />
+              </div>
+            </label>
+            <details
+              className="hk-address-details"
+              open={!home.id ? true : undefined}
+            >
+              <summary>
+                {draft.city && draft.postalCode
+                  ? `${draft.city}, ${draft.state} ${draft.postalCode}`
+                  : "City, state & ZIP"}
+              </summary>
+              <div className="hk-address-extra">
+                <label className="hk-field">
+                  City
+                  <input
+                    name="city"
+                    value={draft.city}
+                    onChange={(e) => set("city", e.target.value)}
+                    autoComplete="address-level2"
+                    required
+                  />
+                </label>
+                <label className="hk-field">
+                  State
+                  <input
+                    name="state"
+                    value={draft.state}
+                    onChange={(e) => set("state", e.target.value)}
+                    autoComplete="address-level1"
+                    required
+                  />
+                </label>
+                <label className="hk-field">
+                  ZIP
+                  <input
+                    name="postalCode"
+                    value={draft.postalCode}
+                    onChange={(e) => set("postalCode", e.target.value)}
+                    autoComplete="postal-code"
+                    pattern="[0-9]{5}"
+                    inputMode="numeric"
+                    required
+                  />
+                </label>
+              </div>
+            </details>
+            <div className="hk-edit-row">
+              <span>Bedrooms</span>
+              <Stepper
+                label="Bedrooms"
+                value={draft.bedroomCount}
+                min={0}
+                step={1}
+                onChange={(v) => set("bedroomCount", v)}
+              />
             </div>
-          </fieldset>
-
-          <div className="wk-account-row wk-account-row--wide">
-            <label htmlFor="account-address">Address</label>
-            <input
-              autoComplete="street-address"
-              id="account-address"
-              onChange={(event) => {
-                setAddress(event.target.value);
-                setAddressError("");
-              }}
-              placeholder="Street, city, state ZIP"
-              value={address}
-            />
-            {addressError ? <p role="alert">{addressError}</p> : null}
+            <div className="hk-edit-row">
+              <span>Bathrooms</span>
+              <Stepper
+                label="Bathrooms"
+                value={draft.bathroomCount}
+                min={0.5}
+                step={0.5}
+                onChange={(v) => set("bathroomCount", v)}
+              />
+            </div>
+            <label className="hk-edit-row">
+              <span>Square feet</span>
+              <div className="hk-input-icon hk-small-input">
+                <House />
+                <input
+                  name="estimatedSquareFeet"
+                  aria-label="Square feet"
+                  type="number"
+                  min="1"
+                  step="1"
+                  inputMode="numeric"
+                  placeholder="Optional"
+                  value={draft.estimatedSquareFeet ?? ""}
+                  onChange={(e) =>
+                    set(
+                      "estimatedSquareFeet",
+                      e.target.value ? Number(e.target.value) : null,
+                    )
+                  }
+                />
+              </div>
+            </label>
+            <div className="hk-edit-row">
+              <span>Pets</span>
+              <div className="hk-segments" role="group" aria-label="Pets">
+                {[false, true].map((v) => (
+                  <button
+                    key={String(v)}
+                    type="button"
+                    aria-pressed={draft.hasPets === v}
+                    onClick={() => set("hasPets", v)}
+                  >
+                    {v ? "Pets" : "No pets"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <label className="hk-field hk-notes-field">
+              Entry notes
+              <div className="hk-input-icon">
+                <KeyRound />
+                <textarea
+                  name="entryNotes"
+                  maxLength={1000}
+                  placeholder="e.g., door code, key location"
+                  value={draft.entryNotes ?? ""}
+                  onChange={(e) => set("entryNotes", e.target.value)}
+                />
+              </div>
+              <small>Private until you choose a cleaner.</small>
+            </label>
+            <label className="hk-field hk-notes-field">
+              Cleaning notes
+              <div className="hk-input-icon">
+                <Sparkles />
+                <textarea
+                  name="notes"
+                  maxLength={1000}
+                  placeholder="e.g., focus areas, special requests"
+                  value={draft.notes ?? ""}
+                  onChange={(e) => set("notes", e.target.value)}
+                />
+              </div>
+            </label>
           </div>
-
-          <div className="wk-account-row wk-account-row--wide">
-            <label htmlFor="account-entry-notes">Entry notes</label>
-            <textarea
-              defaultValue={home.entryNotes}
-              id="account-entry-notes"
-              name="entryNotes"
-              placeholder="Door code, call box, key location, or arrival instructions."
-              rows={2}
-            />
-          </div>
-
-          <div className="wk-account-row wk-account-row--wide">
-            <label htmlFor="account-specifics">Specifics</label>
-            <textarea
-              defaultValue={home.notes}
-              id="account-specifics"
-              name="notes"
-              placeholder="Flooring, priority rooms, parking, or anything cleaners should know."
-              rows={3}
-            />
-          </div>
-        </div>
-
-        <button className="wk-account-save wk-pressable" disabled={saving} type="submit">
-          <Save aria-hidden="true" />
-          {saving ? "Saving…" : "Save changes"}
+          {error && (
+            <p role="alert" className="hk-error">
+              {error}
+            </p>
+          )}
+          <button
+            className="hk-primary hk-sticky-save"
+            disabled={busy}
+            type="submit"
+          >
+            <Save />
+            {busy ? "Saving…" : "Save home details"}
+          </button>
+        </form>
+      ) : (
+        <section className="hk-panel hk-home-summary">
+          <h2>
+            <House />
+            Home summary
+          </h2>
+          <dl>
+            {[
+              {
+                Icon: MapPin,
+                label: "Address",
+                value:
+                  [saved.addressLine1, saved.city, saved.state]
+                    .filter(Boolean)
+                    .join(", ") || "No home details yet",
+              },
+              {
+                Icon: BedDouble,
+                label: "Bedrooms",
+                value:
+                  saved.bedroomCount === null
+                    ? "Bedrooms not added"
+                    : saved.bedroomCount === 0
+                      ? "Studio"
+                      : `${saved.bedroomCount} beds`,
+              },
+              {
+                Icon: Bath,
+                label: "Bathrooms",
+                value:
+                  saved.bathroomCount === null
+                    ? "Bathrooms not added"
+                    : `${saved.bathroomCount} baths`,
+              },
+              {
+                Icon: PawPrint,
+                label: "Pets",
+                value: saved.hasPets ? "Pets" : "No pets",
+              },
+            ].map(({ Icon, label, value }) => (
+              <div key={label}>
+                <dt>
+                  <Icon />
+                  <span className="sr-only">{label}</span>
+                </dt>
+                <dd>{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )}
+      <form
+        action="/auth/logout"
+        method="post"
+        onSubmit={(e) => {
+          if (!discardChanges(dirty)) e.preventDefault();
+        }}
+      >
+        <button className="hk-outline hk-logout" type="submit">
+          <LogOut />
+          Log out
         </button>
       </form>
-        ) : (
-          <div className="wk-home-summary-list">
-            <SummaryRow icon={MapPin} label="Location" onClick={() => setEditing(true)} value={initialAddress || "Add your address"} />
-            <SummaryRow icon={PawPrint} label="Pets" onClick={() => setEditing(true)} value={home.hasPets ? "Pets in the home" : "No pets"} />
-            <SummaryRow icon={ClipboardList} label="Entry notes" onClick={() => setEditing(true)} value={home.entryNotes.trim() || "Add entry instructions"} />
-            <SummaryRow icon={Sparkles} label="Cleaning specifics" onClick={() => setEditing(true)} value={home.notes.trim() || "Add cleaning priorities"} />
-          </div>
-        )}
-      </section>
-
-      {showBuilderMessage ? (
-        <div className="wk-builder-backdrop" onClick={() => setShowBuilderMessage(false)}>
-          <div aria-labelledby="builder-message-heading" aria-modal="true" className="wk-builder-dialog" onClick={(event) => event.stopPropagation()} role="dialog">
-            <button aria-label="Close" autoFocus className="wk-builder-close" onClick={() => setShowBuilderMessage(false)} type="button"><X aria-hidden="true" /></button>
-            <Box aria-hidden="true" className="wk-builder-dialog-icon" />
-            <h2 id="builder-message-heading">Home builder coming soon</h2>
-            <p>You’ll be able to add and explore rooms here.</p>
-            <button className="wk-builder-done wk-pressable" onClick={() => setShowBuilderMessage(false)} type="button">Got it</button>
-          </div>
-        </div>
-      ) : null}
     </>
   );
 }
-
-function HomeProfileCard({ home, onBuild }: { home: AccountHome; onBuild: () => void }) {
-  const stats = [
-    home.bedroomCount !== null ? { Icon: BedDouble, text: `${home.bedroomCount} ${home.bedroomCount === 1 ? "bedroom" : "bedrooms"}` } : null,
-    home.bathroomCount !== null ? { Icon: Bath, text: `${home.bathroomCount} ${home.bathroomCount === 1 ? "bathroom" : "bathrooms"}` } : null,
-    home.estimatedSquareFeet !== null ? { Icon: Ruler, text: `${home.estimatedSquareFeet.toLocaleString()} sq ft` } : null,
-    home.hasPets ? { Icon: PawPrint, text: "Pets" } : null,
-  ].filter((stat): stat is { Icon: typeof BedDouble; text: string } => stat !== null);
-
-  return (
-    <section aria-labelledby="your-home-heading" className="wk-home-profile-card">
-      <div className="wk-home-profile-heading">
-        <div>
-          <h1 id="your-home-heading">Your home</h1>
-          <p>Visualize and manage your home details<br className="wk-home-description-break" /> for a better clean.</p>
-        </div>
-        <span aria-hidden="true" className="wk-home-profile-motto">✦<small>A cleaner<br />tomorrow</small></span>
-      </div>
-      <img alt="Isometric illustration of a home with a bedroom, living room, kitchen, and bathroom" className="wk-home-illustration" src="/images/home-isometric.webp" />
-      <button className="wk-build-home-button wk-pressable" onClick={onBuild} type="button">
-        <Box aria-hidden="true" />
-        <span>Build your home</span>
-        <ChevronRight aria-hidden="true" />
-      </button>
-      {stats.length > 0 ? <div aria-label="Home details" className="wk-home-stats">
-        {stats.map(({ Icon, text }) => <span className="wk-home-stat" key={text}><Icon aria-hidden="true" />{text}</span>)}
-      </div> : null}
-    </section>
-  );
-}
-
-function SummaryRow({ icon: Icon, label, onClick, value }: { icon: typeof Home; label: string; onClick: () => void; value: string }) {
-  return (
-    <button className="wk-home-summary-row" onClick={onClick} type="button">
-      <span className="wk-home-summary-row-icon"><Icon aria-hidden="true" /></span>
-      <span className="wk-home-summary-row-copy"><strong>{label}</strong><span>{value}</span></span>
-      <ChevronRight aria-hidden="true" className="wk-home-summary-row-chevron" />
-    </button>
-  );
-}
-
-function NumberStepper({
-  id,
+export function Stepper({
   label,
-  max,
-  min,
-  onChange,
-  step,
   value,
+  min,
+  step,
+  onChange,
 }: {
-  id: string;
   label: string;
-  max: number;
-  min: number;
-  onChange: (value: number | null) => void;
-  step: number;
   value: number | null;
+  min: number;
+  step: number;
+  onChange: (v: number) => void;
 }) {
-  const displayValue = value === null ? "—" : Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1);
-  const nextValue = value === null ? min : Math.min(max, value + step);
-
   return (
-    <div aria-label={`${displayValue} ${label}`} className="wk-account-stepper" id={id} role="group">
-      <button aria-label={`Decrease ${label}`} disabled={value === null || value <= min} onClick={() => onChange(value === null ? null : Math.max(min, value - step))} type="button">
-        <Minus aria-hidden="true" />
+    <div className="hk-stepper">
+      <button
+        type="button"
+        aria-label={`Fewer ${label.toLowerCase()}`}
+        disabled={value === null || value <= min}
+        onClick={() => onChange(Math.max(min, (value ?? min) - step))}
+      >
+        <Minus />
       </button>
-      <output aria-live="polite">{displayValue}</output>
-      <button aria-label={`Increase ${label}`} disabled={value !== null && value >= max} onClick={() => onChange(nextValue)} type="button">
-        <Plus aria-hidden="true" />
+      <input
+        aria-label={label}
+        type="number"
+        min={min}
+        max={20}
+        step={step}
+        value={value ?? ""}
+        onChange={(e) => {
+          const n = Number(e.target.value);
+          if (e.target.value && n >= min && n <= 20 && (n / step) % 1 === 0)
+            onChange(n);
+        }}
+      />
+      <button
+        type="button"
+        aria-label={`More ${label.toLowerCase()}`}
+        disabled={value !== null && value >= 20}
+        onClick={() =>
+          onChange(Math.min(20, value === null ? min : value + step))
+        }
+      >
+        <Plus />
       </button>
     </div>
   );
-}
-
-function formatAddress(home: ParsedAddress) {
-  return [
-    home.addressLine1,
-    home.addressLine2,
-    home.city,
-    [home.state, home.postalCode].filter(Boolean).join(" "),
-  ].filter(Boolean).join(", ");
-}
-
-function pickAddress(home: ParsedAddress): ParsedAddress {
-  return {
-    addressLine1: home.addressLine1,
-    addressLine2: home.addressLine2,
-    city: home.city,
-    state: home.state,
-    postalCode: home.postalCode,
-  };
-}
-
-function parseAddress(value: string): ParsedAddress | null {
-  const parts = value.split(",").map((part) => part.trim()).filter(Boolean);
-  const stateAndZip = parts.at(-1)?.match(/^(.+?)\s+(\d{5}(?:-\d{4})?)$/);
-  if (parts.length < 3 || !stateAndZip) return null;
-
-  return {
-    addressLine1: parts.slice(0, -2).join(", "),
-    addressLine2: "",
-    city: parts.at(-2) ?? "",
-    state: stateAndZip[1].trim(),
-    postalCode: stateAndZip[2],
-  };
 }

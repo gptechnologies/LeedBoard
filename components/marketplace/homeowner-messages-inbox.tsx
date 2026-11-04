@@ -1,80 +1,105 @@
 "use client";
-
-import { Search, X } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
-
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect } from "react";
 export type HomeownerConversation = {
-  avatar: string;
-  href: string;
   id: string;
+  jobId: string;
   name: string;
+  avatar: string;
+  price: string;
+  timing: string;
   preview: string;
-  status: string;
-  statusTone: "new" | "chosen" | "sent";
   time: string;
+  unread: boolean;
+  status: string | null;
 };
-
-export function HomeownerMessagesInbox({ conversations }: { conversations: HomeownerConversation[] }) {
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-  const visible = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) return conversations;
-    return conversations.filter((conversation) =>
-      `${conversation.name} ${conversation.preview} ${conversation.status}`.toLowerCase().includes(needle),
-    );
-  }, [conversations, query]);
-
-  function toggleSearch() {
-    setSearchOpen((open) => {
-      if (!open) window.requestAnimationFrame(() => inputRef.current?.focus());
-      if (open) setQuery("");
-      return !open;
-    });
-  }
-
+export function HomeownerMessagesInbox({
+  conversations,
+  jobs,
+  selectedJob,
+}: {
+  conversations: HomeownerConversation[];
+  jobs: { id: string; label: string }[];
+  selectedJob: string;
+}) {
+  const router = useRouter();
+  const p = useSearchParams();
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === "visible") router.refresh();
+    };
+    const t = setInterval(refresh, 15000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [router]);
   return (
-    <>
-      <div className="wk-messages-title-row">
+    <section className="hk-page hk-messages">
+      <header className="hk-heading">
         <h1>Messages</h1>
-        <button aria-expanded={searchOpen} aria-label={searchOpen ? "Close search" : "Search messages"} onClick={toggleSearch} type="button">
-          {searchOpen ? <X aria-hidden="true" /> : <Search aria-hidden="true" />}
-        </button>
-      </div>
-
-      {searchOpen ? (
-        <label className="wk-messages-search">
-          <Search aria-hidden="true" />
-          <span className="sr-only">Search conversations</span>
-          <input ref={inputRef} onChange={(event) => setQuery(event.target.value)} placeholder="Search cleaners" type="search" value={query} />
-        </label>
-      ) : null}
-
-      <section className="wk-messages-list" aria-label="Conversations">
-        {visible.length > 0 ? visible.map((conversation) => (
-          <Link className="wk-message-row wk-pressable" href={conversation.href} key={conversation.id}>
-            <span className="wk-message-row__avatar" aria-hidden="true">{conversation.avatar}</span>
-            <span className="wk-message-row__copy">
-              <span className="wk-message-row__name">
-                <strong>{conversation.name}</strong>
-                <em className={`is-${conversation.statusTone}`}>{conversation.status}</em>
+        <p>Cleaner bids and conversations.</p>
+      </header>
+      <label className="hk-job-filter">
+        <span className="sr-only">Filter conversations by cleaning job</span>
+        <select
+          value={selectedJob}
+          onChange={(e) =>
+            router.replace(
+              e.target.value
+                ? "/customer/messages?jobId=" +
+                    encodeURIComponent(e.target.value)
+                : "/customer/messages",
+              { scroll: false },
+            )
+          }
+        >
+          <option value="">All jobs</option>
+          {jobs.map((j) => (
+            <option key={j.id} value={j.id}>
+              {j.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <section className="hk-inbox" aria-label="Cleaner bids and conversations">
+        {conversations.length ? (
+          conversations.map((c) => (
+            <Link
+              className={`hk-conversation-row${c.unread ? " is-unread" : ""}`}
+              key={c.id}
+              href={`/customer/messages/${c.id}?jobId=${selectedJob || "all"}`}
+              scroll={false}
+            >
+              <span className="hk-avatar" aria-hidden="true">
+                {c.avatar}
               </span>
-              <span>{conversation.preview}</span>
-            </span>
-            <span className="wk-message-row__meta">
-              <time>{conversation.time}</time>
-              <i aria-hidden="true">›</i>
-            </span>
-          </Link>
-        )) : (
-          <div className="wk-messages-empty">
-            <strong>{query ? "No matching conversations" : "No messages yet"}</strong>
-            <p>{query ? "Try a cleaner’s name or part of a message." : "Cleaner replies and job conversations will appear here."}</p>
-          </div>
+              <span className="hk-row-copy">
+                <strong>{c.name}</strong>
+                <span className="hk-row-offer">
+                  {c.price} · {c.timing}
+                </span>
+                <span className="hk-row-preview">
+                  {c.status ? `${c.status} · ` : ""}
+                  {c.preview}
+                </span>
+              </span>
+              <span className="hk-row-meta">
+                <time>{c.time}</time>
+                {c.unread && <i aria-label="Unread" />}
+              </span>
+            </Link>
+          ))
+        ) : (
+          <p className="hk-empty">
+            {selectedJob
+              ? "Bids for this request will appear here."
+              : "Cleaner bids and conversations will appear here."}
+          </p>
         )}
       </section>
-    </>
+    </section>
   );
 }

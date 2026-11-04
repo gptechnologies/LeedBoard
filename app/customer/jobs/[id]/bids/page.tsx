@@ -5,5 +5,5 @@ export default async function Page({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  redirect("/customer#job-" + encodeURIComponent(id));
+  redirect("/customer/messages?jobId=" + encodeURIComponent(id));
 }

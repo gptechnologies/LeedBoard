@@ -31,6 +31,10 @@ export async function submitOffer(token: string, f: FormData) {
   });
   if (recent >= 10)
     throw new Error("Please wait a minute before sending another update.");
+  if (f.has("jobRevision") && Number(f.get("jobRevision")) !== j.revision)
+    throw new Error(
+      "This cleaning request changed. Reload the details before submitting your bid.",
+    );
   const date = String(f.get("availableDate") ?? "");
   const start = String(f.get("arrivalTime") ?? "");
   const question = String(f.get("question") ?? "").trim();
@@ -53,6 +57,7 @@ export async function submitOffer(token: string, f: FormData) {
     const claim = await tx.jobRequest.updateMany({
       where: {
         id: j.id,
+        revision: j.revision,
         status: "OPEN",
         acceptanceDeadline: { gt: new Date() },
       },
@@ -128,8 +133,8 @@ export async function submitOffer(token: string, f: FormData) {
             ? "A cleaner has a question"
             : `New cleaning bid · ${j.publicReference}`,
           text: question
-            ? `${question}\n\nAnswer in your job workspace: ${buildAppUrl("/customer#job-" + j.id)}`
-            : `$${price.toFixed(2)} · ${date} at ${start}\nReview all bids: ${buildAppUrl("/customer#job-" + j.id)}`,
+            ? `${question}\n\nAnswer in your job workspace: ${buildAppUrl("/customer/messages/" + bid.id)}`
+            : `$${price.toFixed(2)} · ${date} at ${start}\nReview all bids: ${buildAppUrl("/customer/messages/" + bid.id)}`,
         },
         tx,
       );

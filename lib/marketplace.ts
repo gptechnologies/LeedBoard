@@ -539,19 +539,13 @@ export async function getCustomerHomeProfiles(customerId: string) {
   });
 }
 
-export async function getCustomerHomeData(customerId: string) {
+export async function getCustomerHomeData(customerId: string, limit = 20) {
   await expireDueJobs();
   const [jobs, homeProfile] = await Promise.all([
     prisma.jobRequest.findMany({
       where: {
         customerId,
-        status: {
-          in: [
-            JobRequestStatus.OPEN,
-            JobRequestStatus.AWARDED,
-            JobRequestStatus.EXPIRED,
-          ],
-        },
+        status: { not: JobRequestStatus.DELETED },
       },
       include: {
         outreaches: { select: { status: true } },
@@ -607,7 +601,7 @@ export async function getCustomerHomeData(customerId: string) {
         },
       },
       orderBy: { createdAt: "desc" },
-      take: 50,
+      take: limit + 1,
     }),
     getDefaultHomeProfile(customerId),
   ]);

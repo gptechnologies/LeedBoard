@@ -26,7 +26,11 @@ export function parseQuickPost(f: FormData) {
   const postingKey = String(f.get("postingKey") ?? "");
   if (!/^[a-zA-Z0-9-]{20,80}$/.test(postingKey))
     throw new Error("Reload the form and try again.");
+  const notes = String(f.get("notes") ?? "").trim();
+  if (notes.length > 500)
+    throw new Error("Keep instructions under 500 characters.");
   return {
+    notes: notes || null,
     postalCode,
     bedroomCount: Number(beds),
     bathroomCount: Number(baths),

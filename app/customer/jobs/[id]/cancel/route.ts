@@ -4,8 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { requireApiUser } from "@/lib/session";
 
 function redirectWithError(request: Request, jobId: string, message: string) {
+  if (request.headers.get("X-Well-Kept-Client") === "1")
+    return NextResponse.json({ error: message }, { status: 400 });
   return NextResponse.redirect(
-    new URL(`/customer/jobs/${jobId}?error=${encodeURIComponent(message)}`, request.url),
+    new URL(
+      `/customer/jobs/${jobId}?error=${encodeURIComponent(message)}`,
+      request.url,
+    ),
   );
 }
 
@@ -32,5 +37,7 @@ export async function POST(
     return redirectWithError(request, id, "Only an open job can be cancelled.");
   }
 
-  return NextResponse.redirect(new URL("/customer/jobs?cancelled=1", request.url));
+  if (request.headers.get("X-Well-Kept-Client") === "1")
+    return NextResponse.json({ ok: true });
+  return NextResponse.redirect(new URL("/customer", request.url));
 }

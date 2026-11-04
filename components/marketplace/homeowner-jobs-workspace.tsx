@@ -2,299 +2,308 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ProviderSelectionDrawer } from "./provider-selection-drawer";
-export type HomeownerWorkspaceJob = {
+import { CalendarDays, ChevronRight, Plus, X } from "lucide-react";
+import { age, jobTiming, type HomeDetails } from "@/lib/homeowner-view";
+import { SimpleJobRequestForm, type JobDraft } from "./simple-job-request-form";
+import { discardChanges } from "./homeowner-shell";
+export type HomeownerWorkspaceJob = JobDraft & {
   id: string;
+  revision: number;
   publicReference: string | null;
-  postalCode: string;
-  bedroomCount: number | null;
-  bathroomCount: number | null;
-  cleanersNotifiedCount: number;
-  acceptanceDeadline: Date | null;
-  status: string;
-  createdAt: Date;
-  requestedDate: Date | null;
-  requestedWindowStart: string | null;
-  requestedWindowEnd: string | null;
-  bids: WorkspaceBid[];
-  acceptedBid: WorkspaceBid | null;
-  mailState?: string;
   addressLine1: string;
-  addressLine2: string | null;
-  city: string;
-  state: string;
-  title: string;
-  notes: string | null;
-  selectionPriority: string;
-  timingPreference: string;
+  createdAt: Date | string;
+  status: string;
+  bidCount: number;
+  cleanersNotifiedCount: number;
+  mailState: string;
+  homeFactsSnapshot?: unknown;
 };
-type WorkspaceBid = {
-  id: string;
-  flatRateCents: number | null;
-  pricingType: string;
-  hourlyRateCents: number | null;
-  offerType: string | null;
-  arrivalDate: Date | null;
-  arrivalWindowStart: string | null;
-  arrivalWindowEnd: string | null;
-  requestedScheduleAccepted: boolean | null;
-  message: string | null;
-  providerQuestion: string | null;
-  updatedAt: Date;
-  cleaner: {
-    firstName: string;
-    lastName: string;
-    email?: string | null;
-    phone?: string | null;
-    cleanerProfile: {
-      businessName: string | null;
-      googleRating: number | null;
-      googleReviewCount: number | null;
-    } | null;
-  } | null;
-  cleanerLead: {
-    businessName: string | null;
-    name: string | null;
-    email?: string | null;
-    phone: string | null;
-    googleRating: number | null;
-    googleReviewCount: number | null;
-  } | null;
-};
-function name(b: WorkspaceBid) {
-  return (
-    b.cleanerLead?.businessName ||
-    b.cleanerLead?.name ||
-    b.cleaner?.cleanerProfile?.businessName ||
-    [b.cleaner?.firstName, b.cleaner?.lastName].filter(Boolean).join(" ") ||
-    "Local cleaner"
-  );
-}
-function when(b: WorkspaceBid) {
-  return b.arrivalDate
-    ? `${new Date(b.arrivalDate).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })} · ${clock(b.arrivalWindowStart)}`
-    : "Time to confirm";
-}
-function clock(value: string | null) {
-  if (!value) return "Time to confirm";
-  const [h, m] = value.split(":").map(Number);
-  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
-}
-function total(b: WorkspaceBid) {
-  return b.flatRateCents
-    ? new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-      }).format(b.flatRateCents / 100)
-    : b.hourlyRateCents
-      ? `$${b.hourlyRateCents / 100}/hr`
-      : "Needs a total price";
-}
 export function HomeownerJobsWorkspace({
   jobs,
+  home,
+  compose = false,
+  repost,
+  limit = 20,
+  hasMore = false,
 }: {
   jobs: HomeownerWorkspaceJob[];
+  home: HomeDetails | null;
+  compose?: boolean;
+  repost?: JobDraft | null;
+  limit?: number;
+  hasMore?: boolean;
 }) {
   const router = useRouter();
+  const [form, setForm] = useState<string | null>(compose ? "new" : null);
+  const [open, setOpen] = useState<string | null>(null);
+  const [source, setSource] = useState<JobDraft | null>(repost ?? null);
+  const [notice, setNotice] = useState("");
+  useEffect(() => {
+    if (window.location.hash.startsWith("#job-"))
+      setOpen(window.location.hash.slice(5));
+  }, []);
+  const [cancelId, setCancelId] = useState<string | null>(null);
+  const [error, setError] = useState("");
   useEffect(() => {
     const refresh = () => {
       if (document.visibilityState === "visible") router.refresh();
     };
-    const t = setInterval(refresh, 15000);
+    const timer = setInterval(refresh, 15000);
     window.addEventListener("focus", refresh);
     return () => {
-      clearInterval(t);
+      clearInterval(timer);
       window.removeEventListener("focus", refresh);
     };
   }, [router]);
+  function switchForm(next: string | null) {
+    if (form && form !== next) {
+      if (
+        !discardChanges(
+          !!document.querySelector('.hk-job-form[data-dirty="true"]'),
+        )
+      )
+        return;
+      window.dispatchEvent(new Event("wellkept:discard"));
+    }
+    setForm(next);
+  }
+  async function cancel(id: string) {
+    setError("");
+    try {
+      const r = await fetch(`/customer/jobs/${id}/cancel`, {
+        method: "POST",
+        headers: { "X-Well-Kept-Client": "1" },
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error);
+      setCancelId(null);
+      setNotice("Request cancelled.");
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to cancel.");
+    }
+  }
   return (
-    <div className="effortless-page">
-      <header className="effortless-actions">
-        <h1>My jobs</h1>
-        <Link className="effortless-primary" href="/customer/jobs/new">
-          Find cleaners
-        </Link>
+    <section className="hk-page hk-jobs">
+      <header className="hk-heading">
+        <h1>Your jobs</h1>
+        <p>Post and manage your cleanings.</p>
       </header>
-      {!jobs.length ? (
-        <section className="effortless-status">
-          <h2>A cleaner home starts here.</h2>
-          <p>Post your ZIP, home size, and timing. We’ll collect the prices.</p>
-        </section>
-      ) : (
-        jobs.map((j) => <Job key={j.id} job={j} />)
+      <button
+        className="hk-primary"
+        type="button"
+        onClick={() => {
+          setSource(null);
+          switchForm(form === "new" ? null : "new");
+        }}
+      >
+        {form === "new" ? <X /> : <Plus />}
+        {form === "new" ? "Cancel posting" : "Post a cleaning job"}
+      </button>
+      {form === "new" && (
+        <SimpleJobRequestForm
+          home={home}
+          source={source}
+          onSaved={() => {
+            setForm(null);
+            setNotice("Request sent. We’re finding cleaners.");
+          }}
+          onDiscard={() => setForm(null)}
+        />
       )}
-    </div>
-  );
-}
-function Job({ job: j }: { job: HomeownerWorkspaceJob }) {
-  const [sort, setSort] = useState("fit");
-  const offers = j.bids
-    .filter((b) => !b.providerQuestion)
-    .sort((a, b) =>
-      sort === "price"
-        ? (a.flatRateCents ?? Infinity) - (b.flatRateCents ?? Infinity)
-        : sort === "soon"
-          ? stamp(a) - stamp(b)
-          : Number(!!b.requestedScheduleAccepted) -
-              Number(!!a.requestedScheduleAccepted) ||
-            stamp(a) - stamp(b) ||
-            (a.flatRateCents ?? Infinity) - (b.flatRateCents ?? Infinity),
-    );
-  const questions = j.bids.filter((b) => b.providerQuestion);
-  return (
-    <article className="effortless-job" id={"job-" + j.id}>
-      <small>
-        {j.publicReference} · ZIP {j.postalCode}
-      </small>
-      <h2>
-        {j.bedroomCount ?? "—"} bed · {j.bathroomCount ?? "—"} bath
-      </h2>
-      <p>
-        {j.requestedDate
-          ? `${new Date(j.requestedDate).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })} · ${j.requestedWindowStart}–${j.requestedWindowEnd}`
-          : "First available"}
-      </p>
-      {j.status === "AWARDED" && j.acceptedBid ? (
-        <section className="effortless-status">
-          <h3>You’re connected with {name(j.acceptedBid)}</h3>
-          <p>
-            {total(j.acceptedBid)} · {when(j.acceptedBid)}
-          </p>
-          <p>
-            <a
-              href={`mailto:${j.acceptedBid.cleanerLead?.email ?? j.acceptedBid.cleaner?.email ?? ""}`}
-            >
-              {j.acceptedBid.cleanerLead?.email ?? j.acceptedBid.cleaner?.email}
-            </a>
-          </p>
-          {(j.acceptedBid.cleanerLead?.phone ??
-            j.acceptedBid.cleaner?.phone) && (
-            <p>
-              <a
-                href={`tel:${j.acceptedBid.cleanerLead?.phone ?? j.acceptedBid.cleaner?.phone}`}
-              >
-                Call cleaner
-              </a>
-            </p>
-          )}
-          <p>
-            Payment is arranged directly. Your introduction is also in your
-            email.
-          </p>
-          <Link href={`/customer/messages/${j.acceptedBid.id}`}>
-            Open conversation
-          </Link>
-        </section>
-      ) : j.status === "OPEN" ? (
-        <>
-          <div className="effortless-status" role="status">
-            <strong>
-              {offers.length
-                ? `${offers.length} ${offers.length === 1 ? "bid" : "bids"} to review`
-                : j.cleanersNotifiedCount
-                  ? "Waiting for prices and availability"
-                  : "Your request is posted"}
-            </strong>
-            <p>
-              {offers.length
-                ? "Compare the prices and proposed times below. Your personal details stay private until you confirm."
-                : j.cleanersNotifiedCount
-                  ? `${j.cleanersNotifiedCount} local ${j.cleanersNotifiedCount === 1 ? "cleaner contacted" : "cleaners contacted"}. Your information stays private until you choose.`
-                  : j.mailState === "NO_MATCH"
-                    ? "We haven’t found a subscribed cleaner for this ZIP yet. Your request is visible to our team."
-                    : j.mailState === "FAILED"
-                      ? "Your request is saved. Email delivery needs attention; our team can review it."
-                      : "We’re finding cleaners for your ZIP."}
-            </p>
-            <small>
-              Closes{" "}
-              {j.acceptanceDeadline
-                ? new Date(j.acceptanceDeadline).toLocaleDateString()
-                : ""}
-            </small>
-          </div>
-          {offers.length > 1 && (
-            <label>
-              Sort bids{" "}
-              <select value={sort} onChange={(e) => setSort(e.target.value)}>
-                <option value="fit">Schedule fit</option>
-                <option value="price">Lowest total</option>
-                <option value="soon">Soonest</option>
-              </select>
-            </label>
-          )}
-          {offers.map((b) => (
-            <details key={b.id} className="effortless-offer">
-              <summary>
-                <span>
-                  {name(b)}
-                  <br />
-                  <small>
-                    {b.requestedScheduleAccepted
-                      ? "Fits your schedule"
-                      : "Next available"}{" "}
-                    · {when(b)}
-                  </small>
-                </span>
-                <span style={{ textAlign: "right" }}>
-                  <strong>{total(b)}</strong>
-                  <br />
-                  <small>Review bid ›</small>
-                </span>
-              </summary>
-              {b.message && <p>{b.message}</p>}
-              <div className="effortless-actions">
-                <Link href={`/customer/messages/${b.id}`}>Ask a question</Link>
-                {b.flatRateCents &&
-                (!b.offerType || b.offerType === "FIXED_PRICE") ? (
-                  <ProviderSelectionDrawer
-                    bidId={b.id}
-                    jobId={j.id}
-                    jobTitle={j.title}
-                    price={total(b)}
-                    providerName={name(b)}
-                    timing={when(b)}
-                    bidVersion={new Date(b.updatedAt).toISOString()}
+      {notice && (
+        <p className="hk-feedback" role="status">
+          {notice}
+        </p>
+      )}
+      <div className="hk-job-list">
+        {!jobs.length && !form ? (
+          <p className="hk-empty">Your cleaning requests will appear here.</p>
+        ) : (
+          jobs.map((j) => {
+            const expanded = open === j.id;
+            const status =
+              j.status === "AWARDED"
+                ? "Cleaner chosen"
+                : j.status === "COMPLETED"
+                  ? "Completed"
+                  : j.status === "CANCELLED"
+                    ? "Cancelled"
+                    : j.status === "EXPIRED"
+                      ? "Expired"
+                      : j.bidCount
+                        ? `${j.bidCount} ${j.bidCount === 1 ? "bid" : "bids"}`
+                        : "Finding cleaners";
+            const facts = j.homeFactsSnapshot as {
+              estimatedSquareFeet?: number;
+              hasPets?: boolean;
+            } | null;
+            return (
+              <article className="hk-job-card" id={"job-" + j.id} key={j.id}>
+                <button
+                  className="hk-job-overview"
+                  type="button"
+                  aria-expanded={expanded}
+                  aria-controls={"details-" + j.id}
+                  onClick={() => {
+                    if (form === j.id) {
+                      if (
+                        !discardChanges(
+                          !!document.querySelector(
+                            '.hk-job-form[data-dirty="true"]',
+                          ),
+                        )
+                      )
+                        return;
+                      window.dispatchEvent(new Event("wellkept:discard"));
+                      setForm(null);
+                    }
+                    setOpen(expanded ? null : j.id);
+                  }}
+                >
+                  <span className="hk-calendar">
+                    <CalendarDays />
+                  </span>
+                  <span className="hk-job-copy">
+                    <strong>{jobTiming(j)}</strong>
+                    <span>{j.addressLine1 || `ZIP ${j.postalCode}`}</span>
+                    <small>Posted {age(j.createdAt)}</small>
+                  </span>
+                  <span
+                    className={`hk-job-badge ${["COMPLETED", "CANCELLED", "EXPIRED"].includes(j.status) ? "is-neutral" : ""}`}
+                  >
+                    {status}
+                  </span>
+                  <ChevronRight
+                    className={expanded ? "hk-chevron is-open" : "hk-chevron"}
                   />
-                ) : (
-                  <p>Ask the cleaner to confirm a total before selecting.</p>
+                </button>
+                {expanded && (
+                  <div
+                    className="hk-job-detail hk-expand"
+                    id={"details-" + j.id}
+                  >
+                    <p>
+                      {j.bedroomCount ?? "—"} beds · {j.bathroomCount ?? "—"}{" "}
+                      baths
+                      {facts?.estimatedSquareFeet
+                        ? ` · ${facts.estimatedSquareFeet.toLocaleString()} sq ft`
+                        : ""}
+                    </p>
+                    <p>{j.cleanType?.replaceAll("_", " ").toLowerCase()}</p>
+                    {j.notes && <p>{j.notes}</p>}
+                    {j.status === "OPEN" && (
+                      <p className="hk-muted">
+                        {j.cleanersNotifiedCount
+                          ? `${j.cleanersNotifiedCount} cleaners contacted.`
+                          : j.mailState === "FAILED"
+                            ? "Email delivery needs attention. Your request is saved."
+                            : j.mailState === "NO_MATCH"
+                              ? "We haven’t found a subscribed cleaner for this ZIP yet."
+                              : "Finding nearby cleaners."}
+                      </p>
+                    )}
+                    <Link
+                      className="hk-primary"
+                      href={`/customer/messages?jobId=${j.id}`}
+                      replace
+                      scroll={false}
+                    >
+                      {j.bidCount
+                        ? `View ${j.bidCount} cleaning ${j.bidCount === 1 ? "bid" : "bids"}`
+                        : "View conversations"}
+                    </Link>
+                    {j.status === "OPEN" ? (
+                      <>
+                        <button
+                          className="hk-text-button"
+                          type="button"
+                          onClick={() =>
+                            switchForm(form === j.id ? null : j.id)
+                          }
+                        >
+                          {form === j.id
+                            ? "Cancel editing"
+                            : "Edit job details"}
+                        </button>
+                        {form === j.id && (
+                          <SimpleJobRequestForm
+                            source={j}
+                            edit={{ id: j.id, revision: j.revision }}
+                            onSaved={() => {
+                              setForm(null);
+                              setNotice("Job details saved.");
+                            }}
+                            onDiscard={() => setForm(null)}
+                          />
+                        )}
+                        {cancelId === j.id ? (
+                          <div className="hk-inline-confirm">
+                            <strong>Cancel this request?</strong>
+                            <div className="hk-button-pair">
+                              <button
+                                className="hk-outline"
+                                onClick={() => setCancelId(null)}
+                                type="button"
+                              >
+                                Keep request
+                              </button>
+                              <button
+                                className="hk-primary"
+                                onClick={() => cancel(j.id)}
+                                type="button"
+                              >
+                                Cancel request
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            className="hk-text-button hk-muted"
+                            type="button"
+                            onClick={() => setCancelId(j.id)}
+                          >
+                            Cancel request
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      !["AWARDED"].includes(j.status) && (
+                        <button
+                          className="hk-text-button"
+                          type="button"
+                          onClick={() => {
+                            setSource(j);
+                            switchForm("new");
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }}
+                        >
+                          Post again
+                        </button>
+                      )
+                    )}
+                  </div>
                 )}
-              </div>
-            </details>
-          ))}
-          {questions.length > 0 && (
-            <section>
-              <h3>Questions from cleaners</h3>
-              {questions.map((b) => (
-                <div className="effortless-offer" key={b.id}>
-                  <strong>{name(b)}</strong>
-                  <p>{b.providerQuestion}</p>
-                  <Link href={`/customer/messages/${b.id}`}>
-                    Answer privately through Well Kept
-                  </Link>
-                </div>
-              ))}
-            </section>
-          )}
-          <form action={`/customer/jobs/${j.id}/cancel`} method="post">
-            <button className="effortless-secondary">Cancel request</button>
-          </form>
-        </>
-      ) : (
-        <div className="effortless-status">
-          <p>This request has ended.</p>
-          <Link href={`/customer/jobs/new?repost=${j.id}`}>
-            Post again with a new time
-          </Link>
-        </div>
+              </article>
+            );
+          })
+        )}
+      </div>
+      {error && (
+        <p className="hk-error" role="alert">
+          {error}
+        </p>
       )}
-    </article>
+      {hasMore && (
+        <Link
+          href={`/customer?limit=${limit + 20}`}
+          replace
+          scroll={false}
+          className="hk-outline"
+        >
+          Load more jobs
+        </Link>
+      )}
+    </section>
   );
-}
-function stamp(b: WorkspaceBid) {
-  return b.arrivalDate
-    ? new Date(
-        `${new Date(b.arrivalDate).toISOString().slice(0, 10)}T${b.arrivalWindowStart ?? "23:59"}:00Z`,
-      ).getTime()
-    : Infinity;
 }

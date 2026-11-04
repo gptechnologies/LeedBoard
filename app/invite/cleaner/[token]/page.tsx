@@ -23,6 +23,7 @@ export default async function Offer({
       bid: {
         select: {
           id: true,
+
           flatRateCents: true,
           arrivalDate: true,
           arrivalWindowStart: true,
@@ -34,6 +35,7 @@ export default async function Offer({
       jobRequest: {
         select: {
           id: true,
+          revision: true,
           publicReference: true,
           postalCode: true,
           bedroomCount: true,
@@ -115,6 +117,7 @@ export default async function Offer({
       ) : (
         <ProviderResponseForm
           token={token}
+          jobRevision={j.revision}
           timingPreference={j.timingPreference}
           requestedDate={j.requestedDate?.toISOString().slice(0, 10) ?? null}
           requestedTime={j.requestedWindowStart}
