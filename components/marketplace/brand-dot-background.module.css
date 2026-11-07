@@ -1,0 +1,37 @@
+.texture {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: clamp(108px, 20svh, 180px);
+  color: var(--hk-green, var(--wk-forest, var(--primary)));
+  background: white;
+  pointer-events: none;
+  mask-image: linear-gradient(to bottom, black 0%, black 35%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 35%, transparent 100%);
+}
+
+:global(.hk-brand):has(> .texture),
+:global(.wk-screen-header):has(> .texture) {
+  position: relative;
+  isolation: isolate;
+}
+
+:global(.hk-brand):has(> .texture) > :not(.texture),
+:global(.wk-screen-header):has(> .texture) > :not(.texture) {
+  position: relative;
+  z-index: 1;
+}
+
+/* Shared screens have horizontal padding; let the texture reach their edges. */
+:global(.wk-screen-header) > .texture {
+  left: 50%;
+  top: -18px;
+  width: min(100vw, 620px);
+  transform: translateX(-50%);
+}
+
+:global(.wk-role-shell[data-role="cleaner"]) :global(.wk-screen-header) > .texture {
+  width: min(100vw, 520px);
+}

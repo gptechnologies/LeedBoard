@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { House, MessageCircle, UserRound } from "lucide-react";
+import { BrandDotBackground } from "./brand-dot-background";
 import {
   createContext,
   useCallback,
@@ -40,6 +41,7 @@ export function discardChanges(dirty: boolean) {
 export function HomeownerHeader() {
   return (
     <header className="hk-brand">
+      <BrandDotBackground />
       <Link href="/customer" aria-label="Well Kept, Jobs">
         Well Kept<span aria-hidden="true">✦</span>
       </Link>

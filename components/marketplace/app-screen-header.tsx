@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AppNavigationMenu } from "@/components/marketplace/app-navigation-menu";
+import { BrandDotBackground } from "./brand-dot-background";
 
 export function AppScreenHeader({
   brandHref = "/",
@@ -10,6 +11,7 @@ export function AppScreenHeader({
 }) {
   return (
     <header className="wk-screen-header">
+      <BrandDotBackground />
       <div className="wk-screen-brand">
         <Link className="wk-wordmark" href={brandHref}>
           Well Kept<span aria-hidden="true">✦</span>
