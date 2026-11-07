@@ -6,7 +6,7 @@
   width: 100%;
   height: clamp(108px, 20svh, 180px);
   color: var(--hk-green, var(--wk-forest, var(--primary)));
-  background: white;
+  background: var(--hk-bg, var(--provider-bg, var(--wk-ivory)));
   pointer-events: none;
   mask-image: linear-gradient(to bottom, black 0%, black 35%, transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, black 0%, black 35%, transparent 100%);
