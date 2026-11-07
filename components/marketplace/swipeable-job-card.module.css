@@ -1,10 +1,8 @@
 .swipe { position: relative; overflow: hidden; border-radius: 20px; background: #f5e8e2; }
 .card { position: relative; width: 100%; }
-.actions { position: absolute; top: 0; left: 0; bottom: 0; width: 88px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; }
-.delete, .close { border: 0; background: transparent; color: #8d372f; display: flex; align-items: center; justify-content: center; padding: 10px; min-height: 44px; min-width: 44px; }
-.delete { flex-direction: column; gap: 6px; font-size: 12px !important; font-weight: 650; }
+.actions { position: absolute; top: 0; left: 0; bottom: 0; width: 72px; display: flex; align-items: center; justify-content: center; }
+.delete { border: 0; background: transparent; color: #8d372f; display: flex; align-items: center; justify-content: center; padding: 12px; min-height: 48px; min-width: 48px; border-radius: 12px; }
 .delete svg { width: 23px; height: 23px; }
-.close svg { width: 16px; height: 16px; }
 .footer { display: none; padding: 0 16px 8px; }
 .card:has(:global(.hk-job-detail)) .footer { display: block; }
 .toggle { display: inline-flex; align-items: center; gap: 6px; padding: 8px 0; min-height: 44px; border: 0; background: transparent; color: var(--hk-muted); font-size: 12px !important; }

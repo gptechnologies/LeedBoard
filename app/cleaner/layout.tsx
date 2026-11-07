@@ -12,7 +12,7 @@ export default async function CleanerLayout({ children }: { children: React.Reac
     where: {
       AND: [
         { OR: [{ cleanerId: user.id }, { cleanerLead: { linkedCleanerUserId: user.id } }] },
-        { OR: [{ status: BidStatus.ACCEPTED }, { messages: { some: { sender: "CUSTOMER" } } }, { jobRequest: { status: { in: [JobRequestStatus.EXPIRED, JobRequestStatus.DELETED] } } }] },
+        { OR: [{ status: BidStatus.ACCEPTED }, { messages: { some: { sender: "CUSTOMER" } } }, { jobRequest: { status: { in: [JobRequestStatus.EXPIRED, JobRequestStatus.DELETED, JobRequestStatus.CANCELLED] } } }] },
       ],
       cleanerViewedAt: null,
     },

@@ -7,7 +7,23 @@ export type JobActivityInput = {
 };
 
 export function canDeletePosting(job: Pick<JobActivityInput, "status" | "acceptedBidId">) {
-  return !job.acceptedBidId && ["OPEN", "EXPIRED"].includes(job.status);
+  return ["OPEN", "AWARDED", "COMPLETED", "CANCELLED", "EXPIRED"].includes(job.status);
+}
+
+export function getPostingDeletion(job: Pick<JobActivityInput, "status">) {
+  const active = job.status === "OPEN" || job.status === "AWARDED";
+  return {
+    active,
+    // Removing history must preserve its completed/expired/cancelled state.
+    status: active ? "CANCELLED" as const : job.status,
+    title: active ? "Cancel and delete this job?" : "Delete this posting?",
+    description: job.status === "AWARDED"
+      ? "This will cancel the job with your chosen cleaner and remove it from Your jobs. The cleaner will be notified."
+      : active
+        ? "This will cancel your active posting and remove it from Your jobs. Cleaners will no longer be able to send bids or replies."
+        : "This posting will be removed from Your jobs. Your existing bids and conversations will be kept for your records.",
+    action: active ? "Cancel and delete" : "Delete posting",
+  };
 }
 
 export function getJobActivity(job: JobActivityInput) {

@@ -147,7 +147,7 @@ export default async function CleanerMessageThreadPage({
           role="cleaner"
         />
         <div className="wk-conversation-actions">
-          {accepted && !completed ? (
+          {accepted && !completed && !closedReason ? (
             <form
               action={`/cleaner/jobs/${job.id}/complete`}
               method="post"
@@ -158,7 +158,7 @@ export default async function CleanerMessageThreadPage({
               </span>
               <button type="submit">Mark complete</button>
             </form>
-          ) : accepted ? (
+          ) : accepted && !closedReason ? (
             <div className="wk-conversation-chosen">
               <Check aria-hidden="true" /> Job complete
             </div>

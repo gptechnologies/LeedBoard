@@ -61,6 +61,7 @@ export default async function CleanerMessagesPage() {
       ["AWARDED", "COMPLETED"].includes(bid.jobRequest.status);
     const completed = bid.jobRequest.status === JobRequestStatus.COMPLETED;
     const closed =
+      bid.jobRequest.status === JobRequestStatus.CANCELLED ||
       bid.jobRequest.status === JobRequestStatus.EXPIRED ||
       bid.jobRequest.status === JobRequestStatus.DELETED;
     const address = accepted
@@ -81,7 +82,9 @@ export default async function CleanerMessagesPage() {
         {
           label: "Status",
           value: closed
-            ? bid.jobRequest.status === JobRequestStatus.EXPIRED
+            ? bid.jobRequest.status === JobRequestStatus.CANCELLED
+              ? "Cancelled"
+              : bid.jobRequest.status === JobRequestStatus.EXPIRED
               ? "Expired"
               : "Job removed"
             : completed
@@ -121,7 +124,9 @@ export default async function CleanerMessagesPage() {
       name: customerName,
       href: `/cleaner/messages/${bid.id}`,
       preview:
-        bid.jobRequest.status === JobRequestStatus.EXPIRED
+        bid.jobRequest.status === JobRequestStatus.CANCELLED
+          ? "Job cancelled · The homeowner cancelled this job."
+          : bid.jobRequest.status === JobRequestStatus.EXPIRED
           ? "Job ended · No cleaner was selected."
           : bid.jobRequest.status === JobRequestStatus.DELETED
             ? "Job removed · The homeowner closed this job."
@@ -134,6 +139,7 @@ export default async function CleanerMessagesPage() {
         (bid.status === BidStatus.ACCEPTED ||
           bid.messages[0]?.sender === "CUSTOMER" ||
           bid.jobRequest.status === JobRequestStatus.EXPIRED ||
+          bid.jobRequest.status === JobRequestStatus.CANCELLED ||
           bid.jobRequest.status === JobRequestStatus.DELETED) &&
         !bid.cleanerViewedAt
           ? 1

@@ -1331,7 +1331,6 @@ body #main-content:has(.hk-app) {
 .hk-jobs .hk-job-detail > .hk-primary { border-radius: 14px; min-height: 48px; font-size: 15px; }
 .hk-jobs .hk-job-detail > .hk-text-button { min-height: 44px; padding-block: 8px; }
 .hk-jobs .hk-job-badge.is-attention { background: #f0e4c8; color: #77521c; }
-.hk-jobs .hk-job-delete-error { margin: 0 14px 12px; }
 @media (max-width: 360px) {
   .hk-job-facts li { gap: 5px; padding-inline: 5px; font-size: 11px; }
   .hk-job-facts svg { width: 18px; height: 18px; }

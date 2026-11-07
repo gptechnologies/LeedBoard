@@ -10,6 +10,7 @@ import { SimpleJobRequestForm, type JobDraft } from "./simple-job-request-form";
 import { discardChanges } from "./homeowner-shell";
 import { HomeownerJobActivity } from "./homeowner-job-activity";
 import { SwipeableJobCard } from "./swipeable-job-card";
+import { DeletePostingDialog } from "./delete-posting-dialog";
 export type HomeownerWorkspaceJob = JobDraft & {
   id: string;
   revision: number;
@@ -55,7 +56,8 @@ export function HomeownerJobsWorkspace({
   }, []);
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const [deleteError, setDeleteError] = useState<{ id: string; message: string } | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<HomeownerWorkspaceJob | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const postButtonRef = useRef<HTMLButtonElement>(null);
@@ -99,24 +101,27 @@ export function HomeownerJobsWorkspace({
       setError(e instanceof Error ? e.message : "Unable to cancel.");
     }
   }
-  async function deletePosting(id: string) {
-    if (deletingId) return;
+  async function deletePosting() {
+    if (deletingId || !deleteTarget) return;
+    const { id, revision, status } = deleteTarget;
     setDeleteError(null);
     setDeletingId(id);
     try {
       const response = await fetch(`/customer/jobs/${id}/delete`, {
         method: "POST",
-        headers: { "X-Well-Kept-Client": "1" },
+        headers: { "X-Well-Kept-Client": "1", "Content-Type": "application/json" },
+        body: JSON.stringify({ revision, status }),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Unable to delete this posting.");
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.ok) throw new Error(data?.error || "Unable to delete this posting. Please try again.");
       setDeletedIds((ids) => [...ids, id]);
       setOpen((current) => current === id ? null : current);
-      setNotice("Job posting deleted.");
+      setNotice(status === "OPEN" || status === "AWARDED" ? "Job cancelled and removed." : "Job posting deleted.");
+      setDeleteTarget(null);
       requestAnimationFrame(() => postButtonRef.current?.focus({ preventScroll: true }));
       router.refresh();
     } catch (error) {
-      setDeleteError({ id, message: error instanceof Error ? error.message : "Unable to delete this posting." });
+      setDeleteError(error instanceof Error ? error.message : "Unable to delete this posting.");
     } finally {
       setDeletingId(null);
     }
@@ -206,7 +211,7 @@ export function HomeownerJobsWorkspace({
                 canDelete={canDeletePosting(j)}
                 disabled={form !== null || deletingId !== null}
                 pending={deletingId === j.id}
-                onDelete={() => deletePosting(j.id)}
+                onDelete={() => { setDeleteError(null); setDeleteTarget(j); }}
               >
                 <button
                   className="hk-job-overview"
@@ -247,7 +252,6 @@ export function HomeownerJobsWorkspace({
                     className={expanded ? "hk-chevron is-open" : "hk-chevron"}
                   />
                 </button>
-                {deleteError?.id === j.id && <p className="hk-error hk-job-delete-error" role="alert">{deleteError.message}</p>}
                 {expanded && (
                   <div
                     className="hk-job-detail hk-expand"
@@ -363,6 +367,17 @@ export function HomeownerJobsWorkspace({
           Load more jobs
         </Link>
       )}
+      <DeletePostingDialog
+        job={deleteTarget}
+        pending={deletingId !== null}
+        error={deleteError}
+        onCancel={() => { setDeleteTarget(null); setDeleteError(null); }}
+        onConfirm={deletePosting}
+        onRestoreFocus={(id) => {
+          const target = document.getElementById("job-" + id)?.querySelector<HTMLButtonElement>(".hk-job-overview") ?? postButtonRef.current;
+          target?.focus({ preventScroll: true });
+        }}
+      />
     </section>
   );
 }

@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { animate, motion, useMotionValue, useReducedMotion } from "framer-motion";
-import { Trash2, X } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import styles from "./swipeable-job-card.module.css";
 
-const REVEAL_WIDTH = 88;
+const REVEAL_WIDTH = 72;
 
 export function SwipeableJobCard({ id, label, canDelete, disabled, pending, onDelete, children }: {
   id: string;
@@ -23,8 +23,6 @@ export function SwipeableJobCard({ id, label, canDelete, disabled, pending, onDe
   const resetClick = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const controls = useRef<ReturnType<typeof animate> | null>(null);
   const articleRef = useRef<HTMLElement>(null);
-  const deleteRef = useRef<HTMLButtonElement>(null);
-  const toggleRef = useRef<HTMLButtonElement>(null);
   const allowed = canDelete && !disabled && !pending;
 
   function reveal(next: boolean) {
@@ -35,9 +33,7 @@ export function SwipeableJobCard({ id, label, canDelete, disabled, pending, onDe
 
   function closeOptions() {
     reveal(false);
-    const toggle = toggleRef.current;
-    if (toggle?.getClientRects().length) toggle.focus({ preventScroll: true });
-    else articleRef.current?.querySelector<HTMLButtonElement>("button")?.focus({ preventScroll: true });
+    articleRef.current?.querySelector<HTMLButtonElement>("button")?.focus({ preventScroll: true });
   }
 
   useEffect(() => {
@@ -52,8 +48,7 @@ export function SwipeableJobCard({ id, label, canDelete, disabled, pending, onDe
   return (
     <div className={styles.swipe} onKeyDown={(event) => { if (event.key === "Escape") closeOptions(); }}>
       {allowed && <div id={`delete-options-${id}`} className={styles.actions} aria-hidden={!revealed} inert={!revealed}>
-        <button ref={deleteRef} className={styles.delete} type="button" onClick={onDelete} aria-label={`Delete posting for ${label}`}><Trash2 aria-hidden="true" /><span>Delete</span></button>
-        <button className={styles.close} type="button" onClick={closeOptions} aria-label="Hide delete option"><X aria-hidden="true" /></button>
+        <button className={styles.delete} type="button" onClick={() => { reveal(false); onDelete(); }} aria-label={`Delete posting for ${label}`} aria-haspopup="dialog"><Trash2 aria-hidden="true" /></button>
       </div>}
       <motion.article
         ref={articleRef}
@@ -74,11 +69,8 @@ export function SwipeableJobCard({ id, label, canDelete, disabled, pending, onDe
       >
         {children}
         {canDelete && <div className={styles.footer}>
-          <button ref={toggleRef} type="button" className={styles.toggle} disabled={disabled || pending} onClick={() => {
-            reveal(!revealed);
-            if (!revealed) requestAnimationFrame(() => deleteRef.current?.focus({ preventScroll: true }));
-          }} aria-expanded={revealed} aria-controls={`delete-options-${id}`}>
-            <Trash2 aria-hidden="true" />{pending ? "Deleting…" : revealed ? "Hide delete option" : "Delete posting"}
+          <button type="button" className={styles.toggle} disabled={disabled || pending} onClick={onDelete} aria-haspopup="dialog">
+            <Trash2 aria-hidden="true" />{pending ? "Deleting…" : "Delete posting"}
           </button>
         </div>}
       </motion.article>

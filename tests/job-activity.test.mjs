@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canDeletePosting, getJobActivity } from "../lib/job-activity.ts";
+import { canDeletePosting, getJobActivity, getPostingDeletion } from "../lib/job-activity.ts";
 
 const job = { status: "OPEN", bidCount: 3, cleanersNotifiedCount: 8, mailState: "PENDING", acceptedBidId: null };
 
@@ -31,12 +31,29 @@ test("delivery failures and missing matches show attention instead of simulated 
   }
 });
 
-test("only open or expired postings without an accepted bid expose delete", () => {
-  for (const status of ["OPEN", "EXPIRED"]) {
+test("every visible posting can be deleted, including accepted and completed jobs", () => {
+  for (const status of ["OPEN", "EXPIRED", "AWARDED", "COMPLETED", "CANCELLED"]) {
     assert.equal(canDeletePosting({ status, acceptedBidId: null }), true);
-    assert.equal(canDeletePosting({ status, acceptedBidId: "accepted-bid" }), false);
+    assert.equal(canDeletePosting({ status, acceptedBidId: "accepted-bid" }), true);
   }
-  for (const status of ["AWARDED", "COMPLETED", "CANCELLED", "DELETED"]) {
-    assert.equal(canDeletePosting({ status, acceptedBidId: null }), false);
+  assert.equal(canDeletePosting({ status: "DELETED", acceptedBidId: null }), false);
+});
+
+test("deleting active jobs cancels them and confirmation explains the cancellation", () => {
+  for (const status of ["OPEN", "AWARDED"]) {
+    const deletion = getPostingDeletion({ status });
+    assert.equal(deletion.active, true);
+    assert.equal(deletion.status, "CANCELLED");
+    assert.match(deletion.title, /Cancel and delete/);
+  }
+  assert.match(getPostingDeletion({ status: "AWARDED" }).description, /chosen cleaner/);
+});
+
+test("removing historical postings preserves their final state", () => {
+  for (const status of ["COMPLETED", "EXPIRED", "CANCELLED"]) {
+    const deletion = getPostingDeletion({ status });
+    assert.equal(deletion.active, false);
+    assert.equal(deletion.status, status);
+    assert.equal(deletion.action, "Delete posting");
   }
 });

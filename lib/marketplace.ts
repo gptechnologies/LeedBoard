@@ -545,6 +545,7 @@ export async function getCustomerHomeData(customerId: string, limit = 20) {
     prisma.jobRequest.findMany({
       where: {
         customerId,
+        deletedAt: null,
         status: { not: JobRequestStatus.DELETED },
       },
       include: {

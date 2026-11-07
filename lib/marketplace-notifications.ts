@@ -113,7 +113,7 @@ export async function notifyHomeownerOfCompletion(input: {
 
 export async function notifyCleanersOfJobClosure(
   jobId: string,
-  reason: "deleted" | "expired",
+  reason: "deleted" | "expired" | "cancelled",
 ) {
   try {
     const bids = await prisma.jobBid.findMany({
@@ -139,10 +139,12 @@ export async function notifyCleanersOfJobClosure(
         await sendMarketplaceEmail({
           content: {
             subject:
-              reason === "deleted"
+              reason === "cancelled"
+                ? "A Well Kept job was cancelled"
+                : reason === "deleted"
                 ? "A Well Kept job was removed"
                 : "A Well Kept job has ended",
-            text: `${reason === "deleted" ? "The homeowner closed this job." : "The homeowner didn't select a cleaner before the acceptance deadline."}\n\nYour offer and conversation are saved for your records. View the update: ${buildAppUrl(updatePath)}`,
+            text: `${reason === "cancelled" ? "The homeowner cancelled this job. It is no longer active." : reason === "deleted" ? "The homeowner closed this job." : "The homeowner didn't select a cleaner before the acceptance deadline."}\n\nYour offer and conversation are saved for your records. View the update: ${buildAppUrl(updatePath)}`,
           },
           dedupeKey: `job-${reason}:${jobId}:${bid.id}`,
           jobRequestId: jobId,
