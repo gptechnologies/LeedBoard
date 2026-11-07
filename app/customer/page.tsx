@@ -34,6 +34,7 @@ export default async function Jobs({
     notes: j.notes,
     createdAt: j.createdAt,
     status: j.status,
+    acceptedBidId: j.acceptedBidId,
     homeFactsSnapshot: j.homeFactsSnapshot,
     bidCount: j.bids.filter((b) => !b.providerQuestion).length,
     cleanersNotifiedCount: j.cleanersNotifiedCount,

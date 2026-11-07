@@ -1298,3 +1298,44 @@ body #main-content:has(.hk-app) {
   font-display: swap;
 }
 .hk-request-form { font-family: "Plus Jakarta Sans", var(--sans, sans-serif); }
+
+/* Posted jobs: compact facts, actual activity, and a clear conversation action. */
+.hk-jobs .hk-job-overview {
+  grid-template-columns: 42px minmax(0, 1fr) 14px;
+  column-gap: 10px;
+  padding: 16px 14px;
+  min-height: 100px;
+}
+.hk-jobs .hk-job-copy strong { padding-right: 0; font-size: 15px; }
+.hk-jobs .hk-job-copy small { padding-right: 90px; font-size: 11px; }
+.hk-jobs .hk-job-badge { bottom: 16px; right: 30px; }
+.hk-jobs .hk-chevron { transform: rotate(180deg); }
+.hk-jobs .hk-chevron.is-open { transform: rotate(0); }
+.hk-jobs .hk-job-detail {
+  margin-inline: 14px;
+  padding: 16px 0 8px;
+  gap: 16px;
+}
+.hk-job-facts { list-style: none; display: grid; grid-template-columns: 0.9fr 0.9fr 1.35fr; padding: 0; margin: 0; }
+.hk-job-facts li { min-width: 0; display: flex; align-items: center; justify-content: center; gap: 7px; padding-inline: 7px; font-size: 12px; line-height: 1.4; }
+.hk-job-facts li:first-child { justify-content: flex-start; padding-left: 0; }
+.hk-job-facts li:last-child { padding-right: 0; }
+.hk-job-facts li + li { border-left: 1px solid var(--hk-line); }
+.hk-job-facts svg { width: 21px; height: 21px; color: var(--hk-green); }
+.hk-job-note { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.hk-job-note > svg { width: 20px; height: 20px; color: var(--hk-green); margin-top: 1px; }
+.hk-job-note-label { font-weight: 550; }
+.hk-job-extras { display: flex; flex-wrap: wrap; gap: 12px; color: var(--hk-muted); font-size: 12px; }
+.hk-job-extras > span { display: inline-flex; align-items: center; gap: 6px; }
+.hk-job-extras svg { width: 16px; height: 16px; color: var(--hk-green); }
+.hk-jobs .hk-job-detail > .hk-primary { border-radius: 14px; min-height: 48px; font-size: 15px; }
+.hk-jobs .hk-job-detail > .hk-text-button { min-height: 44px; padding-block: 8px; }
+.hk-jobs .hk-job-badge.is-attention { background: #f0e4c8; color: #77521c; }
+.hk-jobs .hk-job-delete-error { margin: 0 14px 12px; }
+@media (max-width: 360px) {
+  .hk-job-facts li { gap: 5px; padding-inline: 5px; font-size: 11px; }
+  .hk-job-facts svg { width: 18px; height: 18px; }
+  .hk-jobs .hk-job-copy strong { font-size: 14px; }
+  .hk-jobs .hk-job-copy small { padding-right: 75px; font-size: 10px; }
+  .hk-jobs .hk-job-badge { font-size: 9px; padding-inline: 6px; }
+}

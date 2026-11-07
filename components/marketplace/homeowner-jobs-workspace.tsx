@@ -1,12 +1,15 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
-import { CalendarDays, ChevronRight, Plus } from "lucide-react";
+import { Bath, BedDouble, CalendarDays, ChevronUp, NotebookText, PawPrint, Plus, Ruler, Sparkles } from "lucide-react";
 import { age, jobTiming, type HomeDetails } from "@/lib/homeowner-view";
+import { canDeletePosting } from "@/lib/job-activity";
 import { SimpleJobRequestForm, type JobDraft } from "./simple-job-request-form";
 import { discardChanges } from "./homeowner-shell";
+import { HomeownerJobActivity } from "./homeowner-job-activity";
+import { SwipeableJobCard } from "./swipeable-job-card";
 export type HomeownerWorkspaceJob = JobDraft & {
   id: string;
   revision: number;
@@ -18,6 +21,7 @@ export type HomeownerWorkspaceJob = JobDraft & {
   cleanersNotifiedCount: number;
   mailState: string;
   homeFactsSnapshot?: unknown;
+  acceptedBidId?: string | null;
 };
 export function HomeownerJobsWorkspace({
   jobs,
@@ -51,6 +55,11 @@ export function HomeownerJobsWorkspace({
   }, []);
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [deleteError, setDeleteError] = useState<{ id: string; message: string } | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletedIds, setDeletedIds] = useState<string[]>([]);
+  const postButtonRef = useRef<HTMLButtonElement>(null);
+  const visibleJobs = jobs.filter((job) => !deletedIds.includes(job.id));
   useEffect(() => {
     const refresh = () => {
       if (document.visibilityState === "visible") router.refresh();
@@ -90,6 +99,28 @@ export function HomeownerJobsWorkspace({
       setError(e instanceof Error ? e.message : "Unable to cancel.");
     }
   }
+  async function deletePosting(id: string) {
+    if (deletingId) return;
+    setDeleteError(null);
+    setDeletingId(id);
+    try {
+      const response = await fetch(`/customer/jobs/${id}/delete`, {
+        method: "POST",
+        headers: { "X-Well-Kept-Client": "1" },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to delete this posting.");
+      setDeletedIds((ids) => [...ids, id]);
+      setOpen((current) => current === id ? null : current);
+      setNotice("Job posting deleted.");
+      requestAnimationFrame(() => postButtonRef.current?.focus({ preventScroll: true }));
+      router.refresh();
+    } catch (error) {
+      setDeleteError({ id, message: error instanceof Error ? error.message : "Unable to delete this posting." });
+    } finally {
+      setDeletingId(null);
+    }
+  }
   return (
     <section className="hk-page hk-jobs">
       <AnimatePresence initial={false} mode="wait">
@@ -122,6 +153,7 @@ export function HomeownerJobsWorkspace({
               <p>Post and manage your cleanings.</p>
             </header>
             <button
+              ref={postButtonRef}
               className="hk-primary"
               type="button"
               onClick={() => {
@@ -141,10 +173,10 @@ export function HomeownerJobsWorkspace({
         </p>
       )}
       <div className="hk-job-list">
-        {!jobs.length && !form ? (
+        {!visibleJobs.length && !form ? (
           <p className="hk-empty">Your cleaning requests will appear here.</p>
         ) : (
-          jobs.map((j) => {
+          visibleJobs.map((j) => {
             const expanded = open === j.id;
             const status =
               j.status === "AWARDED"
@@ -157,13 +189,25 @@ export function HomeownerJobsWorkspace({
                       ? "Expired"
                       : j.bidCount
                         ? `${j.bidCount} ${j.bidCount === 1 ? "bid" : "bids"}`
-                        : "Finding cleaners";
+                        : j.mailState === "FAILED"
+                          ? "Needs attention"
+                          : j.mailState === "NO_MATCH"
+                            ? "No match yet"
+                            : "Finding cleaners";
             const facts = j.homeFactsSnapshot as {
               estimatedSquareFeet?: number;
               hasPets?: boolean;
             } | null;
             return (
-              <article className="hk-job-card" id={"job-" + j.id} key={j.id}>
+              <SwipeableJobCard
+                id={"job-" + j.id}
+                key={j.id}
+                label={j.addressLine1 || `ZIP ${j.postalCode}`}
+                canDelete={canDeletePosting(j)}
+                disabled={form !== null || deletingId !== null}
+                pending={deletingId === j.id}
+                onDelete={() => deletePosting(j.id)}
+              >
                 <button
                   className="hk-job-overview"
                   type="button"
@@ -194,48 +238,39 @@ export function HomeownerJobsWorkspace({
                     <small>Posted {age(j.createdAt)}</small>
                   </span>
                   <span
-                    className={`hk-job-badge ${["COMPLETED", "CANCELLED", "EXPIRED"].includes(j.status) ? "is-neutral" : ""}`}
+                    className={`hk-job-badge ${["COMPLETED", "CANCELLED", "EXPIRED"].includes(j.status) ? "is-neutral" : j.status === "OPEN" && ["FAILED", "NO_MATCH"].includes(j.mailState) ? "is-attention" : ""}`}
                   >
                     {status}
                   </span>
-                  <ChevronRight
+                  <ChevronUp
+                    aria-hidden="true"
                     className={expanded ? "hk-chevron is-open" : "hk-chevron"}
                   />
                 </button>
+                {deleteError?.id === j.id && <p className="hk-error hk-job-delete-error" role="alert">{deleteError.message}</p>}
                 {expanded && (
                   <div
                     className="hk-job-detail hk-expand"
                     id={"details-" + j.id}
                   >
-                    <p>
-                      {j.bedroomCount ?? "—"} beds · {j.bathroomCount ?? "—"}{" "}
-                      baths
-                      {facts?.estimatedSquareFeet
-                        ? ` · ${facts.estimatedSquareFeet.toLocaleString()} sq ft`
-                        : ""}
-                    </p>
-                    <p>{j.cleanType?.replaceAll("_", " ").toLowerCase()}</p>
-                    {j.notes && <p>{j.notes}</p>}
-                    {j.status === "OPEN" && (
-                      <p className="hk-muted">
-                        {j.cleanersNotifiedCount
-                          ? `${j.cleanersNotifiedCount} cleaners contacted.`
-                          : j.mailState === "FAILED"
-                            ? "Email delivery needs attention. Your request is saved."
-                            : j.mailState === "NO_MATCH"
-                              ? "We haven’t found a subscribed cleaner for this ZIP yet."
-                              : "Finding nearby cleaners."}
-                      </p>
-                    )}
+                    <ul className="hk-job-facts" aria-label="Cleaning details">
+                      <li><BedDouble aria-hidden="true" /><span>{j.bedroomCount ?? "—"} {j.bedroomCount === 1 ? "bed" : "beds"}</span></li>
+                      <li><Bath aria-hidden="true" /><span>{j.bathroomCount ?? "—"} {j.bathroomCount === 1 ? "bath" : "baths"}</span></li>
+                      <li><Sparkles aria-hidden="true" /><span>{j.cleanType ? j.cleanType.replaceAll("_", " ").toLowerCase().replace(/^./, (c) => c.toUpperCase()) : "Cleaning"}</span></li>
+                    </ul>
+                    {(facts?.estimatedSquareFeet || facts?.hasPets) && <div className="hk-job-extras">
+                      {facts?.estimatedSquareFeet ? <span><Ruler aria-hidden="true" />{facts.estimatedSquareFeet.toLocaleString()} sq ft</span> : null}
+                      {facts?.hasPets ? <span><PawPrint aria-hidden="true" />Pets at home</span> : null}
+                    </div>}
+                    {j.notes && <p className="hk-job-note"><NotebookText aria-hidden="true" /><span><span className="hk-job-note-label">Note: </span>{j.notes}</span></p>}
+                    <HomeownerJobActivity job={j} />
                     <Link
                       className="hk-primary"
                       href={`/customer/messages?jobId=${j.id}`}
                       replace
                       scroll={false}
                     >
-                      {j.bidCount
-                        ? `View ${j.bidCount} cleaning ${j.bidCount === 1 ? "bid" : "bids"}`
-                        : "View conversations"}
+                      View bids and messages
                     </Link>
                     {j.status === "OPEN" ? (
                       <>
@@ -299,7 +334,7 @@ export function HomeownerJobsWorkspace({
                           onClick={() => {
                             setSource(j);
                             switchForm("new");
-                            window.scrollTo({ top: 0, behavior: "smooth" });
+                            window.scrollTo({ top: 0, behavior: reducedMotion ? "instant" : "smooth" });
                           }}
                         >
                           Post again
@@ -308,7 +343,7 @@ export function HomeownerJobsWorkspace({
                     )}
                   </div>
                 )}
-              </article>
+              </SwipeableJobCard>
             );
           })
         )}
